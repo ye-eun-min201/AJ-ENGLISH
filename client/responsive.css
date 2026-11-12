@@ -1,0 +1,265 @@
+/* Touch-first layouts for the existing classroom. Theme and content stay unchanged. */
+body.dashboard-shell,body.aj-admin{--touch-size:44px}
+body.dashboard-shell .footer-links,body.aj-admin .footer-links{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px 18px}
+body.dashboard-shell .footer-links :is(button,a){min-height:44px;display:inline-flex;align-items:center;padding:8px 0;font-size:14px;line-height:1.6;white-space:normal;text-align:left}
+body.dashboard-shell .footer-links button{background:none;border:0;color:inherit;cursor:pointer}
+body.dashboard-shell .dashboard-footer{flex-wrap:wrap;gap:12px 20px}
+body.dashboard-shell .dashboard-footer .footer-links{margin-left:auto}
+body.dashboard-shell .ds-welcome h2{font-size:24px;line-height:1.5;letter-spacing:-1px;font-weight:600;color:var(--park-ink-fg,#dfe8f7);margin:0 0 7px}
+body.dashboard-shell .ds-welcome h2>span{font-size:23px;display:inline-block;margin-left:4px}
+@media(max-width:1100px),(pointer:coarse){
+  body.dashboard-shell :is(button,a.btn,a.slides-button,a.nav-item),body.aj-admin :is(button,a.button,a.nav-button){touch-action:manipulation}
+  body.dashboard-shell :is(input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea),body.aj-admin :is(input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea){font-size:16px!important;line-height:1.6;max-width:100%;scroll-margin-block:90px}
+  body.dashboard-shell :is(input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]),select),body.aj-admin :is(input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]),select){min-height:44px}
+  body.dashboard-shell .quest-map-game .qm-locate,.aj-help-dialog button{min-height:44px}
+  body.dashboard-shell :is(.icon-button,.dialog-close,.aj-help-close),body.aj-admin :is(.dialog-close,.aj-help-close){width:44px!important;height:44px!important;min-width:44px;min-height:44px;padding:8px}
+  body.dashboard-shell .ds-listen,body.dashboard-shell .flashcard-study :is(.fc-icon-button,.fc-list-star){width:44px!important;height:44px!important;min-width:44px;min-height:44px}
+  .aj-help-dialog .aj-help-filters button{font-size:12px!important}
+  body.dashboard-shell :is(.btn,.ds-button,.aj-help-entry,.aj-help-button,.aj-help-button-primary,.aj-help-button-outline,.aj-help-button-soft),body.aj-admin :is(.button,.text-button,.simple-back,.aj-help-entry,.aj-help-button,.aj-help-button-primary,.aj-help-button-outline,.aj-help-button-soft){min-height:44px}
+  body.dashboard-shell .rail-quest :is(.rq-primary,.rq-secondary,.rq-listen,.rq-map-link,.rq-camera button,.rq-collections button,.rq-footer button){min-height:44px!important}
+  body.dashboard-shell .rail-quest .rq-camera .rq-pause{width:44px!important;min-width:44px}
+  body.dashboard-shell .rail-quest .rq-answer{min-height:56px}
+  body.dashboard-shell .flashcard-study :is(.fc-button,.fc-mode,.fc-status-filters button,.fc-star-filter,.fc-listen,.fc-favorite){min-height:44px!important}
+  body.dashboard-shell .classroom-slides :is(.slides-button,.slides-button.small,.slides-toolbar button,.slides-toolbar input,.slides-toolbar select){min-height:44px!important}
+  body.dashboard-shell .classroom-slides .slides-page-controls>.slides-button{width:44px;min-width:44px;padding:8px}
+  body.dashboard-shell .classroom-slides .slides-color{width:44px;height:44px;min-width:44px;min-height:44px;padding:0;border-width:10px;background-clip:padding-box}
+  body.dashboard-shell .classroom-slides .slides-colors{gap:3px;flex-wrap:wrap}
+  body.dashboard-shell .classroom-slides .slides-pen-width{min-height:44px;font-size:14px;flex-wrap:wrap}
+  body.dashboard-shell .classroom-slides .slides-pen-width input{min-height:44px;min-width:100px}
+  body.dashboard-shell .classroom-slides .slides-note-text,body.dashboard-shell .flashcard-study .fc-write-input{font-size:16px!important;line-height:1.8}
+  body.dashboard-shell .option.swatch{height:44px!important;width:44px!important;min-height:44px;min-width:44px}
+  body.dashboard-shell .option{min-height:44px;min-width:44px}
+  body.aj-admin :is(.nav-button,.simple-list-toggle,.item-actions button,.pdf-editor .form-actions>.button){min-height:44px!important}
+  body.aj-admin .item-actions{display:flex;gap:8px;flex-wrap:wrap}
+  body.aj-admin .item-actions button{padding-inline:10px}
+}
+@media(max-width:1100px){
+  /* A labelled tablet rail replaces the old wide, icon-only sidebar. */
+  body.dashboard-shell .dashboard-sidebar{width:calc(112px + env(safe-area-inset-left,0px));padding:18px 9px 16px max(9px,env(safe-area-inset-left,0px));overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+  body.dashboard-shell .main-shell.dashboard-main-shell{margin-left:calc(112px + env(safe-area-inset-left,0px));width:calc(100% - 112px - env(safe-area-inset-left,0px))}
+  body.dashboard-shell .dashboard-brand{justify-content:center;gap:0;margin-bottom:20px}
+  body.dashboard-shell .dashboard-brand>span:nth-child(2),body.dashboard-shell .dashboard-nav-label{display:none}
+  body.dashboard-shell .dashboard-nav{gap:4px}
+  body.dashboard-shell .dashboard-nav .nav-item{width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px 4px;min-height:66px;line-height:1.45;font-size:12px;text-align:center;text-decoration:none;white-space:normal}
+  body.dashboard-shell .dashboard-nav .nav-item>svg{height:21px;width:21px;flex-shrink:0}
+  body.dashboard-shell .dashboard-nav .nav-item>span:first-of-type{display:block;font-size:12px;overflow-wrap:anywhere}
+  body.dashboard-shell .dashboard-nav .nav-item>small,body.dashboard-shell .dashboard-nav .nav-item>.dashboard-play-dot{display:none}
+  body.dashboard-shell .dashboard-nav .nav-item.active:before{height:28px;left:0}
+  body.dashboard-shell .dashboard-sidebar-bottom{position:static;margin-top:18px;padding-top:0}
+  body.dashboard-shell .dashboard-class-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:68px;padding:10px 5px;text-align:center;width:100%;white-space:normal}
+  body.dashboard-shell .dashboard-class-card .hud-class-name,body.dashboard-shell .dashboard-class-card .hud-class-code{display:block;max-width:100%;white-space:normal;overflow-wrap:anywhere;font-size:12px;line-height:1.5}
+  body.dashboard-shell .dashboard-sidebar-note,body.dashboard-shell .dashboard-sidebar-bottom .dashboard-admin-link{display:none}
+  /* Account mode and the requested administrator link are normal grid items. */
+  body.dashboard-shell .dashboard-header{display:grid;grid-template-columns:minmax(0,1fr) auto 44px 44px;gap:8px 10px;height:auto;min-height:0;padding:10px max(18px,env(safe-area-inset-right,0px)) 12px 18px;align-items:center}
+  body.dashboard-shell .dashboard-header>.aj-save-status{position:static;grid-column:1/3;grid-row:1;justify-self:start;max-width:100%;min-height:44px;padding:8px 10px;font-size:12px!important;line-height:1.5;white-space:normal;text-align:left}
+  body.dashboard-shell .dashboard-header>.header-admin-link{position:static;grid-column:3/5;grid-row:1;justify-self:end;max-width:100%;min-height:44px;padding:8px 10px;font-size:12px!important;line-height:1.5;white-space:normal;text-align:center}
+  body.dashboard-shell .dashboard-header>div:first-child{grid-column:1;grid-row:2;min-width:0}
+  body.dashboard-shell .dashboard-header-kicker{display:none}
+  body.dashboard-shell .dashboard-header-label{display:block;font-size:16px;line-height:1.5;overflow-wrap:anywhere}
+  body.dashboard-shell .dashboard-header-actions{display:contents}
+  body.dashboard-shell .dashboard-header #today-date{display:none}
+  body.dashboard-shell .dashboard-header .aj-help-entry{grid-column:2;grid-row:2;min-height:44px;padding:8px 10px;white-space:nowrap;font-size:12px!important}
+  body.dashboard-shell .dashboard-header #sound-settings{grid-column:3;grid-row:2;width:44px;height:44px}
+  body.dashboard-shell .dashboard-header #nav-user{grid-column:4;grid-row:2;display:flex;align-items:center;justify-content:center;width:44px;height:44px;min-height:44px;padding:0;border-left:0}
+  body.dashboard-shell .dashboard-header .nav-user>.mini-avatar{display:flex;width:40px;height:40px}
+  body.dashboard-shell .dashboard-header .nav-user>span:not(.mini-avatar){display:none}
+  body.dashboard-shell .dashboard-header .aj-game-hud{grid-column:1/-1;grid-row:3;gap:8px;display:flex;min-width:0}
+  body.dashboard-shell .dashboard-header .aj-hud-stat{min-width:0;flex:1;display:flex;justify-content:space-between;gap:8px;padding:7px 10px;white-space:normal}
+  body.dashboard-shell .dashboard-header .aj-hud-stat>span{display:inline;font-size:12px!important;line-height:1.5}
+  body.dashboard-shell .dashboard-header .aj-hud-stat>strong{font-size:14px;line-height:1.5;white-space:nowrap}
+  body.dashboard-shell #app{padding:18px max(18px,env(safe-area-inset-right,0px)) 28px 18px;min-width:0}
+  body.dashboard-shell :is(#app,.rail-quest,.flashcard-study,.classroom-slides,.quest-map-game){scroll-margin-top:180px;min-width:0}
+  body.dashboard-shell .dashboard-footer{padding:20px max(18px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) 18px}
+  body.dashboard-shell .rail-quest .rq-scene-host{height:340px;min-height:340px}
+  body.dashboard-shell .rail-quest .rq-scene-tools{left:12px;right:12px;top:16px;gap:8px;flex-wrap:wrap}
+  body.dashboard-shell .rail-quest .rq-camera{max-width:100%;flex-wrap:wrap}
+  body.dashboard-shell .rail-quest .rq-camera button{padding:8px 10px;font-size:12px!important}
+  body.dashboard-shell .rail-quest .rq-task{padding:20px}
+  body.dashboard-shell .rail-quest .rq-scoreline{flex-wrap:wrap;gap:8px 12px}
+  body.dashboard-shell .rail-quest .rq-route-strip{grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:14px 16px}
+  body.dashboard-shell .rail-quest .rq-checkpoints{gap:4px;min-width:0}
+  body.dashboard-shell .rail-quest .rq-answer{font-size:14px!important}
+  body.dashboard-shell .rail-quest .rq-answer>strong{font-size:14px!important;line-height:1.7}
+  /* PDF width follows its classroom area instead of the browser's desktop width. */
+  body.dashboard-shell .classroom-slides{padding:20px;min-width:0}
+  body.dashboard-shell .classroom-slides .slides-heading{flex-wrap:wrap;align-items:flex-start;gap:16px}
+  body.dashboard-shell .classroom-slides .slides-course-select{min-width:0;width:100%;max-width:none}
+  body.dashboard-shell .classroom-slides .slides-course-select select{width:100%;min-width:0}
+  body.dashboard-shell .classroom-slides .slides-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+  body.dashboard-shell .classroom-slides .slides-thumbnails{display:flex;flex-direction:row;grid-column:1/-1;gap:10px;max-height:142px;width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;padding:4px 2px 8px;overscroll-behavior-inline:contain}
+  body.dashboard-shell .classroom-slides.is-thumbs-collapsed .slides-thumbnails{display:none}
+  body.dashboard-shell .classroom-slides.is-thumbs-collapsed .slides-layout{grid-template-columns:minmax(0,1fr)}
+  body.dashboard-shell .classroom-slides .slide-thumb{flex:0 0 84px;max-width:84px;min-height:100px}
+  body.dashboard-shell .classroom-slides .slides-stage{grid-column:1/-1;width:100%;min-width:0;min-height:280px;max-height:70dvh;padding:12px;overscroll-behavior:contain}
+  body.dashboard-shell .classroom-slides .slides-notes-panel{grid-column:1/-1;position:static;top:auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 18px;padding:18px;min-width:0;width:100%}
+  body.dashboard-shell .classroom-slides .slides-note-text{min-height:190px}
+  body.dashboard-shell .classroom-slides .slides-save-row{grid-column:1/-1;display:flex;align-items:center;flex-wrap:wrap;gap:10px;flex-direction:row}
+  body.dashboard-shell .classroom-slides .slides-note-label,body.dashboard-shell .classroom-slides .slides-storage-label{grid-column:1/-1}
+  body.dashboard-shell .classroom-slides .slides-text-label{min-width:0;grid-column:2;grid-row:3/7}
+  body.dashboard-shell .classroom-slides :is(.slides-drawing-tools,.slides-ink-options,.slides-drawing-actions,.slides-help){grid-column:1}
+  body.dashboard-shell .classroom-slides .slides-toolbar{gap:8px;align-items:center}
+  body.dashboard-shell .classroom-slides .slides-page-controls{min-width:0;gap:6px}
+  body.dashboard-shell .classroom-slides .slides-page-input input{width:58px}
+  body.dashboard-shell .classroom-slides .slides-zoom{margin-left:0;gap:6px;min-width:0}
+  body.dashboard-shell .classroom-slides .slides-zoom select{max-width:180px;min-width:0}
+  body.dashboard-shell .classroom-slides.is-expanded,body.dashboard-shell .classroom-slides:fullscreen{padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(20px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));height:100dvh;max-height:100dvh;overflow:auto}
+  body.dashboard-shell .classroom-slides.is-expanded .slides-stage,body.dashboard-shell .classroom-slides:fullscreen .slides-stage{min-height:220px;max-height:65dvh}
+  body.dashboard-shell .flashcard-study{padding:22px 18px;min-width:0}
+  body.dashboard-shell .flashcard-study .fc-header{flex-wrap:wrap;gap:12px}
+  body.dashboard-shell .flashcard-study .fc-toolbar{flex-wrap:wrap}
+  body.dashboard-shell .flashcard-study .fc-navigation{gap:10px;flex-wrap:wrap}
+  body.dashboard-shell .flashcard-study .fc-match-stats{flex-wrap:wrap;gap:10px 16px}
+  body.dashboard-shell .flashcard-study .fc-game-footer{flex-wrap:wrap;align-items:center;gap:12px}
+  body.dashboard-shell .flashcard-study .fc-collection{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:14px 12px}
+  body.dashboard-shell .flashcard-study .fc-collection>span{min-width:0;overflow-wrap:anywhere;line-height:1.6}
+  body.dashboard-shell .flashcard-study .fc-status-filters button{font-size:12px!important}
+  /* Dialogs scroll within the dynamic viewport; fields never require a tiny tap. */
+  body.dashboard-shell .modal-backdrop,body.dashboard-shell .modal-overlay,body.dashboard-shell .overlay,body.aj-admin .preview-backdrop{align-items:flex-start;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));overflow:auto;overscroll-behavior:contain}
+  body.dashboard-shell .dialog,body.aj-admin .preview-dialog{max-height:calc(100dvh - max(12px,env(safe-area-inset-top,0px)) - max(12px,env(safe-area-inset-bottom,0px)));overflow:auto;max-width:100%;margin:0 auto}
+  body.dashboard-shell .dialog-head{padding:16px 18px;gap:12px;align-items:center}
+  body.dashboard-shell .dialog-body{padding:20px 18px;min-width:0}
+  body.dashboard-shell .dialog-footer{padding:14px 18px max(16px,env(safe-area-inset-bottom,0px));flex-wrap:wrap;gap:10px}
+  body.dashboard-shell .dialog :is(input,textarea,select){scroll-margin-top:90px;scroll-margin-bottom:110px}
+  .aj-help-dialog{max-height:calc(100dvh - max(12px,env(safe-area-inset-top,0px)) - max(12px,env(safe-area-inset-bottom,0px)))}
+  .aj-help-close{width:44px;height:44px;min-width:44px;min-height:44px}
+}
+@media(min-width:1000px) and (max-width:1100px){
+  body.dashboard-shell .rail-quest .rq-layout{grid-template-columns:minmax(0,1.05fr) minmax(320px,1fr)}
+  body.dashboard-shell .rail-quest .rq-scene-host{height:430px;min-height:430px}
+  body.dashboard-shell .rail-quest .rq-answers{display:flex;flex-direction:column}
+}
+@media(max-width:1024px){
+  body.aj-admin .login-screen{grid-template-columns:minmax(0,1fr);min-height:100svh;padding:30px max(20px,env(safe-area-inset-right,0px)) 30px max(20px,env(safe-area-inset-left,0px));gap:20px}
+  body.aj-admin .login-art{display:none}
+  body.aj-admin .login-card{width:100%;max-width:520px;margin-inline:auto}
+  body.aj-admin .teacher-sidebar{position:static;inset:auto;width:100%;display:block;padding:18px max(18px,env(safe-area-inset-right,0px)) 0 max(18px,env(safe-area-inset-left,0px));border-right:0}
+  body.aj-admin .teacher-sidebar .wordmark{font-size:24px;margin-bottom:0}
+  body.aj-admin .teacher-sidebar .wordmark>small{font-size:12px}
+  body.aj-admin .teacher-sidebar .sidebar-caption,body.aj-admin .teacher-sidebar .sidebar-bottom{display:none}
+  body.aj-admin .teacher-sidebar nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:18px;padding-bottom:16px}
+  body.aj-admin .teacher-sidebar .nav-button{display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:10px 12px;width:100%;min-width:0;min-height:48px;white-space:normal;font-size:14px}
+  body.aj-admin .teacher-sidebar .nav-button>span:not(.nav-symbol){display:block;min-width:0;overflow-wrap:anywhere}
+  body.aj-admin .teacher-shell{margin-left:0;min-width:0}
+  body.aj-admin .teacher-header{height:auto;min-height:88px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:16px max(18px,env(safe-area-inset-right,0px)) 16px max(18px,env(safe-area-inset-left,0px))}
+  body.aj-admin .header-actions{flex-wrap:wrap;gap:8px}
+  body.aj-admin #teacher-main{padding:24px max(18px,env(safe-area-inset-right,0px)) 30px max(18px,env(safe-area-inset-left,0px));min-width:0}
+  body.aj-admin .paper{min-width:0;max-width:100%}
+  body.aj-admin .simple-wizard-head{min-width:0}
+  body.aj-admin .wizard-steps>span{min-height:52px;font-size:14px;line-height:1.5}
+  body.aj-admin .wizard-actions{gap:10px;align-items:center}
+  body.aj-admin .wizard-actions .button{min-height:48px;white-space:normal;line-height:1.6}
+  body.aj-admin .teacher-footer{padding-bottom:max(24px,env(safe-area-inset-bottom,0px));flex-wrap:wrap}
+}
+@media(max-width:600px){
+  body.dashboard-shell .dashboard-sidebar{position:relative;inset:auto;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px 10px;width:100%;padding:14px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));overflow:visible}
+  body.dashboard-shell .dashboard-brand{grid-column:1;grid-row:1;justify-content:flex-start;gap:8px;margin:0;min-width:0}
+  body.dashboard-shell .dashboard-brand-symbol{width:34px;height:34px;flex-shrink:0}
+  body.dashboard-shell .dashboard-brand>span:nth-child(2){display:block;min-width:0}
+  body.dashboard-shell .dashboard-brand strong{font-size:17px;line-height:1.5;white-space:nowrap}
+  body.dashboard-shell .dashboard-brand small{display:none}
+  body.dashboard-shell .dashboard-sidebar-bottom{grid-column:2;grid-row:1;position:static;inset:auto;display:block;margin:0;padding:0;width:126px}
+  body.dashboard-shell .dashboard-class-card{display:flex;min-height:48px;padding:6px 8px;gap:1px}
+  body.dashboard-shell .dashboard-class-card .hud-class-name,body.dashboard-shell .dashboard-class-card .hud-class-code{font-size:12px;line-height:1.5}
+  body.dashboard-shell .dashboard-nav{grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;overflow:visible;white-space:normal;padding:0}
+  body.dashboard-shell .dashboard-nav .nav-item{display:flex;flex-direction:column;justify-content:center;gap:4px;min-height:62px;width:100%;padding:8px 3px;text-align:center;white-space:normal;flex:none;border-radius:9px}
+  body.dashboard-shell .dashboard-nav .nav-item>svg{width:18px;height:18px}
+  body.dashboard-shell .dashboard-nav .nav-item>span:first-of-type{display:block;font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+  body.dashboard-shell .dashboard-nav .nav-item.active:before{display:none}
+  body.dashboard-shell .main-shell.dashboard-main-shell{width:100%;margin-left:0}
+  body.dashboard-shell .dashboard-header{padding:10px max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px));gap:8px}
+  body.dashboard-shell .dashboard-header-label{font-size:14px}
+  body.dashboard-shell .dashboard-header .aj-help-entry{padding:8px;font-size:12px!important}
+  body.dashboard-shell .dashboard-header>.header-admin-link{padding:8px;font-size:12px!important}
+  body.dashboard-shell .dashboard-header .aj-hud-stat{padding:7px 9px}
+  body.dashboard-shell .dashboard-header .aj-hud-stat:nth-child(3){display:none}
+  body.dashboard-shell #app{padding:14px max(14px,env(safe-area-inset-right,0px)) 24px max(14px,env(safe-area-inset-left,0px))}
+  body.dashboard-shell .dashboard-footer{padding:20px max(16px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:flex-start}
+  body.dashboard-shell .dashboard-footer .footer-links{justify-content:flex-start;margin:0;gap:4px 16px}
+  body.dashboard-shell .rail-quest .rq-heading{gap:10px;margin-bottom:14px}
+  body.dashboard-shell .rail-quest .rq-heading h2{font-size:24px;line-height:1.45}
+  body.dashboard-shell .rail-quest .rq-scene-host{height:230px;min-height:230px}
+  body.dashboard-shell .rail-quest .rq-scene-tools{top:14px;left:9px;right:9px;gap:6px}
+  body.dashboard-shell .rail-quest .rq-scene-badge{padding:7px 9px;line-height:1.5}
+  body.dashboard-shell .rail-quest .rq-camera{margin-left:auto;padding:3px;gap:2px}
+  body.dashboard-shell .rail-quest .rq-camera button{padding:7px 8px}
+  body.dashboard-shell .rail-quest .rq-route-strip{padding:13px 10px;gap:10px}
+  body.dashboard-shell .rail-quest .rq-checkpoints{gap:3px}
+  body.dashboard-shell .rail-quest .rq-station{min-width:13px;font-size:12px!important}
+  body.dashboard-shell .rail-quest .rq-task{padding:18px 14px}
+  body.dashboard-shell .rail-quest .rq-collections button{padding:10px 5px;gap:5px;font-size:14px!important;white-space:normal;line-height:1.6}
+  body.dashboard-shell .rail-quest .rq-collections button small{flex-shrink:0}
+  body.dashboard-shell .rail-quest .rq-answers{display:flex;flex-direction:column}
+  body.dashboard-shell .rail-quest .rq-english{overflow-wrap:anywhere;font-size:27px!important;line-height:1.55}
+  body.dashboard-shell .rail-quest .rq-english.sentence{font-size:23px!important}
+  body.dashboard-shell .rail-quest .rq-question-panel{min-height:0}
+  body.dashboard-shell .classroom-slides{padding:16px 12px}
+  body.dashboard-shell .classroom-slides .slides-toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  body.dashboard-shell .classroom-slides .slides-page-controls{grid-column:1/-1;justify-content:center;gap:9px}
+  body.dashboard-shell .classroom-slides .slides-toolbar>.slides-zoom{grid-column:1/-1;justify-content:center;width:100%;margin:0}
+  body.dashboard-shell .classroom-slides .slides-toolbar>.slides-button{justify-content:center;width:100%;white-space:normal;text-align:center;padding:9px 6px;font-size:12px!important;line-height:1.6}
+  body.dashboard-shell .classroom-slides .slides-stage{min-height:200px;max-height:62dvh;padding:10px}
+  body.dashboard-shell .classroom-slides .slides-notes-panel{display:block;padding:16px 12px}
+  body.dashboard-shell .classroom-slides .slides-drawing-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  body.dashboard-shell .classroom-slides .slides-drawing-tools>.slides-button{width:100%;white-space:normal;justify-content:center}
+  body.dashboard-shell .classroom-slides .slides-ink-options{align-items:flex-start;gap:10px}
+  body.dashboard-shell .classroom-slides .slides-pen-width{width:100%;justify-content:space-between}
+  body.dashboard-shell .classroom-slides .slides-save-row{align-items:flex-start;gap:10px}
+  body.dashboard-shell .classroom-slides .slides-note-text{min-height:180px}
+  body.dashboard-shell .classroom-slides .slides-course-select select{font-size:16px!important}
+  body.dashboard-shell .flashcard-study{padding:18px 12px}
+  body.dashboard-shell .flashcard-study .fc-collections{gap:8px}
+  body.dashboard-shell .flashcard-study .fc-collection{min-height:70px;padding:12px 10px;font-size:14px!important}
+  body.dashboard-shell .flashcard-study .fc-mode{font-size:14px!important;padding:10px 4px;gap:5px}
+  body.dashboard-shell .flashcard-study .fc-maincard{padding:26px 16px;min-height:260px}
+  body.dashboard-shell .flashcard-study .fc-maincard .fc-card-word{font-size:clamp(22px,6vw,30px);line-height:1.6;overflow-wrap:anywhere}
+  body.dashboard-shell .flashcard-study .fc-body{padding:18px 10px}
+  body.dashboard-shell .flashcard-study .fc-navigation{justify-content:space-between;gap:8px}
+  body.dashboard-shell .flashcard-study .fc-key-hint{display:none}
+  body.dashboard-shell .flashcard-study .fc-navigation>.fc-button{min-width:96px}
+  body.dashboard-shell .flashcard-study .fc-match-board{gap:9px}
+  body.dashboard-shell .flashcard-study .fc-match-tile{font-size:14px!important;line-height:1.65;min-height:92px;padding:12px 8px;overflow-wrap:anywhere}
+  body.dashboard-shell .flashcard-study .fc-write-actions{display:flex;gap:8px;flex-wrap:wrap}
+  body.dashboard-shell .flashcard-study .fc-write-actions>.fc-button{flex:1;min-width:105px}
+  body.dashboard-shell .ds-welcome h2{font-size:22px;line-height:1.6}
+  body.dashboard-shell .ds-welcome h2>span{font-size:22px}
+  body.dashboard-shell .dialog-head,body.dashboard-shell .dialog-body,body.dashboard-shell .dialog-footer{padding-inline:16px}
+  body.dashboard-shell .dialog-footer>.btn{flex:1;min-width:118px;white-space:normal}
+  body.dashboard-shell .dialog .grid-2{grid-template-columns:minmax(0,1fr)}
+  body.aj-admin .teacher-sidebar nav{grid-template-columns:repeat(2,minmax(0,1fr))}
+  body.aj-admin .teacher-header{align-items:flex-start}
+  body.aj-admin .header-actions{width:100%}
+  body.aj-admin .header-actions>.button{flex:1;white-space:normal;min-width:85px;font-size:12px!important}
+  body.aj-admin #teacher-main{padding-top:22px;padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}
+  body.aj-admin .paper{padding:20px 16px}
+  body.aj-admin .page-heading{flex-wrap:wrap;gap:12px}
+  body.aj-admin .page-heading>.button{max-width:none;width:auto}
+  body.aj-admin .simple-choice-grid{grid-template-columns:minmax(0,1fr)}
+  body.aj-admin .simple-choice:nth-child(3){grid-column:auto}
+  body.aj-admin .wizard-steps{gap:6px}
+  body.aj-admin .wizard-steps>span{display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 5px;gap:5px;min-height:78px}
+  body.aj-admin .wizard-actions{align-items:stretch;gap:10px}
+  body.aj-admin .wizard-actions>.button{flex:1;min-width:110px}
+  body.aj-admin #teacher-main .form-row{display:flex;flex-direction:column;gap:0}
+  body.aj-admin #teacher-main .form-row>.field{width:100%;flex:1 1 auto}
+  body.aj-admin .wizard-summary{padding:16px}
+  body.aj-admin .pdf-selection,body.aj-admin .pdf-current{min-width:0;overflow-wrap:anywhere}
+  body.aj-admin .preview-toolbar{flex-wrap:wrap;gap:10px}
+}
+@media(max-width:1100px) and (max-height:560px) and (orientation:landscape){
+  body.dashboard-shell .dashboard-header{position:relative;top:auto}
+  body.dashboard-shell .rail-quest .rq-scene-host{height:220px;min-height:220px}
+  body.dashboard-shell .classroom-slides .slides-stage,body.dashboard-shell .classroom-slides.is-expanded .slides-stage,body.dashboard-shell .classroom-slides:fullscreen .slides-stage{min-height:160px;max-height:65dvh}
+  body.dashboard-shell .classroom-slides .slides-note-text{min-height:140px}
+  body.dashboard-shell .dialog,body.aj-admin .preview-dialog{max-height:calc(100dvh - 16px)}
+  body.dashboard-shell .modal-backdrop,body.aj-admin .preview-backdrop{padding-block:8px}
+}
+@media(min-width:740px) and (max-width:1100px) and (max-height:560px) and (orientation:landscape){
+  body.dashboard-shell .rail-quest .rq-layout{grid-template-columns:minmax(0,.9fr) minmax(300px,1.1fr)}
+  body.dashboard-shell .rail-quest .rq-task{padding:16px 12px}
+  body.dashboard-shell .rail-quest .rq-answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto!important}
+  body.dashboard-shell,body.aj-admin{scroll-behavior:auto}
+  body.dashboard-shell .dashboard-nav .nav-item,body.dashboard-shell .rail-quest .rq-camera button,body.dashboard-shell .classroom-slides .slides-button,body.aj-admin .nav-button{transition:none}
+}

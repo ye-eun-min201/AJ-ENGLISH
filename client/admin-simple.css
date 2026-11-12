@@ -1,0 +1,52 @@
+/* Clear choices and one step at a time. Load after pastel.css and help.css. */
+body.aj-admin #teacher-main{max-width:1140px}
+body.aj-admin .workspace :is(button,.button){min-height:44px;font-size:14px!important;white-space:normal}
+body.aj-admin #teacher-main :is(.field,.form-status,.publish-hint,.simple-daily-intro){font-size:14px;line-height:1.8}
+body.aj-admin #teacher-main .optional{font-size:13px}
+body.aj-admin .workspace .nav-button small{font-size:13px}
+.simple-home{max-width:960px;margin:0 auto;color:var(--pastel-ink-fg,#dfe8f7)}
+.simple-home>p,.simple-daily-intro{color:var(--pastel-secondary-fg,#adb7c4);font-size:14px;line-height:1.9;margin:0 0 28px;overflow-wrap:anywhere}
+.simple-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin:28px 0}
+.simple-choice{display:flex;flex-direction:column;align-items:flex-start;gap:15px;width:100%;min-width:0;min-height:230px;padding:26px;text-align:left;background:#14181f;border:2px solid #2c323c;border-radius:18px;color:#dfe8f7;white-space:normal;overflow-wrap:anywhere}
+.simple-choice:nth-child(2){background:#171c23;border-color:#2f353f}
+.simple-choice:hover{border-color:#c46858}
+.choice-symbol{display:grid;place-items:center;width:56px;height:56px;border-radius:15px;background:var(--pastel-lavender,#372a00);font-size:28px;font-weight:700}
+.simple-choice:nth-child(2) .choice-symbol{background:var(--pastel-mint,#372a00)}
+.simple-choice :is(h2,h3,strong){font-size:21px;font-weight:700;line-height:1.5;margin:0}
+.simple-choice p{font-size:14px;line-height:1.85;color:#adb7c4;margin:0}
+.simple-recent{margin-top:30px;padding-top:24px;border-top:1px solid #2b313b}
+.simple-recent button{display:block;width:100%;min-height:52px;padding:13px 16px;border:1px solid #2b313b;border-radius:10px;background:#0f131a;color:#dfe8f7;text-align:left;line-height:1.7;margin-top:9px;overflow-wrap:anywhere}
+body.aj-admin .editor-layout{grid-template-columns:minmax(0,1fr);max-width:860px;margin:0 auto}
+body.aj-admin .editor-layout .collection-paper{position:static}
+body.aj-admin .simple-chapter-workspace{grid-template-columns:minmax(0,1fr);max-width:860px;margin:0 auto}
+body.aj-admin .simple-chapter-workspace .chapter-list-paper{position:static;min-width:0}
+body.aj-admin :is(.collection-paper,.wizard-step-panel,.simple-success)[hidden]{display:none!important}
+.simple-back,.simple-list-toggle{display:inline-flex;align-items:center;gap:9px;padding:10px 0;border:0;background:none;color:#dfe8f7;line-height:1.7;text-align:left;text-decoration:underline;text-underline-offset:4px}
+.simple-back{margin-bottom:18px}
+.simple-list-toggle{margin-top:18px}
+.simple-advanced{margin:22px 0;border:1px solid #2b313b;border-radius:12px;background:#10141b}
+.simple-advanced>summary{min-height:48px;padding:13px 17px;font-size:14px;font-weight:600;color:#dfe8f7;cursor:pointer;line-height:1.6}
+.simple-advanced>summary:focus-visible{outline:3px solid #c46858;outline-offset:3px}
+.simple-advanced[open]>summary{border-bottom:1px solid #2b313b;margin-bottom:18px}
+.simple-advanced>:not(summary){margin-left:17px;margin-right:17px}
+.simple-advanced>:last-child{margin-bottom:18px}
+.simple-wizard-head h2{font-size:26px;margin:0 0 10px;color:#dfe8f7}
+.simple-wizard-head p,.wizard-pdf-note{font-size:14px;line-height:1.85;color:#adb7c4;margin:0;overflow-wrap:anywhere}
+.wizard-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 25px}
+.wizard-steps>:is(button,span){display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;min-height:48px;padding:10px 8px;border:1px solid #2b313b;border-radius:11px;background:#0f131a;color:#adb7c4;font-size:14px;line-height:1.6;overflow-wrap:anywhere}
+.wizard-steps>.active{background:#372a00;border-color:#8a5244;color:#dfe8f7;font-weight:700}
+.wizard-steps>.complete{background:#372a00;border-color:#b37363;color:#dfe8f7}
+.wizard-steps>span>b{display:grid;place-items:center;flex-shrink:0;width:25px;height:25px;border-radius:50%;background:#0f131a;color:#dfe8f7;font-size:13px;line-height:1}
+.wizard-step-panel{min-width:0}
+.wizard-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid #2b313b;padding-top:22px;margin-top:28px}
+.wizard-summary{display:grid;gap:15px;padding:22px;background:#14181f;border:1px solid #2c323c;border-radius:13px;margin:18px 0}
+.summary-field{min-width:0;color:#dfe8f7;font-size:14px;line-height:1.85;white-space:pre-wrap;overflow-wrap:anywhere}
+.summary-field :is(label,small),.summary-field>span{display:block;color:#adb7c4;font-size:13px;line-height:1.7;margin-bottom:4px}
+.summary-field>strong,.summary-field>p{display:block;font-size:14px;color:#dfe8f7;margin:0}
+.wizard-pdf-note{padding:15px 17px;background:#171b23;border:1px solid #8e512f;border-radius:11px;margin:18px 0}
+.simple-success{padding:25px;background:#171c23;border:1px solid #2f353f;border-radius:16px;color:#dfe8f7;margin:22px 0}
+.simple-success h2,.simple-success h3{font-size:22px;margin:0 0 10px}
+.simple-success p{font-size:14px;line-height:1.9;margin:0 0 18px}
+@media(max-width:720px){body.aj-admin .teacher-sidebar nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding-bottom:16px}body.aj-admin .teacher-sidebar .nav-button{width:100%;min-width:0;justify-content:flex-start;border-radius:10px;padding:10px;gap:8px}body.aj-admin .teacher-sidebar .nav-button>span:not(.nav-symbol){min-width:0;overflow-wrap:anywhere}body.aj-admin .teacher-header{height:auto;min-height:88px;flex-wrap:wrap;padding-top:16px;padding-bottom:16px}body.aj-admin .header-actions{flex-wrap:wrap}body.aj-admin .page-heading{flex-wrap:wrap}body.aj-admin .page-heading>div{min-width:0;flex:1 1 240px}}
+@media(max-width:700px){.simple-choice-grid{grid-template-columns:1fr;gap:16px}.simple-choice{min-height:200px;padding:22px}body.aj-admin #teacher-main{padding:25px 16px}body.aj-admin #teacher-main .form-row{flex-direction:column;gap:0}body.aj-admin #teacher-main .form-row>.field{flex:1 1 auto;width:100%}.wizard-steps{gap:6px}.wizard-steps>:is(button,span){font-size:14px;padding:10px 5px;gap:5px}.wizard-summary{padding:18px}.wizard-actions .button{flex:1 1 auto}}
+@media(max-width:400px){.wizard-steps>span{flex-direction:column;text-align:center}}

@@ -1,0 +1,463 @@
+/* ==========================================================================
+   stage.css — AJ ENGLISH '밤 무대' 테마 (맨 마지막에 불러오는 덮어쓰기 층)
+   · 색은 아래 :root 변수만 바꾸면 전체가 함께 바뀐다.
+   · 움직임(로딩·스포트라이트·카드 뒤집기·놀이터)은 stage.js 담당.
+   ========================================================================== */
+
+/* ---------- 글꼴 (직접 보관 · OFL) ---------- */
+@font-face{font-family:'Instrument Serif';font-style:normal;font-weight:400;font-display:swap;src:url(/vendor/fonts/instrument-serif-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'Instrument Serif';font-style:italic;font-weight:400;font-display:swap;src:url(/vendor/fonts/instrument-serif-latin-400-italic.woff2) format('woff2')}
+@font-face{font-family:'Silkscreen';font-style:normal;font-weight:400;font-display:swap;src:url(/vendor/fonts/silkscreen-latin-400-normal.woff2) format('woff2')}
+
+/* ---------- 색·글꼴 변수 ---------- */
+:root{
+  --night:#05070c;          /* 페이지 바탕 */
+  --deck:#0a0d14;           /* 옆 메뉴·머리말 */
+  --booth:#10141d;          /* 카드 */
+  --booth-2:#171c28;        /* 카드 안의 카드 */
+  --booth-3:#212838;        /* 눌린·선택된 면 */
+  --hair:rgba(255,255,255,.08);
+  --hair-2:rgba(255,255,255,.16);
+  --chalk:#f4f2ec;          /* 본문 글자 */
+  --mist:#9aa3b5;           /* 보조 글자 */
+  --dim:#687083;            /* 흐린 글자 */
+  --lamp:#ffd25f;           /* 포인트(조명) */
+  --lamp-hot:#ffe9a8;
+  --lamp-deep:#f0a83a;
+  --lamp-ink:#1a1400;       /* 조명색 위의 글자 */
+  --lamp-glow:255,210,95;   /* rgb 값 — 빛 번짐용 */
+  --ticket:#ff7a59;         /* 강조(지금·경고) */
+  --neon:#7fd0ff;           /* 보조 포인트 */
+  --ok:#7be0b0;
+  --display:'Instrument Serif','Pretendard',Georgia,serif;
+  --pixel:'Silkscreen','Pretendard',ui-monospace,monospace;
+  color-scheme:dark;
+}
+
+/* ---------- 바탕 ---------- */
+html{background:var(--night)}
+body.dashboard-shell,body.aj-admin{background:
+  radial-gradient(1100px 520px at 78% -8%,rgba(127,208,255,.07),transparent 62%),
+  radial-gradient(900px 480px at 8% 108%,rgba(var(--lamp-glow),.05),transparent 60%),
+  var(--night) !important;color:var(--chalk);background-attachment:fixed !important}
+body.dashboard-shell .main-shell,body.dashboard-shell .dashboard-main-shell,body.dashboard-shell .dashboard-footer{background:transparent !important}
+body.dashboard-shell .dashboard-header{background:rgba(5,7,12,.78) !important;backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2)}
+::selection{background:var(--lamp);color:var(--lamp-ink)}
+*{scrollbar-color:#2a3142 transparent}
+:focus-visible{outline:2px solid var(--lamp) !important;outline-offset:3px}
+
+/* 포인터를 따라다니는 조명 (stage.js가 위치를 옮긴다) */
+#stage-light{position:fixed;left:0;top:0;width:900px;height:900px;margin:-450px 0 0 -450px;border-radius:50%;pointer-events:none;z-index:40;
+  background:radial-gradient(closest-side,rgba(var(--lamp-glow),.11),rgba(var(--lamp-glow),.045) 42%,transparent 70%);
+  mix-blend-mode:screen;opacity:0;transition:opacity .6s ease;will-change:transform}
+#stage-light.is-on{opacity:1}
+
+/* ---------- 옆 메뉴 ---------- */
+body.dashboard-shell .dashboard-sidebar{background:rgba(8,11,17,.82) !important;border-right:1px solid var(--hair) !important;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+body.dashboard-shell .dashboard-brand-symbol rect{fill:var(--lamp)}
+body.dashboard-shell .dashboard-brand-symbol text{fill:var(--lamp-ink)}
+body.dashboard-shell .dashboard-brand strong{color:var(--chalk) !important;letter-spacing:-.02em}
+body.dashboard-shell .dashboard-brand strong>span,body.dashboard-shell .dashboard-footer>span>span{color:var(--lamp) !important}
+body.dashboard-shell .dashboard-brand small,body.dashboard-shell .dashboard-nav-label{color:var(--dim) !important}
+body.dashboard-shell .dashboard-nav .nav-item{color:var(--mist) !important;background:transparent !important;border-radius:12px;transition:background .18s,color .18s}
+body.dashboard-shell .dashboard-nav .nav-item:hover{color:var(--chalk) !important;background:rgba(255,255,255,.05) !important}
+body.dashboard-shell .dashboard-nav .nav-item.active{color:var(--chalk) !important;background:var(--booth-2) !important;box-shadow:inset 0 0 0 1px var(--hair-2) !important}
+body.dashboard-shell .dashboard-nav .nav-item.active:before{background:var(--lamp) !important;box-shadow:0 0 14px 1px rgba(var(--lamp-glow),.7)}
+body.dashboard-shell .dashboard-nav .nav-item.active svg{color:var(--lamp)}
+body.dashboard-shell .dashboard-nav .nav-item small{background:transparent !important;color:var(--neon) !important;border:1px solid rgba(127,208,255,.45) !important;font-family:var(--pixel) !important;font-size:9px;letter-spacing:.06em;padding:3px 6px}
+body.dashboard-shell .dashboard-play-dot{background:var(--ticket) !important;box-shadow:0 0 10px var(--ticket)}
+body.dashboard-shell .dashboard-class-card{background:transparent !important;border:1px dashed rgba(var(--lamp-glow),.5) !important;color:var(--lamp) !important;box-shadow:none !important;transition:background .18s,border-color .18s}
+body.dashboard-shell .dashboard-class-card:hover{background:rgba(var(--lamp-glow),.08) !important;border-color:var(--lamp) !important}
+body.dashboard-shell .dashboard-class-card *{color:inherit !important}
+body.dashboard-shell .dashboard-sidebar-note,body.dashboard-shell .dashboard-sidebar-note p{color:var(--dim) !important}
+body.dashboard-shell .dashboard-sidebar-note>span{color:var(--lamp) !important}
+
+/* ---------- 머리말 ---------- */
+body.dashboard-shell .dashboard-header{border-bottom:1px solid var(--hair) !important}
+body.dashboard-shell .dashboard-header-kicker{color:var(--dim) !important;letter-spacing:.22em}
+body.dashboard-shell .dashboard-header-label{color:var(--chalk) !important}
+body.dashboard-shell .aj-hud-stat{background:var(--booth) !important;border:1px solid var(--hair) !important;box-shadow:none !important;border-radius:999px !important;padding-inline:14px}
+body.dashboard-shell .aj-hud-stat span{color:var(--mist) !important}
+body.dashboard-shell .aj-hud-stat strong{color:var(--chalk) !important;font-weight:800;font-variant-numeric:tabular-nums}
+body.dashboard-shell .aj-hud-stat:first-child{border-color:rgba(var(--lamp-glow),.4) !important}
+body.dashboard-shell .aj-hud-stat:first-child strong{color:var(--lamp) !important}
+body.dashboard-shell #today-date{color:var(--dim) !important}
+body.dashboard-shell .aj-help-entry,body.dashboard-shell .header-admin-link,body.dashboard-shell .aj-save-status{background:transparent !important;border:1px solid var(--hair-2) !important;color:var(--mist) !important;box-shadow:none !important;border-radius:999px !important;transition:color .18s,border-color .18s}
+body.dashboard-shell .aj-help-entry{padding:6px 12px;font-weight:700;font-size:12px}
+body.dashboard-shell :is(.aj-help-entry,.header-admin-link,.aj-save-status):hover{color:var(--chalk) !important;border-color:var(--chalk) !important}
+body.dashboard-shell .header-admin-link *{color:inherit !important}
+body.dashboard-shell .aj-save-status:before{background:var(--ok) !important;box-shadow:0 0 8px var(--ok)}
+body.dashboard-shell .aj-save-status[data-mode=error]:before{background:var(--ticket) !important;box-shadow:0 0 8px var(--ticket)}
+body.dashboard-shell .icon-button{background:var(--booth) !important;border:1px solid var(--hair) !important;color:var(--chalk) !important;border-radius:999px !important}
+body.dashboard-shell .icon-button:hover{border-color:var(--lamp) !important;color:var(--lamp) !important}
+body.dashboard-shell .nav-user strong{color:var(--chalk) !important}
+body.dashboard-shell .nav-user small{color:var(--dim) !important}
+body.dashboard-shell .mini-avatar{background:var(--booth-2) !important;box-shadow:0 0 0 1px var(--hair-2)}
+
+/* ---------- 꼬리말 ---------- */
+body.dashboard-shell .footer-links [data-auth-logout][hidden]{display:none !important}
+body.dashboard-shell .dashboard-footer{border-top:1px solid var(--hair);margin-top:36px;padding-top:22px;color:var(--dim) !important}
+body.dashboard-shell .dashboard-footer>span{color:var(--chalk) !important}
+body.dashboard-shell .dashboard-footer p,body.dashboard-shell .footer-links button{color:var(--dim) !important}
+body.dashboard-shell .footer-links button:hover{color:var(--chalk) !important}
+
+/* ---------- 버튼: 가장 중요한 행동 = 불 켜진 간판 ---------- */
+body.dashboard-shell:not([data-view="arcade"]) #app .btn.primary,
+body.dashboard-shell .dialog :is(.btn.primary,.orange-actions .orange-mic),
+body.dashboard-shell .he-start,
+body.dashboard-shell .rail-quest .rq-primary,
+body.dashboard-shell .qm-start,
+body.dashboard-shell .flashcard-study .fc-primary,
+body.dashboard-shell .classroom-slides .slides-button.primary,
+body.dashboard-shell .business-practice .bp-primary,
+body.dashboard-shell :is(.ds-button.navy,.ds-login-note>a),
+body.dashboard-shell .aj-help-button-primary,
+body.dashboard-shell .arcade-button,
+body.arcade #app .btn.primary,
+body.aj-admin .button.primary{
+  background:linear-gradient(180deg,var(--lamp-hot),var(--lamp) 55%,#ffc640) !important;color:var(--lamp-ink) !important;
+  border:1px solid var(--lamp-hot) !important;box-shadow:0 0 0 1px rgba(var(--lamp-glow),.2),0 14px 44px -12px rgba(var(--lamp-glow),.55) !important;
+  font-weight:800 !important;text-shadow:none !important;transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .18s,filter .18s}
+body.dashboard-shell:not([data-view="arcade"]) #app .btn.primary *,
+body.dashboard-shell .dialog :is(.btn.primary,.orange-actions .orange-mic) *,
+body.dashboard-shell :is(.he-start,.qm-start,.aj-help-button-primary,.arcade-button) *,
+body.dashboard-shell .rail-quest .rq-primary *,
+body.dashboard-shell .flashcard-study .fc-primary *,
+body.dashboard-shell .classroom-slides .slides-button.primary *,
+body.dashboard-shell .business-practice .bp-primary *,
+body.dashboard-shell :is(.ds-button.navy,.ds-login-note>a) *,
+body.arcade #app .btn.primary *,
+body.aj-admin .button.primary *{color:inherit !important}
+body.dashboard-shell:not([data-view="arcade"]) #app .btn.primary:hover:not(:disabled),
+body.dashboard-shell .dialog :is(.btn.primary,.orange-actions .orange-mic):hover:not(:disabled),
+body.dashboard-shell .he-start:hover:not(:disabled),
+body.dashboard-shell .rail-quest .rq-primary:hover:not(:disabled),
+body.dashboard-shell .qm-start:hover:not(:disabled),
+body.dashboard-shell .flashcard-study .fc-primary:hover:not(:disabled),
+body.dashboard-shell .classroom-slides .slides-button.primary:hover:not(:disabled),
+body.dashboard-shell .business-practice .bp-primary:hover:not(:disabled),
+body.dashboard-shell :is(.ds-button.navy,.ds-login-note>a):hover,
+body.dashboard-shell .aj-help-button-primary:hover,
+body.dashboard-shell .arcade-button:hover,
+body.arcade #app .btn.primary:hover,
+body.aj-admin .button.primary:hover:not(:disabled){
+  background:linear-gradient(180deg,#fff3c9,var(--lamp-hot) 55%,var(--lamp)) !important;color:var(--lamp-ink) !important;transform:translateY(-2px);
+  box-shadow:0 0 0 1px rgba(var(--lamp-glow),.35),0 18px 54px -10px rgba(var(--lamp-glow),.75) !important}
+body.dashboard-shell :is(.btn,.button,.he-start,.rq-primary,.qm-start,.fc-primary):disabled{filter:saturate(.35) brightness(.7);box-shadow:none !important;transform:none !important}
+
+/* 보조 버튼 */
+body.dashboard-shell #app :is(.btn.secondary,.btn.ghost,.btn:not(.primary):not(.danger):not(.lime):not(.light)),
+body.dashboard-shell .dialog .btn:not(.primary):not(.danger),
+body.aj-admin .button:not(.primary):not(.danger){background:var(--booth-2) !important;border:1px solid var(--hair-2) !important;color:var(--chalk) !important;box-shadow:none !important}
+body.dashboard-shell #app :is(.btn.secondary,.btn.ghost,.btn:not(.primary):not(.danger):not(.lime):not(.light)):hover,
+body.dashboard-shell .dialog .btn:not(.primary):not(.danger):hover,
+body.aj-admin .button:not(.primary):not(.danger):hover:not(:disabled){background:var(--booth-3) !important;border-color:var(--chalk) !important;transform:translateY(-1px)}
+
+/* ---------- 카드·패널 공통 ---------- */
+body.dashboard-shell #app :is(.panel,.lesson-card,.stat,.quest-row,.achievement,.empty),
+body.dashboard-shell .aj-dashboard-records{background:var(--booth) !important;border:1px solid var(--hair) !important;box-shadow:none !important}
+body.dashboard-shell .aj-dashboard-records>summary{color:var(--chalk) !important}
+body.dashboard-shell .aj-dashboard-records[open]{border-color:var(--hair-2) !important}
+
+/* ---------- 입력칸 ---------- */
+body.dashboard-shell :is(input:not([type=range]):not([type=checkbox]):not([type=radio]),select,textarea),
+body.aj-admin :is(input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea){background-color:var(--deck) !important;border-color:var(--hair-2) !important;color:var(--chalk) !important;caret-color:var(--lamp)}
+body.dashboard-shell :is(input,select,textarea)::placeholder,body.aj-admin :is(input,textarea)::placeholder{color:var(--dim) !important}
+body.dashboard-shell :is(input:not([type=range]),select,textarea):focus,body.aj-admin :is(input:not([type=range]),select,textarea):focus{border-color:var(--lamp) !important;box-shadow:0 0 0 3px rgba(var(--lamp-glow),.18) !important}
+body.dashboard-shell input[type=range],body.aj-admin input[type=range]{accent-color:var(--lamp)}
+
+/* ---------- 창(모달) ---------- */
+body.dashboard-shell :is(.modal-backdrop,.modal-overlay,.overlay){background:rgba(2,3,6,.72) !important;backdrop-filter:blur(10px)}
+body.dashboard-shell .dialog{background:var(--deck) !important;border:1px solid var(--hair-2) !important;box-shadow:0 40px 120px -20px #000,0 0 0 1px rgba(var(--lamp-glow),.06) !important}
+body.dashboard-shell .dialog :is(.dialog-head,.dialog-footer){background:rgba(16,20,29,.9) !important;border-color:var(--hair) !important}
+body.dashboard-shell .dialog-close{background:transparent !important;border:1px solid var(--hair-2) !important;color:var(--mist) !important;border-radius:999px !important}
+body.dashboard-shell .dialog-close:hover{color:var(--chalk) !important;border-color:var(--chalk) !important}
+body.dashboard-shell .toast{background:var(--chalk) !important;color:#0b0d12 !important;border:0 !important;font-weight:700;box-shadow:0 16px 50px -10px #000}
+
+/* ==========================================================================
+   홈 — 오늘의 20분 복습
+   ========================================================================== */
+body.dashboard-shell .home-entry{margin-bottom:34px}
+body.dashboard-shell .he-grid{align-items:end}
+body.dashboard-shell .he-eyebrow{color:var(--mist) !important;font-weight:600;letter-spacing:.2em;font-size:11px}
+body.dashboard-shell .home-entry h1{font-size:clamp(34px,5.6vw,84px);line-height:1.04;letter-spacing:-.055em;font-weight:850;margin:6px 0 18px;color:var(--chalk) !important;word-break:keep-all}
+body.dashboard-shell .home-entry h1 em{font-family:var(--display) !important;font-style:italic;font-weight:400;letter-spacing:-.02em;color:var(--lamp);padding-inline:.04em .1em;text-shadow:0 0 42px rgba(var(--lamp-glow),.45)}
+body.dashboard-shell .he-lesson>span{color:var(--lamp) !important;font-family:var(--pixel) !important;font-weight:400;font-size:11px;letter-spacing:.04em}
+body.dashboard-shell .he-lesson>strong{color:var(--chalk) !important}
+body.dashboard-shell .he-progress-heading{color:var(--mist) !important}
+body.dashboard-shell .he-progress{background:rgba(255,255,255,.08) !important;height:6px}
+body.dashboard-shell .he-progress>i{background:linear-gradient(90deg,var(--lamp-deep),var(--lamp)) !important;box-shadow:0 0 14px rgba(var(--lamp-glow),.7)}
+body.dashboard-shell .he-completion.is-complete{color:var(--ok) !important}
+body.dashboard-shell .he-start{min-height:72px;border-radius:18px !important;font-size:19px !important;letter-spacing:-.02em;padding-inline:26px !important}
+body.dashboard-shell .he-start>span{font-size:26px;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+body.dashboard-shell .he-start:hover>span{transform:translateX(6px)}
+body.dashboard-shell .he-main-note{color:var(--dim) !important}
+
+/* 다음 수업 = 입장권 */
+body.dashboard-shell .he-class{background:linear-gradient(160deg,var(--booth-2),var(--booth)) !important;border:1px solid var(--hair-2) !important;border-radius:22px !important;box-shadow:none !important;position:relative;overflow:hidden}
+body.dashboard-shell .he-class:before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:radial-gradient(circle,var(--lamp) 0 2px,transparent 2.6px) 0 50%/18px 3px repeat-x;opacity:.9}
+body.dashboard-shell .he-class-top>span{color:var(--mist) !important;letter-spacing:.14em;font-size:11px}
+body.dashboard-shell .he-dday{background:var(--ticket) !important;border:0 !important;color:#1b0700 !important;font-family:var(--pixel) !important;font-weight:400;font-size:12px;padding:5px 11px;box-shadow:0 0 22px -2px rgba(255,122,89,.7)}
+body.dashboard-shell .he-class>time{color:var(--chalk) !important}
+body.dashboard-shell .he-class-time{color:var(--mist) !important}
+body.dashboard-shell .he-class-time>strong{font-family:var(--display) !important;font-weight:400;font-size:clamp(30px,3.1vw,46px) !important;letter-spacing:-.01em;color:var(--chalk) !important;line-height:1}
+body.dashboard-shell .he-class-time>span{color:var(--dim) !important;font-family:var(--pixel) !important;font-size:10px}
+body.dashboard-shell :is(.he-class-note,.he-class-source){color:var(--mist) !important}
+body.dashboard-shell .he-class-divider{background:var(--hair) !important}
+
+/* 학습 순서 — 뒤집히며 나타나는 세 장 */
+body.dashboard-shell .he-guide{border-top:1px solid var(--hair) !important;margin-top:30px;padding-top:24px}
+body.dashboard-shell .he-guide-title h2{color:var(--chalk) !important}
+body.dashboard-shell .he-guide-title p{color:var(--dim) !important}
+body.dashboard-shell .he-steps{gap:14px;perspective:1100px}
+body.dashboard-shell .he-step{background:var(--booth) !important;border:1px solid var(--hair) !important;border-radius:18px;padding:18px 18px 12px !important;transform-origin:50% 0;transition:border-color .2s,background .2s}
+body.dashboard-shell .he-step:hover{border-color:var(--hair-2) !important;background:var(--booth-2) !important}
+body.dashboard-shell .he-step-number{background:transparent !important;border:0 !important;width:auto;height:auto;font-family:var(--display) !important;font-style:italic;font-weight:400;font-size:34px;line-height:1;color:var(--dim) !important;padding-right:4px}
+body.dashboard-shell .he-step.is-complete .he-step-number{color:var(--lamp) !important;text-shadow:0 0 24px rgba(var(--lamp-glow),.5)}
+body.dashboard-shell .he-step h3{color:var(--chalk) !important}
+body.dashboard-shell .he-step p,body.dashboard-shell .he-step-note{color:var(--mist) !important}
+body.dashboard-shell .he-step-action{color:var(--lamp) !important;text-decoration-color:rgba(var(--lamp-glow),.4) !important}
+body.dashboard-shell .he-step-action:hover{text-decoration-color:var(--lamp) !important}
+html.stage-ready .he-step.stage-flip{animation:stage-flip .7s cubic-bezier(.2,.75,.2,1) both;animation-delay:calc(var(--i,0)*.13s)}
+@keyframes stage-flip{from{opacity:0;transform:rotateX(-88deg) translateY(-8px)}60%{opacity:1}to{opacity:1;transform:none}}
+
+/* ---------- 레일 퀘스트 ---------- */
+body.dashboard-shell .rq-heading p{color:var(--dim) !important;letter-spacing:.2em}
+body.dashboard-shell .rq-heading h2{color:var(--chalk) !important;font-size:clamp(26px,2.6vw,38px);letter-spacing:-.045em}
+body.dashboard-shell .rq-heading span{color:var(--mist) !important}
+body.dashboard-shell .rq-map-link{background:transparent !important;border:1px solid var(--hair-2) !important;color:var(--chalk) !important;box-shadow:none !important;border-radius:999px !important}
+body.dashboard-shell .rq-map-link:hover{border-color:var(--lamp) !important;color:var(--lamp) !important}
+body.dashboard-shell .rq-map-link *{color:inherit !important}
+body.dashboard-shell .rq-layout{background:var(--booth) !important;border:1px solid var(--hair-2) !important;box-shadow:0 40px 120px -60px rgba(var(--lamp-glow),.25) !important;overflow:hidden}
+body.dashboard-shell .rq-stage{background:#070b14 !important}
+body.dashboard-shell :is(.rq-scene-host,.ds-week-banner):before{background:radial-gradient(circle,var(--lamp) 0 2.4px,transparent 3px) 0 50%/20px 100% repeat-x !important;height:14px !important;box-shadow:none !important;filter:drop-shadow(0 0 6px rgba(var(--lamp-glow),.9))}
+body.dashboard-shell :is(.rq-scene-badge,.rq-camera){background:rgba(8,11,17,.82) !important;border:1px solid var(--hair-2) !important;color:var(--chalk) !important;backdrop-filter:blur(8px)}
+body.dashboard-shell .rq-scene-badge{font-family:var(--pixel) !important;font-size:10px;font-weight:400}
+body.dashboard-shell .rq-camera button{color:var(--mist) !important;background:transparent !important}
+body.dashboard-shell .rq-camera button.active{background:var(--chalk) !important;color:#0b0d12 !important}
+body.dashboard-shell .rq-scene-host{background:#070b14 !important}
+body.dashboard-shell .rq-route-strip{background:var(--deck) !important;border-top:1px solid var(--hair) !important}
+body.dashboard-shell .rq-route-strip strong{font-family:var(--pixel) !important;font-weight:400;color:var(--lamp) !important;font-size:13px}
+body.dashboard-shell .rq-station{color:var(--dim) !important}
+body.dashboard-shell .rq-station>i{background:transparent !important;border:1.5px solid var(--dim) !important;box-shadow:none !important}
+body.dashboard-shell .rq-station.done>i{background:var(--lamp) !important;border-color:var(--lamp) !important;box-shadow:0 0 12px rgba(var(--lamp-glow),.8) !important}
+body.dashboard-shell .rq-station.current>i{background:var(--ticket) !important;border-color:var(--ticket) !important;box-shadow:0 0 14px rgba(255,122,89,.9) !important}
+body.dashboard-shell .rq-task{background:var(--booth) !important;border-left:1px solid var(--hair) !important}
+body.dashboard-shell .rq-collections{background:var(--deck) !important;border:1px solid var(--hair) !important;border-radius:999px !important;padding:4px}
+body.dashboard-shell .rq-collections button{color:var(--mist) !important;background:transparent !important;border-radius:999px !important}
+body.dashboard-shell .rq-collections button.active,body.dashboard-shell .rq-collections button[data-rq-collection=speaking].active{background:var(--chalk) !important;color:#0b0d12 !important}
+body.dashboard-shell .rq-collections button.active small{color:#0b0d12 !important;opacity:.6}
+body.dashboard-shell .rq-question-panel{background:transparent !important;border:0 !important}
+body.dashboard-shell .rq-round-label{color:var(--lamp) !important;font-size:11px;letter-spacing:.14em}
+body.dashboard-shell .rq-welcome h3{color:var(--chalk) !important;font-size:clamp(28px,2.7vw,40px);letter-spacing:-.05em;line-height:1.16}
+body.dashboard-shell .rq-welcome p,body.dashboard-shell .rq-welcome small,body.dashboard-shell .rq-run-meta{color:var(--mist) !important}
+body.dashboard-shell .rq-welcome ol li{color:var(--chalk) !important}
+body.dashboard-shell .rq-progress{border-top:1px solid var(--hair) !important}
+body.dashboard-shell .rq-progress strong{font-family:var(--pixel) !important;font-weight:400;color:var(--chalk) !important}
+body.dashboard-shell .rq-progress-track{background:rgba(255,255,255,.08) !important}
+body.dashboard-shell .rq-progress-track>i{background:linear-gradient(90deg,var(--lamp-deep),var(--lamp)) !important;box-shadow:0 0 12px rgba(var(--lamp-glow),.7)}
+body.dashboard-shell .rq-footer,body.dashboard-shell .rq-footer p,body.dashboard-shell .rq-footer span{color:var(--dim) !important}
+body.dashboard-shell .rq-footer button{color:var(--mist) !important;text-decoration-color:var(--hair-2) !important}
+body.dashboard-shell .rq-footer button:hover{color:var(--lamp) !important}
+
+/* ---------- 로딩 막 (stage.js) ---------- */
+#stage-curtain{position:fixed;inset:0;z-index:5000;background:var(--night);display:grid;place-items:center;color:var(--chalk);transition:transform .85s cubic-bezier(.76,0,.24,1),opacity .4s .5s;overflow:hidden}
+#stage-curtain:before{content:'';position:absolute;left:50%;top:50%;width:min(110vw,900px);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(var(--lamp-glow),.16),transparent 70%);animation:stage-breathe 2.4s ease-in-out infinite}
+@keyframes stage-breathe{50%{opacity:.55;transform:translate(-50%,-50%) scale(1.08)}}
+#stage-curtain.is-done{transform:translateY(-100%);opacity:0;pointer-events:none}
+#stage-curtain .sc-inner{position:relative;width:min(84vw,520px);display:grid;gap:18px}
+#stage-curtain .sc-brand{font-size:13px;letter-spacing:.34em;color:var(--mist);font-weight:600}
+#stage-curtain .sc-brand b{color:var(--lamp);font-weight:800}
+#stage-curtain .sc-count{font-family:var(--display) !important;font-style:italic;font-size:clamp(88px,22vw,168px);line-height:.9;letter-spacing:-.03em;color:var(--chalk);font-variant-numeric:tabular-nums}
+#stage-curtain .sc-count small{font-size:.32em;color:var(--lamp);margin-left:.08em;font-style:normal}
+#stage-curtain .sc-rail{height:3px;background:rgba(255,255,255,.1);border-radius:9px;overflow:hidden}
+#stage-curtain .sc-rail i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--lamp-deep),var(--lamp));box-shadow:0 0 16px rgba(var(--lamp-glow),.8)}
+#stage-curtain .sc-note{display:flex;justify-content:space-between;font-family:var(--pixel) !important;font-size:10px;color:var(--dim);letter-spacing:.06em}
+
+/* ---------- 놀이터 (stage.js) ---------- */
+.stage-play{margin:44px 0 6px;border:1px solid var(--hair-2);border-radius:26px;background:linear-gradient(180deg,var(--booth),var(--deck));overflow:hidden;position:relative}
+.stage-play-head{display:flex;align-items:end;justify-content:space-between;gap:16px;padding:26px 28px 6px;flex-wrap:wrap}
+.stage-play-head p{margin:0 0 6px;color:var(--lamp);font-family:var(--pixel) !important;font-size:11px;letter-spacing:.08em}
+.stage-play-head h2{margin:0;font-size:clamp(26px,3.4vw,46px);letter-spacing:-.05em;line-height:1.1;color:var(--chalk);font-weight:850}
+.stage-play-head h2 em{font-family:var(--display) !important;font-style:italic;font-weight:400;color:var(--lamp);letter-spacing:-.01em}
+.stage-play-head span{color:var(--mist);font-size:13px}
+.stage-play-actions{display:flex;gap:8px;align-items:center}
+.stage-play-actions button{border:1px solid var(--hair-2);background:var(--booth-2);color:var(--chalk);border-radius:999px;padding:10px 16px;font-weight:700;font-size:13px;min-height:44px;transition:border-color .18s,transform .18s}
+.stage-play-actions button:hover{border-color:var(--lamp);color:var(--lamp);transform:translateY(-1px)}
+.stage-play-arena{position:relative;height:clamp(300px,42vw,430px);touch-action:pan-y;overflow:hidden;cursor:grab}
+.stage-play-arena:after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--hair-2)}
+.stage-chip{position:absolute;left:0;top:0;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;padding:12px 18px;border-radius:999px;font-weight:750;font-size:15px;letter-spacing:-.01em;user-select:none;-webkit-user-select:none;touch-action:none;cursor:grab;will-change:transform;border:1px solid var(--hair-2);background:var(--booth-3);color:var(--chalk);box-shadow:0 10px 30px -14px #000}
+.stage-chip:active{cursor:grabbing}
+.stage-chip[data-tone="lamp"]{background:var(--lamp);color:var(--lamp-ink);border-color:var(--lamp-hot)}
+.stage-chip[data-tone="chalk"]{background:var(--chalk);color:#0b0d12;border-color:#fff}
+.stage-chip[data-tone="ticket"]{background:var(--ticket);color:#1b0700;border-color:#ffa58e}
+.stage-chip[data-tone="neon"]{background:transparent;color:var(--neon);border-color:rgba(127,208,255,.6)}
+.stage-chip[data-tone="serif"]{font-family:var(--display) !important;font-style:italic;font-weight:400;font-size:22px;padding:8px 20px}
+.stage-chip.is-ko{outline:2px solid var(--lamp);outline-offset:2px}
+.stage-play.is-static .stage-play-arena{height:auto;display:flex;flex-wrap:wrap;gap:10px;padding:18px 26px 26px;cursor:default}
+.stage-play.is-static .stage-chip{position:static;transform:none !important}
+
+/* 카드 위에 떨어지는 조명 테두리 (stage.js가 --gx/--gy를 넣는다) */
+.stage-glow{position:relative}
+.stage-glow:after{content:'';position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;padding:1px;background:radial-gradient(240px circle at var(--gx,50%) var(--gy,-40%),rgba(var(--lamp-glow),.75),transparent 62%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .25s}
+.stage-glow:hover:after{opacity:1}
+
+/* ==========================================================================
+   화면별 다듬기
+   ========================================================================== */
+body.dashboard-shell #app:focus,body.dashboard-shell #app:focus-visible{outline:none !important}
+body.dashboard-shell #app :is(.eyebrow,.fc-eyebrow,.qm-eyebrow,.section-number,.hero-kicker){color:var(--lamp) !important;letter-spacing:.18em}
+body.dashboard-shell #app h2{letter-spacing:-.045em}
+
+/* 탭·선택 단추: 고른 것은 흰 분필색 */
+body.dashboard-shell :is(.course-switch,.ds-mvp-tabs,.fc-modes){background:var(--deck) !important;border:1px solid var(--hair) !important;border-radius:999px !important;padding:4px !important;box-shadow:none !important}
+body.dashboard-shell :is(.course-switch,.ds-mvp-tabs)>button,body.dashboard-shell .fc-mode{background:transparent !important;border-color:transparent !important;color:var(--mist) !important;border-radius:999px !important;box-shadow:none !important}
+body.dashboard-shell :is(.course-switch,.ds-mvp-tabs)>button:hover,body.dashboard-shell .fc-mode:hover{color:var(--chalk) !important}
+body.dashboard-shell :is(.course-switch,.ds-mvp-tabs)>button.active,body.dashboard-shell .flashcard-study .fc-mode.is-active{background:var(--chalk) !important;color:#0b0d12 !important;border-color:transparent !important}
+body.dashboard-shell .flashcard-study .fc-mode.is-active *{color:inherit !important}
+body.dashboard-shell:not([data-view="arcade"]) #app :is(.filter.active,.option.active,.option[aria-pressed=true]){background:rgba(var(--lamp-glow),.14) !important;border-color:var(--lamp) !important;color:var(--lamp) !important}
+
+/* ---------- 영어 게임 ---------- */
+body.dashboard-shell[data-view="arcade"] #app,body.dashboard-shell .arcade-experience,body.dashboard-shell :is(.arcade-hero,.spotlight-room,.scroll-chapters,.arcade-stage,.arcade-gallery){background:transparent !important}
+body.dashboard-shell :is(.spotlight-room,.scroll-chapters,.arcade-stage,.arcade-gallery){border-top:1px solid var(--hair)}
+body.dashboard-shell .arcade-display{font-weight:850 !important;letter-spacing:-.06em !important;color:var(--chalk) !important}
+body.dashboard-shell .arcade-button.outline{background:transparent !important;border:1px solid var(--hair-2) !important;color:var(--chalk) !important;box-shadow:none !important}
+body.dashboard-shell .arcade-button.outline:hover{background:rgba(255,255,255,.06) !important;border-color:var(--chalk) !important;color:var(--chalk) !important;box-shadow:none !important}
+body.dashboard-shell .arcade-marquee{background:var(--lamp) !important;border-color:var(--lamp-hot) !important;box-shadow:0 0 90px -14px rgba(var(--lamp-glow),.6) !important}
+body.dashboard-shell .arcade-marquee *{color:var(--lamp-ink) !important}
+body.dashboard-shell .hero-sticker{background:var(--lamp) !important;border-color:var(--lamp-hot) !important;box-shadow:0 20px 50px -18px rgba(var(--lamp-glow),.6) !important}
+body.dashboard-shell .hero-sticker *{color:var(--lamp-ink) !important}
+body.dashboard-shell .floating-phrase{background:rgba(16,20,29,.9) !important;border:1px solid var(--hair-2) !important;backdrop-filter:blur(8px)}
+body.dashboard-shell .spotlight-phrase .phrase-english{font-family:var(--display) !important;font-size:clamp(27px,3.1vw,46px) !important;line-height:1.1 !important;letter-spacing:-.012em !important;font-weight:400 !important}
+body.dashboard-shell .spotlight-phrase .phrase-index{color:var(--lamp) !important}
+body.dashboard-shell .spotlight-phrase .phrase-listen{border-radius:999px !important;border-color:var(--hair-2) !important}
+body.dashboard-shell .spotlight-phrase:hover .phrase-listen{border-color:var(--lamp) !important;color:var(--lamp) !important}
+body.dashboard-shell .chapter-card{background:var(--booth) !important;border:1px solid var(--hair) !important;border-radius:22px !important;box-shadow:none !important;transition:border-color .2s,transform .25s cubic-bezier(.2,.8,.2,1)}
+body.dashboard-shell .chapter-card:hover{border-color:rgba(var(--lamp-glow),.6) !important;transform:translateY(-4px)}
+body.dashboard-shell .chapter-card .chapter-no{color:var(--dim) !important}
+body.dashboard-shell .chapter-card .chapter-symbol{color:var(--lamp) !important}
+body.dashboard-shell .chapter-card h3{color:var(--chalk) !important}
+body.dashboard-shell .chapter-card p{color:var(--mist) !important}
+body.dashboard-shell .chapter-card .chapter-quote{font-family:var(--display) !important;font-style:italic;font-size:20px !important;line-height:1.3 !important;color:var(--chalk) !important;border-color:var(--hair) !important}
+body.dashboard-shell .chapter-card .chapter-enter{border-color:var(--hair) !important;color:var(--chalk) !important}
+body.dashboard-shell .chapter-card:hover .chapter-enter{color:var(--lamp) !important}
+body.dashboard-shell .chapter-card .chapter-enter *{color:inherit !important}
+body.dashboard-shell :is(.showcase-card,.showcase-form,.showcase-empty,.stage-preview){background:var(--booth) !important;border:1px solid var(--hair) !important;box-shadow:none !important}
+
+/* ---------- 단어·문장 카드 ---------- */
+body.dashboard-shell .flashcard-study{background:var(--booth) !important;border:1px solid var(--hair) !important;box-shadow:none !important}
+body.dashboard-shell .flashcard-study .fc-title{color:var(--chalk) !important}
+body.dashboard-shell .flashcard-study :is(.fc-total-badge,.fc-body,.fc-wordlist){background:var(--deck) !important;border:1px solid var(--hair) !important;box-shadow:none !important}
+body.dashboard-shell .flashcard-study .fc-collection{background:var(--deck) !important;border:1px solid var(--hair) !important;color:var(--mist) !important;box-shadow:none !important}
+body.dashboard-shell .flashcard-study .fc-collection.is-active{background:var(--booth-2) !important;border-color:var(--lamp) !important;color:var(--chalk) !important;box-shadow:0 0 0 3px rgba(var(--lamp-glow),.12) !important}
+body.dashboard-shell .flashcard-study .fc-collection b{background:rgba(255,255,255,.08) !important;color:var(--mist) !important}
+body.dashboard-shell .flashcard-study .fc-collection.is-active b{background:var(--lamp) !important;color:var(--lamp-ink) !important}
+body.dashboard-shell .flashcard-study :is(.fc-maincard,.fc-maincard.is-flipped){background:radial-gradient(110% 85% at 50% -8%,rgba(var(--lamp-glow),.2),transparent 62%),var(--booth-2) !important;border:1px solid var(--hair-2) !important;box-shadow:0 40px 110px -50px rgba(var(--lamp-glow),.5) !important}
+body.dashboard-shell .flashcard-study .fc-maincard.is-flipped{border-color:rgba(var(--lamp-glow),.55) !important}
+body.dashboard-shell .flashcard-study .fc-side-label{color:var(--lamp) !important;letter-spacing:.2em}
+body.dashboard-shell .flashcard-study .fc-maincard .fc-card-word{font-family:var(--display) !important;font-weight:400 !important;letter-spacing:-.015em !important;color:var(--chalk) !important;font-size:clamp(44px,8.6vw,96px) !important;line-height:1.05 !important}
+body.dashboard-shell .flashcard-study[data-collection=speaking] .fc-maincard .fc-card-word{font-size:clamp(26px,3.7vw,46px) !important;line-height:1.2 !important}
+body.dashboard-shell .flashcard-study .fc-maincard.is-flipped .fc-card-word{font-family:inherit !important;font-size:clamp(23px,3.3vw,40px) !important;font-weight:800 !important;letter-spacing:-.04em !important;line-height:1.35 !important}
+body.dashboard-shell .flashcard-study .fc-flip-hint{color:var(--mist) !important}
+body.dashboard-shell .flashcard-study :is(.fc-secondary,.fc-star-filter,.fc-icon-button){background:var(--booth-2) !important;border:1px solid var(--hair-2) !important;color:var(--chalk) !important;box-shadow:none !important}
+body.dashboard-shell .flashcard-study :is(.fc-secondary,.fc-star-filter,.fc-icon-button):hover:not(:disabled){border-color:var(--chalk) !important}
+body.dashboard-shell .flashcard-study :is(.fc-icon-button.is-starred,.fc-list-star.is-starred,.fc-star-filter[aria-pressed=true]){color:var(--lamp) !important;border-color:var(--lamp) !important;background:rgba(var(--lamp-glow),.12) !important}
+body.dashboard-shell .flashcard-study .fc-again{background:transparent !important;border:1px solid rgba(255,122,89,.55) !important;color:var(--ticket) !important;box-shadow:none !important}
+body.dashboard-shell .flashcard-study .fc-known{background:transparent !important;border:1px solid rgba(123,224,176,.55) !important;color:var(--ok) !important;box-shadow:none !important}
+body.dashboard-shell .flashcard-study .fc-again:hover:not(:disabled){background:rgba(255,122,89,.12) !important}
+body.dashboard-shell .flashcard-study .fc-known:hover:not(:disabled){background:rgba(123,224,176,.12) !important}
+body.dashboard-shell .flashcard-study progress{accent-color:var(--lamp)}
+body.dashboard-shell .flashcard-study progress::-webkit-progress-value{background:var(--lamp) !important}
+body.dashboard-shell .flashcard-study progress::-webkit-progress-bar{background:rgba(255,255,255,.08) !important}
+
+/* ---------- 20분 복습 지도 ---------- */
+body.dashboard-shell .qm-heading h2{color:var(--chalk) !important;font-size:clamp(26px,2.6vw,38px)}
+body.dashboard-shell .qm-week-tag{background:transparent !important;border:1px solid var(--hair-2) !important;color:var(--mist) !important;border-radius:999px !important;box-shadow:none !important}
+body.dashboard-shell :is(.qm-hud,.qm-inspector,.qm-legend){background:var(--booth) !important;border-color:var(--hair) !important}
+body.dashboard-shell .qm-stage{background:#070b14 !important;box-shadow:0 0 0 1px var(--hair) !important}
+body.dashboard-shell .qm-world{background:#070b14 !important;position:relative}
+body.dashboard-shell .qm-progress-track{background:rgba(255,255,255,.08) !important}
+body.dashboard-shell .qm-progress-track>*{background:linear-gradient(90deg,var(--lamp-deep),var(--lamp)) !important}
+body.dashboard-shell .campaign-stop.current .campaign-number{background:var(--lamp) !important;border-color:var(--lamp-hot) !important;color:var(--lamp-ink) !important;box-shadow:0 0 30px -4px rgba(var(--lamp-glow),.7)}
+body.dashboard-shell .campaign-start{background:var(--booth-2) !important;border:1px solid var(--hair-2) !important;color:var(--chalk) !important}
+body.dashboard-shell .campaign-start:hover{border-color:var(--lamp) !important;color:var(--lamp) !important}
+
+/* ---------- 학습 기록 영역 ---------- */
+body.dashboard-shell .ds-week-banner{background:radial-gradient(80% 130% at 88% 0%,rgba(var(--lamp-glow),.18),transparent 62%),var(--booth-2) !important;border:1px solid var(--hair-2) !important;box-shadow:none !important}
+body.dashboard-shell .ds-button:not(.navy){background:var(--booth-2) !important;border:1px solid var(--hair-2) !important;color:var(--chalk) !important;box-shadow:none !important}
+body.dashboard-shell .ds-button:not(.navy):hover{border-color:var(--chalk) !important}
+body.dashboard-shell :is(.ds-progress-track,.progress-track){background:rgba(255,255,255,.08) !important}
+body.dashboard-shell :is(.ds-progress-track>span,.progress-track>span,.progress-track>div){background:linear-gradient(90deg,var(--lamp-deep),var(--lamp)) !important}
+
+/* ---------- 도움말·안내창 ---------- */
+.aj-help-backdrop{background:rgba(2,3,6,.74) !important;backdrop-filter:blur(10px)}
+.aj-help-dialog{background:var(--deck) !important;border:1px solid var(--hair-2) !important;box-shadow:0 40px 120px -20px #000 !important}
+.aj-help-header{background:rgba(16,20,29,.92) !important;border-color:var(--hair) !important}
+.aj-help-close{border-radius:999px !important;background:transparent !important;border:1px solid var(--hair-2) !important;color:var(--mist) !important}
+.aj-help-tour-cover{background:radial-gradient(120% 80% at 30% 0%,rgba(var(--lamp-glow),.2),transparent 62%),var(--booth-2) !important;border-color:var(--hair) !important}
+.aj-help-tour-icon,.aj-help-center-symbol{background:var(--lamp) !important;color:var(--lamp-ink) !important;border-color:var(--lamp-hot) !important;box-shadow:0 20px 50px -18px rgba(var(--lamp-glow),.7) !important}
+.aj-help-tour-icon *,.aj-help-center-symbol *{color:var(--lamp-ink) !important;stroke:var(--lamp-ink)}
+.aj-help-eyebrow{color:var(--lamp) !important}
+.aj-help-progress{background:rgba(255,255,255,.08) !important}
+.aj-help-progress>*{background:var(--lamp) !important}
+.aj-help-steps button[aria-current],.aj-help-steps button.is-active,.aj-help-steps .is-active{background:var(--chalk) !important;color:#0b0d12 !important;border-color:var(--chalk) !important}
+.aj-help-role-tabs{background:var(--booth) !important;border:1px solid var(--hair) !important;border-radius:999px !important;padding:4px !important}
+.aj-help-role-tabs button{border-radius:999px !important;background:transparent !important;color:var(--mist) !important;border-color:transparent !important}
+.aj-help-role-tabs button[aria-selected=true],.aj-help-role-tabs button.is-active,.aj-help-role-tabs button[aria-pressed=true]{background:var(--chalk) !important;color:#0b0d12 !important}
+.aj-help-button-outline,.aj-help-button-soft,.aj-help-tour-action{background:var(--booth-2) !important;border:1px solid var(--hair-2) !important;color:var(--chalk) !important;box-shadow:none !important}
+.aj-help-faq{border-color:var(--hair) !important}
+
+/* ---------- 복습 창 안의 영어 문장 ---------- */
+body.dashboard-shell .dialog.session :is(.btn,.quiz-option){border-radius:12px !important}
+body.dashboard-shell .dialog .phrase-card{border-radius:18px !important;background:radial-gradient(110% 80% at 50% -10%,rgba(var(--lamp-glow),.13),transparent 60%),var(--booth) !important;border:1px solid var(--hair) !important}
+body.dashboard-shell .dialog .phrase-card :is(.phrase-en,h3){font-family:var(--display) !important;font-weight:400 !important;font-size:clamp(28px,3.4vw,44px) !important;line-height:1.15 !important;letter-spacing:-.012em !important;color:var(--chalk) !important}
+body.dashboard-shell .dialog .phrase-card .phrase-ko{color:var(--mist) !important}
+body.dashboard-shell .dialog .step{background:transparent !important;border:1px solid var(--hair) !important;color:var(--dim) !important;border-radius:999px !important}
+body.dashboard-shell .dialog .step.active{background:var(--chalk) !important;color:#0b0d12 !important;border-color:var(--chalk) !important}
+body.dashboard-shell .dialog .step.active *{color:inherit !important;background:transparent !important}
+body.dashboard-shell .dialog .step.done{color:var(--lamp) !important;border-color:rgba(var(--lamp-glow),.4) !important}
+body.dashboard-shell .dialog .timer{background:var(--booth) !important;border:1px solid var(--hair) !important;border-radius:999px !important}
+body.dashboard-shell .dialog :is(.progress-track,.aj-session-progress){background:rgba(255,255,255,.08) !important}
+body.dashboard-shell .dialog :is(.progress-track>span,.progress-track>div,.aj-session-progress>i){background:linear-gradient(90deg,var(--lamp-deep),var(--lamp)) !important}
+body.dashboard-shell .dialog .quiz-option{background:var(--booth) !important;border:1px solid var(--hair-2) !important;color:var(--chalk) !important}
+body.dashboard-shell .dialog .quiz-option:hover:not(:disabled){border-color:var(--lamp) !important;background:var(--booth-2) !important}
+body.dashboard-shell .dialog :is(.quiz-option.correct,.quiz-option.correct:disabled){background:rgba(123,224,176,.14) !important;border-color:var(--ok) !important;color:var(--ok) !important}
+body.dashboard-shell .dialog :is(.quiz-option.wrong,.quiz-option.wrong:disabled){background:rgba(255,122,89,.13) !important;border-color:var(--ticket) !important;color:var(--ticket) !important}
+
+/* ---------- 관리자 화면 ---------- */
+main:focus,main:focus-visible{outline:none !important}
+body.aj-admin .login-screen{background:transparent !important}
+body.aj-admin .teacher-sidebar{background:rgba(8,11,17,.82) !important;border-right:1px solid var(--hair) !important}
+body.aj-admin .teacher-header{background:rgba(5,7,12,.78) !important;border-bottom:1px solid var(--hair) !important;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+body.aj-admin .teacher-footer{border-color:var(--hair) !important}
+body.aj-admin :is(.wordmark,.teacher-footer strong){color:var(--chalk) !important}
+body.aj-admin :is(.wordmark,.teacher-footer strong) span{color:var(--lamp) !important}
+body.aj-admin .nav-button{color:var(--mist) !important;background:transparent !important;box-shadow:none !important}
+body.aj-admin .nav-button:hover{color:var(--chalk) !important;background:rgba(255,255,255,.05) !important}
+body.aj-admin .nav-button.active{background:var(--booth-2) !important;color:var(--chalk) !important;box-shadow:inset 0 0 0 1px var(--hair-2),inset 3px 0 0 var(--lamp) !important}
+body.aj-admin .aj-help-entry{background:transparent !important;border:1px solid var(--hair-2) !important;color:var(--mist) !important;border-radius:999px !important;padding:6px 12px}
+body.aj-admin :is(.eyebrow,.sidebar-bottom>span){color:var(--lamp) !important}
+body.aj-admin .book-mark i{background:var(--lamp) !important}
+body.aj-admin :is(.text-button,.simple-choice a,.simple-choice strong+span){text-decoration-color:var(--hair-2) !important}
+
+@media (max-width:760px){
+  /* 수업 카드: 옆으로 넘겨 보는 줄 */
+  body.dashboard-shell .chapter-track{display:flex !important;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px !important;padding:4px 18px 18px !important;margin-inline:-18px !important;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  body.dashboard-shell .chapter-track::-webkit-scrollbar{display:none}
+  body.dashboard-shell .chapter-track>.chapter-card{flex:0 0 min(78vw,320px) !important;scroll-snap-align:center;margin:0 !important;transform:none !important}
+}
+
+@media (max-width:760px){
+  body.dashboard-shell .home-entry h1{font-size:clamp(38px,12.5vw,58px)}
+  body.dashboard-shell .he-start{min-height:62px;font-size:17px !important}
+  body.dashboard-shell .he-step{padding:14px 14px 8px !important}
+  body.dashboard-shell .rq-task{border-left:0 !important;border-top:1px solid var(--hair) !important}
+  .stage-play-head{padding:20px 18px 4px}
+  .stage-chip{font-size:14px;padding:10px 15px}
+  #stage-light{width:560px;height:560px;margin:-280px 0 0 -280px}
+}
+@media (prefers-reduced-motion:reduce){
+  #stage-curtain,#stage-curtain:before{animation:none;transition:none}
+  html.stage-ready .he-step.stage-flip{animation:none}
+  #stage-light{display:none}
+}

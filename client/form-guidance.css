@@ -1,0 +1,9 @@
+.fg-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;font:500 11px/1.6 Pretendard,sans-serif;color:#93aaa6;letter-spacing:0;cursor:default}
+.fg-requirement{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.fg-meta[data-required="true"] .fg-requirement{color:#b5c8c3;font-weight:700}
+.fg-meta[data-required="true"] .fg-requirement::before{content:"*";font-weight:800}
+.fg-counter{margin-left:auto;white-space:nowrap;font-variant-numeric:tabular-nums}
+.fg-counter[hidden]{display:none}
+.fg-meta.fg-over-limit .fg-counter{color:#ffa095;font-weight:750}
+.fg-material-note{margin:4px 0 14px;color:#8cada2;font:500 12px/1.7 Pretendard,sans-serif}
+@media(max-width:600px){.fg-meta{font-size:10px}.fg-material-note{font-size:11px}}

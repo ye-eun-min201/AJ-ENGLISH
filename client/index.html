@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#05070c">
+  <meta name="description" content="AJ ENGLISH · 매주 일요일 오후 4–5시 비즈니스 영어 수업, 매일 20분 복습, 레일 퀘스트, 단어·문장 학습, 수업 PDF, 월간 MVP">
+  <title>AJ ENGLISH · 오늘의 학습</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="/vendor/fonts/instrument-serif-latin-400-italic.woff2" crossorigin>
+  <link rel="stylesheet" href="/style.css?v=aj16">
+  <link rel="stylesheet" href="/arcade.css?v=aj16">
+  <link rel="stylesheet" href="/practice.css?v=aj16">
+  <link rel="stylesheet" href="/flashcards.css?v=aj16">
+  <link rel="stylesheet" href="/slides.css?v=aj16">
+  <link rel="stylesheet" href="/characters.css?v=aj16">
+  <link rel="stylesheet" href="/dashboard.css?v=aj16">
+  <link rel="stylesheet" href="/pastel.css?v=aj16">
+  <link rel="stylesheet" href="/help.css?v=aj16">
+  <link rel="stylesheet" href="/quest-map.css?v=aj16">
+  <link rel="stylesheet" href="/fruit-game.css?v=aj16">
+  <link rel="stylesheet" href="/rail-game.css?v=aj16">
+  <link rel="stylesheet" href="/rewards.css?v=aj16">
+  <link rel="stylesheet" href="/theme-park.css?v=aj16">
+  <link rel="stylesheet" href="/storage-status.css?v=aj16">
+  <link rel="stylesheet" href="/typography.css?v=aj16">
+  <link rel="stylesheet" href="/home-entry.css?v=aj16">
+  <link rel="stylesheet" href="/form-guidance.css?v=aj16">
+  <link rel="stylesheet" href="/site-info.css?v=aj16">
+  <link rel="stylesheet" href="/responsive.css?v=aj16">
+  <link rel="stylesheet" href="/stage.css?v=aj16">
+</head>
+<body class="arcade dashboard-shell" data-view="home">
+  <a class="skip-link" href="#app">학습 내용으로 이동</a>
+  <aside class="dashboard-sidebar" aria-label="영어 교실 메뉴">
+    <a class="dashboard-brand" href="#home" data-view="home" aria-label="AJ ENGLISH 오늘의 학습"><span class="dashboard-brand-symbol" aria-hidden="true"><svg viewBox="0 0 44 44"><rect x="2" y="2" width="40" height="40" rx="13" fill="#f6b29a"/><text x="22" y="29" text-anchor="middle" font-family="Pretendard,sans-serif" font-size="19" font-weight="800" fill="#253650">AJ</text></svg></span><span><strong>AJ<span> ENGLISH</span></strong><small>비즈니스 영어 학습</small></span></a>
+    <span class="dashboard-nav-label">학습 메뉴</span>
+    <nav class="dashboard-nav">
+      <a href="#home" class="nav-item active" data-view="home" aria-label="오늘의 학습"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3Zm11 0h7v10h-7ZM3 14h7v7H3Zm11 3h7v4h-7Z"/></svg><span>오늘의 학습</span></a>
+      <a href="#quests" class="nav-item" data-view="quests" aria-label="20분 복습 지도"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v16H4Zm4-3v6m8-6v6M4 10h16m-12 4h3m3 0h3m-9 4h3"/></svg><span>20분 복습 지도</span></a>
+      <a href="#library" class="nav-item" data-view="library" aria-label="단어·문장 학습"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6C8 3 5 3 2 4v15c4-1 7 0 10 2 3-2 6-3 10-2V4c-3-1-6-1-10 2Zm0 0v15"/></svg><span>단어·문장 학습</span></a>
+      <a href="#slides" class="nav-item" data-view="slides" aria-label="수업 자료"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v13H3Zm9 13v6m-5-1 5-5 5 5M7 7h5m-5 4h10"/></svg><span>수업 자료</span><small>CLASS</small></a>
+      <a href="#rankings" class="nav-item" data-view="rankings" aria-label="월간 MVP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v7a4 4 0 0 1-8 0ZM8 5H4v3a4 4 0 0 0 4 4m8-7h4v3a4 4 0 0 1-4 4m-4 2v6m-4 1h8"/></svg><span>월간 MVP</span></a>
+      <a href="#profile" class="nav-item" data-view="profile" aria-label="캐릭터"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10V5l5 2h4l5-2v5a8 8 0 1 1-14 0Zm4 3v1m6-1v1m-5 4h4"/></svg><span>캐릭터</span></a>
+      <a href="#arcade" class="nav-item" data-view="arcade" aria-label="영어 게임"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10c4 0 6 12 3 13-2 1-5-4-5-4H9s-3 5-5 4C1 19 3 7 7 7Zm1 3v5m-3-2h6m5-2v1m3 2v1"/></svg><span>영어 게임</span><span class="dashboard-play-dot"></span></a>
+    </nav>
+    <div class="dashboard-sidebar-bottom">
+      <button class="dashboard-class-card" id="class-open"><span class="hud-class-name">반 참여</span><small class="hud-class-code">반 코드 입력 +</small></button>
+      <div class="dashboard-sidebar-note"><span>✦</span><p>일요일 16:00–17:00 · 매일 20분 복습</p></div>
+    </div>
+  </aside>
+  <div class="main-shell dashboard-main-shell">
+    <header class="dashboard-header"><div><span class="dashboard-header-kicker">AJ ENGLISH</span><strong class="dashboard-header-label">영어 학습</strong></div><div class="dashboard-header-actions"><div class="aj-game-hud" aria-label="학습 기록"><div class="aj-hud-stat"><span>이번 달</span><strong id="aj-hud-xp">0 XP</strong></div><div class="aj-hud-stat"><span>퀘스트 지도</span><strong id="aj-hud-progress">0%</strong></div><div class="aj-hud-stat"><span>연속 학습</span><strong id="aj-hud-streak">0일</strong></div></div><time id="today-date"></time><button type="button" class="aj-help-entry" data-help aria-label="학생 도움말 열기">? 도움말</button><button class="icon-button" id="sound-settings" aria-label="영어 음성 듣기 설정"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m11 5-6 4H2v6h3l6 4Zm4 3a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></svg></button><button class="nav-user" id="nav-user" data-view="profile" aria-label="캐릭터 보기"><span class="mini-avatar" aria-hidden="true">☺</span><span><strong>캐릭터</strong><small>학습 기록</small></span><span aria-hidden="true">⌄</span></button></div><button type="button" class="aj-save-status" id="save-status" data-mode="checking" data-storage-info>저장 연결 확인 중</button><a class="header-admin-link" href="/admin" target="AJEnglishAdmin" rel="noopener">관리자 페이지 <span aria-hidden="true">↗</span></a></header>
+    <main id="app" tabindex="-1"><div class="loading-state"><span class="loading-orbit" aria-hidden="true"></span><p>수업·학습 기록 조회 중</p></div></main>
+    <footer class="dashboard-footer"><span>AJ<span> ENGLISH</span></span><p>일요일 16:00–17:00 · 매일 20분 복습</p><nav class="footer-links" aria-label="이용 안내"><button type="button" data-help>도움말</button><button type="button" data-privacy-info>저장·개인정보 안내</button><button type="button" data-contact-info>수업·이용 문의</button><button type="button" data-auth-logout hidden>로그아웃</button></nav></footer>
+  </div>
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <noscript><p class="dashboard-noscript">학습 기능 사용을 위한 JavaScript 활성화 필요</p></noscript>
+  <script src="/stage.js?v=aj16"></script>
+  <script src="/data.js?v=aj16"></script>
+  <script src="/characters.js?v=aj16"></script>
+  <script src="/quiz-options.js?v=aj16"></script>
+  <script src="/rewards.js?v=aj16"></script>
+  <script src="/quest-map.js?v=aj16"></script>
+  <script src="/rail-scene.js?v=aj16"></script>
+  <script src="/rail-game.js?v=aj16"></script>
+  <script src="/pronunciation.js?v=aj16"></script>
+  <script src="/effects.js?v=aj16"></script>
+  <script src="/experience.js?v=aj16"></script>
+  <script src="/practice.js?v=aj16"></script>
+  <script src="/flashcards.js?v=aj16"></script>
+  <script src="/slides.js?v=aj16"></script>
+  <script src="/dashboard.js?v=aj16"></script>
+  <script src="/help.js?v=aj16"></script>
+  <script src="/home-entry.js?v=aj16"></script>
+  <script src="/form-guidance.js?v=aj16"></script>
+  <script src="/app.js?v=aj16"></script>
+  <script src="/auth.js?v=aj16"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "aj-english",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs && node --check client/app.js && node --check client/admin.js && node --check client/dashboard.js && node --check client/characters.js && node --check client/flashcards.js && node --check client/slides.js && node --check client/practice.js && node --check client/pronunciation.js && node --check client/help.js && node --check client/rail-game.js && node --check client/quiz-options.js && node --check client/pdf-validation.js && node --check client/home-entry.js && node --check client/form-guidance.js && node --check client/experience.js && node --check client/stage.js && node --check client/auth.js && node --check client/login.js && node --check worker/api.js && node --check worker/teaching.js && node --check worker/activity.js && node --check server/adapter.mjs && node --check server/auth.mjs && node --check server/db.mjs && node --check server/storage.mjs && node --check server/core.mjs && node --check api/index.js && node --check scripts/dev.mjs",
+    "dev": "node scripts/dev.mjs"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.18.0",
+    "@vercel/blob": "^2.9.0"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

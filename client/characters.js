@@ -1,0 +1,37 @@
+(function(){'use strict';
+ const names=['달토끼','치즈 고양이','아기 여우','포근 곰','판다','노랑 오리','몽실 강아지','초록 개구리','꼬마 펭귄','햄스터','우파루파','우주 로봇','나의 사람 캐릭터'];
+ const colors=['#f6d98b','#f6b49c','#f2b7a1','#9bcfee','#f4cb70','#f3b5ce','#b9ddeb','#f2d6a0'];
+ const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function render(value={},cls=''){
+  const a={species:0,skin:1,hair:0,eyes:0,outfit:0,accessory:0,color:0,...value};const type=Math.max(0,Math.min(12,Number(a.species)||0));
+  const palette=['#fff4e5','#f5d8b6','#e8bd8d','#d29c6f','#bb875e','#926447'];
+  let fur=type===0?'#fff5ee':type===1?'#f6c876':type===2?'#e9a06f':type===3?'#cda782':type===4?'#fff8e8':type===5?'#f6d876':type===6?'#f1d3b2':type===7?'#b5d898':type===8?'#758fa1':type===9?'#edc49d':type===10?'#f3bad3':type===11?'#c2dbe6':palette[a.skin%6];
+  if(type<12&&a.skin!==1)fur=palette[a.skin%6];
+  const outfit=colors[(a.outfit+a.color)%8],accent=colors[a.color%8],ink='#40534f';let ears='',details='',face='';
+  if(type===0)ears='<path d="M57 78C29 6 52-6 72 20l16 58M112 78l16-58c20-26 43-14 15 58" fill="'+fur+'" stroke="'+ink+'" stroke-width="3"/><path d="M61 62 57 25m82 37 4-37" stroke="#edc3ca" stroke-width="12" stroke-linecap="round"/>';
+  if(type===1||type===2)ears='<path d="M45 87 37 26 84 53m32 0 47-27-8 61" fill="'+fur+'" stroke="'+ink+'" stroke-width="3"/><path d="m48 57-3-17 23 18m64 0 23-18-3 17" fill="#eeb4b2"/>';
+  if([3,4,9].includes(type))ears='<circle cx="51" cy="64" r="27" fill="'+(type===4?'#53625f':fur)+'" stroke="'+ink+'" stroke-width="3"/><circle cx="149" cy="64" r="27" fill="'+(type===4?'#53625f':fur)+'" stroke="'+ink+'" stroke-width="3"/><circle cx="51" cy="64" r="14" fill="#e8b8aa"/><circle cx="149" cy="64" r="14" fill="#e8b8aa"/>';
+  if(type===6)ears='<path d="M55 58C10 49 13 116 40 126l23-28m74-40c45-9 42 58 15 68l-22-28" fill="#ba8e68" stroke="'+ink+'" stroke-width="3"/>';
+  if(type===7)ears='<circle cx="57" cy="65" r="24" fill="'+fur+'" stroke="'+ink+'" stroke-width="3"/><circle cx="143" cy="65" r="24" fill="'+fur+'" stroke="'+ink+'" stroke-width="3"/>';
+  if(type===10)ears='<path d="m49 70-26-18 4 22-20 6 27 16-23 19 36 4m104-49 26-18-4 22 20 6-27 16 23 19-36 4" fill="#df8eb4" stroke="'+ink+'" stroke-width="3" stroke-linejoin="round"/>';
+  if(type===11)ears='<path d="M100 43V24" stroke="'+ink+'" stroke-width="4"/><circle cx="100" cy="17" r="8" fill="#edb676" stroke="'+ink+'" stroke-width="3"/><rect x="28" y="83" width="20" height="31" rx="8" fill="#9cb8c7" stroke="'+ink+'" stroke-width="3"/><rect x="152" y="83" width="20" height="31" rx="8" fill="#9cb8c7" stroke="'+ink+'" stroke-width="3"/>';
+  if(type===5)ears='<path d="M83 50q4-22 16-13-2-14 10-11 6 10-2 23" fill="#f3d17b" stroke="'+ink+'" stroke-width="3"/>';
+  const body='<path d="M51 214v-25c0-35 20-49 49-49s49 14 49 49v25" fill="'+outfit+'" stroke="'+ink+'" stroke-width="3"/><path d="M61 175 41 196m98-21 20 21" stroke="'+ink+'" stroke-width="13" stroke-linecap="round"/><path d="M61 175 41 196m98-21 20 21" stroke="'+fur+'" stroke-width="9" stroke-linecap="round"/><path d="m83 180 11 11 23-24" stroke="'+ink+'" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+  const head=type===11?'<rect x="43" y="49" width="114" height="104" rx="32" fill="'+fur+'" stroke="'+ink+'" stroke-width="3"/>':'<path d="M40 102c0-35 22-57 60-57s60 22 60 57c0 34-23 56-60 56s-60-22-60-56Z" fill="'+fur+'" stroke="'+ink+'" stroke-width="3"/>';
+  if(type===1)details+='<path d="m75 54 7 18m18-22v20m25-16-7 18" stroke="#d8964c" stroke-width="6" stroke-linecap="round"/><path d="m44 106 18 5m-17 8 16-2m77-6 18-5m-17 11 16 2" stroke="'+ink+'" stroke-width="2" stroke-linecap="round"/>';
+  if(type===2)details+='<path d="M43 104c17 0 26 11 33 25l24 21 24-21c7-14 16-25 33-25-7 32-28 53-57 53s-50-21-57-53Z" fill="#fff0dc"/>';
+  if(type===4)details+='<ellipse cx="75" cy="99" rx="17" ry="22" transform="rotate(25 75 99)" fill="#53625f"/><ellipse cx="125" cy="99" rx="17" ry="22" transform="rotate(-25 125 99)" fill="#53625f"/>';
+  if(type===8)details+='<path d="M62 109c0-43 27-46 38-21 11-25 38-22 38 21s-76 44-76 0Z" fill="#fff5e4"/>';
+  if(type===9)details+='<ellipse cx="62" cy="124" rx="21" ry="15" fill="#fff4db"/><ellipse cx="138" cy="124" rx="21" ry="15" fill="#fff4db"/>';
+  if(type===12)details+='<path d="M42 89c-4-64 43-75 65-52 35-14 57 17 52 51l-29-15-23-19-29 28-36 7Z" fill="'+['#65534b','#a87550','#d4b27c','#b8795c','#626773','#d3ccc1'][a.hair%6]+'"/>';
+  if(type<12&&a.hair>0)details+='<path d="'+['','M90 60h20','m92 62 8 8 8-8','M86 62h2m24 0h2','M93 59v7m14-7v7','M88 62q12 10 24 0'][a.hair%6]+'" fill="none" stroke="#9e8375" stroke-width="4" opacity=".5" stroke-linecap="round"/>';
+  const eyeColor=type===4?'#fff4dc':ink;
+  const eyes=a.eyes===1?'<path d="m70 99 9-4m42 0 9 4"/>':a.eyes===2?'<path d="m70 100 5-5 5 5m40 0 5-5 5 5"/>':a.eyes===3?'<path d="M70 98h10m40 0h10"/>':'<path d="M75 94v8m50-8v8"/>';
+  face='<g fill="none" stroke="'+eyeColor+'" stroke-width="4" stroke-linecap="round">'+eyes+'</g><ellipse cx="58" cy="119" rx="10" ry="6" fill="#e897a5" opacity=".5"/><ellipse cx="142" cy="119" rx="10" ry="6" fill="#e897a5" opacity=".5"/>';
+  face+=type===5?'<ellipse cx="100" cy="120" rx="18" ry="10" fill="#eaa465" stroke="'+ink+'" stroke-width="2"/>':type===8?'<path d="m92 118 8 8 8-8Z" fill="#ecad64"/>':'<path d="M96 114h8l-4 5-4-5Z" fill="'+ink+'"/><path d="M88 124q6 8 12 0 6 8 12 0" fill="none" stroke="'+ink+'" stroke-width="2.5" stroke-linecap="round"/>';
+  if(type===11)face+='<circle cx="139" cy="137" r="4" fill="#9fcb83"/><path d="M61 136h16" stroke="#a2b7c2" stroke-width="4" stroke-linecap="round"/>';
+  const accessories=['','<g fill="none" stroke="#625f67" stroke-width="3"><circle cx="75" cy="99" r="17"/><circle cx="125" cy="99" r="17"/><path d="M92 97h16"/></g>','<path d="M36 94c-4-75 132-75 128 0m-128 0v27m128-27v27" fill="none" stroke="#4384b0" stroke-width="10" stroke-linecap="round"/>','<path d="m72 55-5-29 24 15 10-23 11 23 23-15-5 29Z" fill="#f6d57d" stroke="#b08c43" stroke-width="2"/>','<path d="m46 65-6-24 24 10m72 0 24-10-6 24" fill="#ecc3bd" stroke="#92655f" stroke-width="3"/>','<path d="M51 58q3-29 49-29t49 29Z" fill="#f6b49c"/><path d="M37 60h126" stroke="#a9654d" stroke-width="9" stroke-linecap="round"/>'][a.accessory%6];
+  return '<svg class="character cute-character '+esc(cls)+'" viewBox="0 0 200 220" role="img" aria-label="'+names[type]+' 캐릭터"><circle cx="100" cy="113" r="94" fill="'+accent+'" opacity=".35"/>'+body+ears+head+details+face+accessories+'<g fill="'+accent+'"><path d="m22 147 3 6 7 1-5 4 1 7-6-3-6 3 1-7-5-4 7-1Z"/><path d="m171 42 2 5 6 1-4 3 1 6-5-3-5 3 1-6-4-3 6-1Z"/></g></svg>';
+ }
+ window.CuteCharacters={names,render};
+})();
