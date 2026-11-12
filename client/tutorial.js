@@ -150,7 +150,7 @@
   function close(complete) {
     if (!root) return;
     clearTimeout(timer); document.removeEventListener('keydown', onKey, true);
-    root.remove(); root = null; document.documentElement.classList.remove('tut-open');
+    root.remove(); root = null;
     try { lastFocus?.focus?.({ preventScroll: true }); } catch (_) { /* 돌아갈 곳이 없으면 그대로 둠 */ }
     const cb = onClose; onClose = null; if (cb) cb(!!complete);
   }
@@ -172,7 +172,8 @@
 
   function onClick(event) {
     const button = event.target.closest('button'); if (!button || !root.contains(button)) return;
-    if (button.hasAttribute('data-tut-skip')) return close(false);
+    // 닫기는 이 클릭이 다 전달된 뒤에 — 화면에서 떼어 낸 단추를 다른 클릭 처리기가 따라 올라가다 멈추는 일을 막는다
+    if (button.hasAttribute('data-tut-skip')) { setTimeout(() => close(false), 0); return; }
     if (button.hasAttribute('data-tut-back')) return goTo(i - 1);
     if (button.hasAttribute('data-tut-next')) return i === STAGES.length - 1 ? finish(button) : goTo(i + 1);
     const act = button.getAttribute('data-tut-act');
@@ -190,7 +191,7 @@
     if (root) return true;
     onClose = options && typeof options.onClose === 'function' ? options.onClose : null;
     i = 0; cleared = [false, false, false]; finished = false; lastFocus = document.activeElement;
-    root = build(); document.body.appendChild(root); document.documentElement.classList.add('tut-open');
+    root = build(); document.body.appendChild(root);
     STAGES.forEach(s => { root.querySelector('[data-tut-scene="' + s.key + '"]').innerHTML = scenes[s.key](); });
     root.addEventListener('click', onClick);
     const view = root.querySelector('.tut-view');

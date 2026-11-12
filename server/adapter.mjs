@@ -11,8 +11,14 @@ const json = (value, status = 200) => new Response(JSON.stringify(value), { stat
 const problem = (status, error, message) => json({ error, message }, status);
 
 /** 브라우저가 실제로 접속한 주소(https://내도메인)를 구한다. 서버 로직의 '같은 사이트에서 온 요청인지' 검사에 쓰인다. */
+function visitedOrigin(request) {
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || new URL(request.url).host;
+  const proto = (request.headers.get('x-forwarded-proto') || new URL(request.url).protocol.replace(':', '')).split(',')[0].trim();
+  return proto + '://' + host.split(',')[0].trim();
+}
+/** 로그인(카카오·구글)에 등록해 둔 대표 주소. PUBLIC_ORIGIN 이 있으면 그것, 없으면 지금 접속한 주소. */
 function publicOrigin(request) {
-  if (process.env.PUBLIC_ORIGIN) return process.env.PUBLIC_ORIGIN.replace(/\/+$/, '');
+  if (process.env.PUBLIC_ORIGIN) { try { return new URL(process.env.PUBLIC_ORIGIN.trim()).origin; } catch { /* 잘못 적힌 값은 무시하고 접속 주소를 쓴다 */ } }
   const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || new URL(request.url).host;
   const proto = (request.headers.get('x-forwarded-proto') || new URL(request.url).protocol.replace(':', '')).split(',')[0].trim();
   return proto + '://' + host.split(',')[0].trim();
@@ -37,17 +43,40 @@ async function readBody(request, limit) {
 const partKey = (uploadId, index) => 'tmp-upload/' + uploadId + '/' + index;
 const validUpload = (uploadId, count) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(uploadId || '') && Number.isInteger(count) && count >= 1 && count <= MAX_PARTS;
 
+/** 설정 점검표: 비밀값은 보여 주지 않고 '되어 있는지'만 알려 준다. 주소창에 /api/health 를 열어 확인. */
+async function health(request, origin, loginOrigin) {
+  const report = { 접속주소: origin, 로그인주소: loginOrigin, 주소일치: origin === loginOrigin, DB연결: false, DB쓰기: false, PDF보관: 'DB', 관리자비밀번호: !!process.env.ADMIN_PASSWORD, 로그인: providerStatus() };
+  try {
+    const db = await getDatabase();
+    if (db) {
+      report.DB연결 = true;
+      await db.prepare('CREATE TABLE IF NOT EXISTS aj_health (id INTEGER PRIMARY KEY, checked_at INTEGER NOT NULL)').run();
+      await db.prepare('INSERT INTO aj_health (id, checked_at) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET checked_at = excluded.checked_at').bind(Date.now()).run();
+      report.DB쓰기 = !!(await db.prepare('SELECT checked_at FROM aj_health WHERE id = 1').first());
+      report.학생수 = Number(await db.prepare('SELECT COUNT(*) AS n FROM profiles').first('n'));
+      report.수업수 = Number(await db.prepare('SELECT COUNT(*) AS n FROM teacher_chapters').first('n'));
+      report.PDF수 = Number(await db.prepare('SELECT COUNT(*) AS n FROM teacher_pdfs').first('n'));
+      report.PDF보관 = process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID ? 'Vercel Blob' : 'DB';
+    } else report.안내 = 'TURSO_DATABASE_URL 이 없습니다.';
+  } catch (error) { report.오류 = String(error && error.message || error).slice(0, 300); }
+  return json(report);
+}
+
 export async function handle(request) {
   try {
-    const origin = publicOrigin(request);
+    const loginOrigin = publicOrigin(request);
+    // 저장 요청의 '같은 사이트에서 왔는지' 검사는 지금 실제로 접속한 주소 기준으로 한다.
+    // (PUBLIC_ORIGIN 과 다른 주소로 들어와도 — 예: Vercel이 준 다른 주소 — 저장이 막히지 않게)
+    const origin = visitedOrigin(request);
     const incoming = new URL(request.url);
     const pathname = originalPath(incoming);
     const url = new URL(pathname + incoming.search, origin);
+    if (pathname === '/api/health' && request.method === 'GET') return health(request, origin, loginOrigin);
 
     const db = await getDatabase();
     if (!db) return pathname.startsWith('/auth/') ? new Response(null, { status: 302, headers: { location: '/login?error=not_ready' } }) : problem(503, 'database_unavailable', '학습 저장소를 준비하고 있습니다. 잠시 후 다시 시도해 주세요.');
 
-    if (pathname.startsWith('/auth/')) return (await handleAuth(request, url, db, origin)) || new Response('Not found', { status: 404 });
+    if (pathname.startsWith('/auth/')) return (await handleAuth(request, new URL(pathname + incoming.search, loginOrigin), db, loginOrigin)) || new Response('Not found', { status: 404 });
     if (!pathname.startsWith('/api/')) return new Response('Not found', { status: 404 });
 
     const user = await currentUser(request, db);
@@ -57,7 +86,7 @@ export async function handle(request) {
     const headers = new Headers(request.headers);
     headers.delete(USER_HEADER); if (user) headers.set(USER_HEADER, user.id);
     headers.set('cf-connecting-ip', clientAddress(request));
-    const env = { DB: db, BUCKET: getBucket(), ADMIN_PASSWORD: process.env.ADMIN_PASSWORD };
+    const env = { DB: db, BUCKET: getBucket(db), ADMIN_PASSWORD: process.env.ADMIN_PASSWORD };
     const hasBody = !['GET', 'HEAD'].includes(request.method);
     let body = hasBody ? request.body : undefined;
 

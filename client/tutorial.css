@@ -1,6 +1,6 @@
 /* tutorial.css — 게임식 시작 안내 (tutorial.js). 색 변수는 stage.css 것을 그대로 쓴다. */
-html.tut-open{overflow:hidden}
-.tut-root{position:fixed;inset:0;z-index:6000;display:grid;place-items:center;background:var(--veil);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:tutFade .25s ease-out both;
+
+.tut-root{position:fixed;inset:0;overscroll-behavior:contain;z-index:6000;display:grid;place-items:center;background:var(--veil);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:tutFade .25s ease-out both;
   --t0:linear-gradient(165deg,#faf5ff 0%,#ede9fe 55%,#ddd6fe 100%);--t1:linear-gradient(165deg,#f3fbff 0%,#dff1ff 55%,#cfe6ff 100%);--t2:linear-gradient(165deg,#fff8fa 0%,#ffe9f0 55%,#ffd9e6 100%);
   --tut-paper:#fff;--tut-ink:#191f28;--tut-sub:#5b6470;--tut-face:#3b2a5e;--tut-dot:#fff;--tut-scene:rgba(255,255,255,.72);--tut-pilltext:#3730a3}
 html[data-theme="dark"] .tut-root{

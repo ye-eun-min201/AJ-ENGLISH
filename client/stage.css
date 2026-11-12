@@ -563,3 +563,11 @@ body.dashboard-shell .classroom-slides .slides-button:not(.primary):hover:not(:d
 body.dashboard-shell .classroom-slides .slides-button.active{background:var(--lamp) !important;color:var(--lamp-ink) !important;border-color:var(--lamp) !important;border-radius:999px !important}
 body.dashboard-shell .classroom-slides .slides-render-status{background:var(--booth-2) !important;color:var(--mist) !important;border-color:var(--hair) !important}
 body.dashboard-shell .classroom-slides .slide-thumb.active{background:var(--lamp-soft) !important;color:var(--lamp-text) !important;border-color:var(--lamp) !important}
+
+/* 로그인은 했지만 캐릭터가 없을 때의 안내 (app.js) */
+.profile-nudge{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 18px;padding:14px 16px 14px 20px;border-radius:22px;background:color-mix(in srgb,var(--ticket) 18%,var(--booth));border:1px solid var(--ticket);color:var(--chalk)}
+.profile-nudge span{display:grid;gap:3px;min-width:0;flex:1 1 260px}
+.profile-nudge strong{font-size:15px;font-weight:800;letter-spacing:-.02em}
+.profile-nudge small{font-size:12.5px;color:var(--mist);line-height:1.5}
+.profile-nudge a{flex:none;display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:999px;background:var(--lamp);color:var(--lamp-ink) !important;font-weight:800;font-size:14px;text-decoration:none;box-shadow:0 3px 0 var(--lamp-deep)}
+body[data-view="profile"] .profile-nudge a{display:none}

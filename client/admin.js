@@ -177,7 +177,7 @@
 
   function populateDelivery(form, record, kind) {
     const scheduled = record?.status === 'published' && record.publishAt && Date.parse(record.publishAt) > Date.now();
-    setValue(form, 'delivery', !record ? 'now' : record.status !== 'published' ? 'draft' : scheduled ? 'scheduled' : 'now');
+    setValue(form, 'delivery', !record ? 'now' : record.status !== 'published' ? 'draft' : scheduled && kind !== 'chapter' ? 'scheduled' : 'now');
     setValue(form, 'publishAt', scheduled ? isoToKSTInput(record.publishAt) : '');
     updateSchedule(form, kind);
   }
@@ -186,9 +186,9 @@
     const wrapper = document.querySelector('[data-schedule-field="' + kind + '"]');
     wrapper.hidden = mode !== 'scheduled'; input.required = mode === 'scheduled';
     window.AJFormGuidance?.refresh(input);
-    $('#' + kind + '-publish-hint').textContent = mode === 'draft' ? '초안 저장 · 학생 비공개' : mode === 'scheduled' ? '지정 시간에 공개 · 한국 시간(KST) 기준' : kind === 'expression' ? '학생 단어장에 공개 · 연결 수업의 공개 날짜 적용' : '수업 등록 후 선택 주차에 공개';
+    $('#' + kind + '-publish-hint').textContent = mode === 'draft' ? (kind === 'chapter' ? '비공개 · 학생에게 보이지 않아요. 나중에 공개로 바꿀 수 있어요.' : '초안 저장 · 학생 비공개') : mode === 'scheduled' ? '지정 시간에 공개 · 한국 시간(KST) 기준' : kind === 'expression' ? '학생 단어장에 공개 · 연결 수업의 공개 날짜 적용' : '공개 · 등록하면 학생 수업 자료에 바로 보여요. (수업 주를 다음 주로 고르면 그 주 월요일부터)';
     if (kind === 'expression') $('#save-expression').textContent = mode === 'draft' ? '초안 저장' : mode === 'scheduled' ? '예약 등록 ↗' : '학생 공개 ↗';
-    else { $('#save-chapter').textContent = mode === 'draft' ? '초안 저장' : '수업 등록 ↗'; if (wizardStep === 3) renderWizardSummary(); }
+    else { $('#save-chapter').textContent = mode === 'draft' ? '비공개로 저장' : '수업 등록 · 공개 ↗'; if (wizardStep === 3) renderWizardSummary(); }
   }
   function deliveryPayload(form) {
     const mode = value(form, 'delivery');

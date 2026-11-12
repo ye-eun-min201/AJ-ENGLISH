@@ -14,7 +14,7 @@ for (const name of ['.env.local', '.env']) {
 const port = Number(process.env.PORT || 3000), origin = 'http://localhost:' + port;
 await mkdir(at('.local'), { recursive: true });
 process.env.TURSO_DATABASE_URL ||= 'file:' + at('.local/dev.db');
-if (!process.env.BLOB_READ_WRITE_TOKEN) process.env.AJ_LOCAL_BLOB_DIR ||= at('.local/blob');
+if (!process.env.BLOB_READ_WRITE_TOKEN && process.env.AJ_FILES !== 'db') process.env.AJ_LOCAL_BLOB_DIR ||= at('.local/blob');
 process.env.ADMIN_PASSWORD ||= 'admin-dev-1234';
 process.env.PUBLIC_ORIGIN ||= origin;
 

@@ -143,11 +143,15 @@
     focus?.focus?.(); previousFocus = null;
     return true;
   }
+  const GAME_KEY = 'ajenglish-tutorial-game-v1';
+  function gameSeen() { try { return !!localStorage.getItem(GAME_KEY); } catch (_) { return memorySeen.has('game'); } }
+  function markGame() { memorySeen.set('game', 'seen'); try { localStorage.setItem(GAME_KEY, 'seen'); } catch (_) { /* 저장이 안 돼도 이번 방문에는 다시 뜨지 않음 */ } }
   function maybeWelcome() {
-    if (!config || opened || seen(config.role) || appDialogActive()) return false;
+    if (!config || opened || appDialogActive()) return false;
+    if (config.role === 'student' && window.AJTutorial) { if (gameSeen() || memorySeen.has('game')) return false; markGame(); return window.AJTutorial.open({ onClose: complete => markSeen('student', complete) }); }
+    if (seen(config.role)) return false;
     const workspace = document.querySelector('#teacher-workspace');
     if (config.role === 'admin' && workspace?.hidden) return false;
-    if (config.role === 'student' && window.AJTutorial) return window.AJTutorial.open({ onClose: complete => markSeen('student', complete) });
     return open('tour');
   }
   function performAction(item, role) {

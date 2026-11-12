@@ -31,12 +31,46 @@ function folderBucket(folder) {
   };
 }
 
+/** Vercel Blob 설정이 없을 때: PDF를 DB(Turso)에 조각내어 보관한다. 따로 준비할 것이 없다. */
+const PIECE = 700 * 1024;
+function databaseBucket(db) {
+  let prepared;
+  const ready = () => prepared ||= db.prepare('CREATE TABLE IF NOT EXISTS aj_files (key TEXT NOT NULL, seq INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY (key, seq))').run().catch(error => { prepared = undefined; throw error; });
+  const bytesOf = value => value instanceof Uint8Array ? value : value instanceof ArrayBuffer ? new Uint8Array(value) : ArrayBuffer.isView(value) ? new Uint8Array(value.buffer, value.byteOffset, value.byteLength) : new Uint8Array(0);
+  return {
+    async put(key, value) {
+      await ready();
+      const bytes = await toBuffer(value);
+      await db.prepare('DELETE FROM aj_files WHERE key = ?').bind(key).run();
+      for (let seq = 0, at = 0; at < bytes.length || seq === 0; seq++, at += PIECE) await db.prepare('INSERT INTO aj_files (key, seq, data) VALUES (?, ?, ?)').bind(key, seq, new Uint8Array(bytes.subarray(at, at + PIECE))).run();
+    },
+    async get(key) {
+      await ready();
+      const info = await db.prepare('SELECT COUNT(*) AS pieces, COALESCE(SUM(LENGTH(data)), 0) AS size FROM aj_files WHERE key = ?').bind(key).first();
+      const pieces = Number(info?.pieces || 0); if (!pieces) return null;
+      let seq = 0;
+      const body = new ReadableStream({ async pull(controller) {
+        if (seq >= pieces) { controller.close(); return; }
+        const data = await db.prepare('SELECT data FROM aj_files WHERE key = ? AND seq = ?').bind(key, seq++).first('data');
+        controller.enqueue(bytesOf(data));
+      } });
+      return { key, size: Number(info.size), body };
+    },
+    async delete(key) { await ready(); await db.prepare('DELETE FROM aj_files WHERE key = ?').bind(key).run(); }
+  };
+}
+
 let bucket;
-/** 설정이 없으면 null (PDF 기능만 '준비 중'으로 응답하고 나머지는 정상 동작). */
-export function getBucket() {
+/** PDF 보관소: 시험용 폴더 → Vercel Blob → (둘 다 없으면) DB 순서로 고른다. */
+export function getBucket(db) {
   if (bucket === undefined) {
     if (process.env.AJ_LOCAL_BLOB_DIR) bucket = folderBucket(path.resolve(process.env.AJ_LOCAL_BLOB_DIR));
-    else bucket = process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID ? blobBucket() : null;
+    else if (process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID) {
+      // Blob을 나중에 연결해도, 그 전에 DB에 넣어 둔 PDF는 계속 열린다.
+      const blob = blobBucket(), old = db ? databaseBucket(db) : null;
+      bucket = !old ? blob : { put: (...a) => blob.put(...a), async get(key) { return (await blob.get(key)) || old.get(key); }, async delete(key) { try { await blob.delete(key); } finally { await old.delete(key).catch(() => {}); } } };
+    }
+    else bucket = db ? databaseBucket(db) : null;
   }
   return bucket;
 }
