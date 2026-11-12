@@ -1,23 +1,23 @@
 /* Account storage mode and the teacher entrance remain visible on every student route. */
 body.dashboard-shell .dashboard-header{position:sticky;min-height:114px;height:auto;padding-top:45px;padding-bottom:15px}
-.aj-save-status{position:absolute;left:36px;top:10px;display:inline-flex;align-items:center;gap:7px;min-height:28px;padding:4px 10px;border:1px solid #2b313b;border-radius:20px;background:#12161e;color:#c1cdda;font-size:12px!important;line-height:1.5;font-weight:650;cursor:pointer}
+.aj-save-status{position:absolute;left:36px;top:10px;display:inline-flex;align-items:center;gap:7px;min-height:28px;padding:4px 10px;border:1px solid #92bddd;border-radius:20px;background:#e4f3ff;color:#2b5072;font-size:12px!important;line-height:1.5;font-weight:650;cursor:pointer}
 .aj-save-status:before{content:'';height:7px;width:7px;flex-shrink:0;border-radius:50%;background:#3877aa}
-.aj-save-status[data-mode=guest],.aj-save-status[data-mode=profile]{background:#12161d;border-color:#7b5f00;color:#d6b785}
+.aj-save-status[data-mode=guest],.aj-save-status[data-mode=profile]{background:#fff2c2;border-color:#d0ad52;color:#6b501e}
 .aj-save-status[data-mode=guest]:before,.aj-save-status[data-mode=profile]:before{background:#a0771c}
-.aj-save-status[data-mode=error]{background:#12161e;color:#f9a391;border-color:#8f4f3f}
+.aj-save-status[data-mode=error]{background:#ffebe4;color:#8a3e30;border-color:#d6907e}
 .aj-save-status[data-mode=error]:before{background:#b44c38}
-.aj-save-status:focus-visible,.header-admin-link:focus-visible{outline:3px solid #508cbe;outline-offset:3px}
-.header-admin-link{position:absolute;right:36px;top:9px;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:31px;padding:5px 12px;border:1px solid #9b462f;border-radius:7px;background:#4c2112;color:#d0d8e7;font-size:13px!important;font-weight:750;text-decoration:none;line-height:1.5;box-shadow:0 2px 0 #280c05}
-.header-admin-link:hover{background:#432216}
-body.dashboard-shell .storage-guide h2{font-size:25px;margin-bottom:10px;color:#dfe8f7}
-body.dashboard-shell .storage-guide>.storage-mode{font-size:14px!important;font-weight:700;color:#96c1ec;line-height:1.8;margin:0 0 18px}
-.storage-guide-list{margin:0;display:grid;gap:0;border:1px solid #292e38;border-radius:12px;overflow:hidden}
-.storage-guide-list>div{padding:13px 15px;display:grid;grid-template-columns:120px 1fr;gap:12px;border-bottom:1px solid #272d37;background:#0f131a}
-.storage-guide-list>div:nth-child(2n){background:#11151c}
+.aj-save-status:focus-visible,.header-admin-link:focus-visible{outline:3px solid #306c9c;outline-offset:3px}
+.header-admin-link{position:absolute;right:36px;top:9px;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:31px;padding:5px 12px;border:1px solid #cd6d53;border-radius:7px;background:#f6b29a;color:#613628;font-size:13px!important;font-weight:750;text-decoration:none;line-height:1.5;box-shadow:0 2px 0 #c77058}
+.header-admin-link:hover{background:#f7c1ad}
+body.dashboard-shell .storage-guide h2{font-size:25px;margin-bottom:10px;color:#253650}
+body.dashboard-shell .storage-guide>.storage-mode{font-size:14px!important;font-weight:700;color:#335a80;line-height:1.8;margin:0 0 18px}
+.storage-guide-list{margin:0;display:grid;gap:0;border:1px solid #c4d4e2;border-radius:12px;overflow:hidden}
+.storage-guide-list>div{padding:13px 15px;display:grid;grid-template-columns:120px 1fr;gap:12px;border-bottom:1px solid #d6e2eb;background:#fffdf5}
+.storage-guide-list>div:nth-child(2n){background:#eef7ff}
 .storage-guide-list>div:last-child{border:0}
-.storage-guide-list dt{font-size:13px;font-weight:750;color:#dfe8f7;line-height:1.8}
-.storage-guide-list dd{margin:0;font-size:13px;line-height:1.9;color:#adb7c4;word-break:keep-all}
-body.dashboard-shell .storage-guide .storage-guide-note{font-size:13px!important;line-height:1.9;color:#adb7c4;margin-top:16px}
+.storage-guide-list dt{font-size:13px;font-weight:750;color:#253650;line-height:1.8}
+.storage-guide-list dd{margin:0;font-size:13px;line-height:1.9;color:#4e6078;word-break:keep-all}
+body.dashboard-shell .storage-guide .storage-guide-note{font-size:13px!important;line-height:1.9;color:#4e6078;margin-top:16px}
 .storage-guide-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
 .storage-guide-actions>*{flex:1;min-width:145px}
 @media(max-width:1300px){body.dashboard-shell .dashboard-header{padding-top:45px;padding-bottom:15px}.aj-save-status{left:28px}.header-admin-link{right:28px}}

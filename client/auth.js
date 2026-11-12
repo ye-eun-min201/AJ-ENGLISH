@@ -1,12 +1,35 @@
-/* 로그인한 학생에게만 '로그아웃'을 보여 준다. */
+/* 로그인 상태를 머리말에 또렷하게 보여 준다.
+   · 로그인됨: 초록 점 + "카카오 로그인됨" + 로그아웃
+   · 로그인 안 됨: "로그인하기" 단추 (기록을 저장하려면 로그인이 필요) */
 (() => {
   'use strict';
-  const button = document.querySelector('[data-auth-logout]');
-  if (!button) return;
-  fetch('/api/auth/status', { credentials: 'same-origin', cache: 'no-store' }).then(response => response.ok ? response.json() : null).then(status => { if (status && status.authenticated) button.hidden = false; }).catch(() => { /* 상태 확인 실패 시 버튼을 숨긴 채 둔다 */ });
-  button.addEventListener('click', async () => {
-    button.disabled = true;
+  const NAMES = { kakao: '카카오', google: '구글' };
+  const footerButton = document.querySelector('[data-auth-logout]');
+  const host = document.querySelector('.dashboard-header-actions');
+  async function logout(button) {
+    if (button) button.disabled = true;
     try { await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' }); } catch (_) { /* 아래에서 새로고침 */ }
     location.href = '/';
-  });
+  }
+  function show(status) {
+    if (!host || host.querySelector('.auth-pill')) return;
+    const anchor = host.querySelector('#nav-user');
+    let pill;
+    if (status && status.authenticated) {
+      pill = document.createElement('span'); pill.className = 'auth-pill is-in';
+      const label = document.createElement('span'); label.textContent = (NAMES[status.provider] || '계정') + ' 로그인됨';
+      const out = document.createElement('button'); out.type = 'button'; out.textContent = '로그아웃'; out.addEventListener('click', () => logout(out));
+      pill.append(document.createElement('i'), label, out);
+    } else {
+      const ready = status && status.providers && (status.providers.kakao || status.providers.google);
+      pill = document.createElement('a'); pill.className = 'auth-pill is-out'; pill.href = '/login?return_to=' + encodeURIComponent('/' + location.hash);
+      pill.textContent = '로그인하기'; pill.title = ready ? '로그인하면 캐릭터와 학습 기록이 저장돼요' : '로그인 준비 중';
+    }
+    host.insertBefore(pill, anchor || null);
+    document.body.dataset.auth = status && status.authenticated ? 'in' : 'out';
+  }
+  fetch('/api/auth/status', { credentials: 'same-origin', cache: 'no-store' }).then(response => response.ok ? response.json() : null)
+    .then(status => { if (status && status.authenticated && footerButton) footerButton.hidden = false; show(status); })
+    .catch(() => { /* 상태 확인 실패 시 아무것도 덧붙이지 않는다 */ });
+  footerButton?.addEventListener('click', () => logout(footerButton));
 })();

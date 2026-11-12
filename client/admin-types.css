@@ -1,27 +1,27 @@
 /* AJ ENGLISH — teacher word and speaking-sentence categories. */
 .aj-admin .admin-type-picker{border:0;padding:0;margin:0 0 23px;min-width:0}
-.aj-admin .admin-type-picker>legend{font-family:inherit;font-size:12px;font-weight:600;line-height:1.6;color:#bec7d5;padding:0;margin-bottom:9px}
+.aj-admin .admin-type-picker>legend{font-family:inherit;font-size:12px;font-weight:600;line-height:1.6;color:#40526e;padding:0;margin-bottom:9px}
 .aj-admin .admin-type-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.aj-admin .admin-type-option{position:relative;display:grid;grid-template-columns:34px minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:1px 10px;text-align:left;min-height:79px;padding:14px 30px 14px 13px;border:1px solid #282d37;border-radius:12px;background:#10141b;color:#bec7d5;font:inherit;box-shadow:none;transition:border-color .15s,background .15s,box-shadow .15s}
+.aj-admin .admin-type-option{position:relative;display:grid;grid-template-columns:34px minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:1px 10px;text-align:left;min-height:79px;padding:14px 30px 14px 13px;border:1px solid #e3ddd1;border-radius:12px;background:#faf9f6;color:#40526e;font:inherit;box-shadow:none;transition:border-color .15s,background .15s,box-shadow .15s}
 .aj-admin .admin-type-option>strong{grid-column:2;grid-row:1;font-size:13px;font-weight:700;letter-spacing:-.025em;line-height:1.6;color:inherit;white-space:nowrap}
-.aj-admin .admin-type-option>small{grid-column:2;grid-row:2;font-size:10px;line-height:1.6;color:#afb7c5;white-space:nowrap}
-.aj-admin .admin-type-symbol{grid-column:1;grid-row:1/3;display:flex;align-items:center;justify-content:center;width:34px;height:36px;border-radius:9px;background:#14181f;color:#abb3c2;font-size:17px;font-weight:600;line-height:1}
+.aj-admin .admin-type-option>small{grid-column:2;grid-row:2;font-size:10px;line-height:1.6;color:#814f43;white-space:nowrap}
+.aj-admin .admin-type-symbol{grid-column:1;grid-row:1/3;display:flex;align-items:center;justify-content:center;width:34px;height:36px;border-radius:9px;background:#edeae2;color:#855245;font-size:17px;font-weight:600;line-height:1}
 .aj-admin .admin-type-option>i{position:absolute;top:12px;right:12px;font-style:normal;font-size:13px;font-weight:700;color:inherit;opacity:0}
-.aj-admin .admin-type-option.active{border-color:#b07566;background:#13171f;color:#d7e0ee;box-shadow:0 0 0 2px #ffffff1a}
+.aj-admin .admin-type-option.active{border-color:#91594b;background:#efece5;color:#2d3e59;box-shadow:0 0 0 2px #e8e4d9}
 .aj-admin .admin-type-option.active>i{opacity:1}
-.aj-admin .admin-type-option.active .admin-type-symbol{background:#191d24;color:#d7e0ee}
-.aj-admin .admin-type-option[data-expression-kind="표현"] .admin-type-symbol{background:#151920;color:#abb3c1}
-.aj-admin .admin-type-option[data-expression-kind="표현"].active{background:#14181f;border-color:#303640;box-shadow:0 0 0 2px #ffffff1a;color:#b2bac8}
-.aj-admin .admin-type-option:hover{border-color:#8a5245}
-.aj-admin .admin-type-option:focus-visible{outline:3px solid #353b45;outline-offset:4px}
+.aj-admin .admin-type-option.active .admin-type-symbol{background:#dcd6c7;color:#2d3e59}
+.aj-admin .admin-type-option[data-expression-kind="표현"] .admin-type-symbol{background:#eee5d4;color:#735e3d}
+.aj-admin .admin-type-option[data-expression-kind="표현"].active{background:#f2eadb;border-color:#9b8055;box-shadow:0 0 0 2px #e9ddc7;color:#705735}
+.aj-admin .admin-type-option:hover{border-color:#b07567}
+.aj-admin .admin-type-option:focus-visible{outline:3px solid #7a4b3f;outline-offset:4px}
 .aj-admin .admin-type-badge{display:inline-flex;align-items:center;justify-content:center;padding:3px 7px;border-radius:5px;font-size:10px;font-weight:600;line-height:1.6;letter-spacing:-.02em;white-space:nowrap}
-.aj-admin .admin-type-badge.word{color:#cfd9e7;background:#14181f}
-.aj-admin .admin-type-badge.sentence{color:#b0b8c6;background:#141920}
+.aj-admin .admin-type-badge.word{color:#35445b;background:#edeae2}
+.aj-admin .admin-type-badge.sentence{color:#715939;background:#f0e6d5}
 .aj-admin .collection-paper .list-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .aj-admin .collection-paper .list-filters>.search-field{grid-column:1/-1}
 .aj-admin .collection-paper .list-filters>select{width:100%;max-width:none;min-height:38px;font-size:11px;padding:8px 10px}
 .aj-admin .bulk-body>.form-row{flex-wrap:wrap}
-.aj-admin .bulk-preview-table td:nth-child(2){white-space:nowrap;font-size:10px;color:#b1b9c7}
+.aj-admin .bulk-preview-table td:nth-child(2){white-space:nowrap;font-size:10px;color:#7f4e41}
 @media(max-width:720px){.aj-admin .admin-type-picker{margin-bottom:23px}.aj-admin .admin-type-picker>legend{font-size:13px;margin-bottom:10px}.aj-admin .admin-type-options{gap:9px}.aj-admin .admin-type-option{min-height:82px;padding:13px 25px 13px 11px;grid-template-columns:29px minmax(0,1fr);gap:1px 7px}.aj-admin .admin-type-symbol{width:29px;height:33px;font-size:15px}.aj-admin .admin-type-option>strong{font-size:13px}.aj-admin .admin-type-option>small{font-size:11px}.aj-admin .admin-type-option>i{top:10px;right:9px;font-size:12px}.aj-admin .admin-type-badge{font-size:11px;padding:3px 8px}.aj-admin .collection-paper .list-filters>select{min-height:43px;font-size:12px}.aj-admin .bulk-preview-table td:nth-child(2){font-size:11px}}
 @media(max-width:380px){.aj-admin .admin-type-option{grid-template-columns:1fr;grid-template-rows:22px auto auto;gap:3px;min-height:100px;padding:11px 10px;text-align:center}.aj-admin .admin-type-symbol{grid-column:1;grid-row:1;width:25px;height:24px;margin:0 auto;font-size:13px;border-radius:6px}.aj-admin .admin-type-option>strong{grid-column:1;grid-row:2}.aj-admin .admin-type-option>small{grid-column:1;grid-row:3;font-size:10px}}
 @media(prefers-reduced-motion:reduce){.aj-admin .admin-type-option{transition:none}}

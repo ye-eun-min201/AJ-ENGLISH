@@ -21,10 +21,17 @@
     const reduced = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const host = document.createElement('div');
     host.className = 'rail-scene-surface';
-    host.style.cssText = 'position:relative;width:100%;height:100%;min-height:300px;overflow:hidden;background:#070b14;isolation:isolate';
+    // 밝은 판 = 낮의 놀이공원, 어두운 판 = 밤의 놀이공원 (theme.js가 'aj-theme' 신호를 보낸다)
+    const LOOKS = {
+      light: { sky: '#dfe9ff', fog: [100, 185], exposure: 1.22, hemi: ['#fff6db', '#b5a3a5', 2.7], sun: ['#fff0cb', 3.0], lamp: 0, text: '#4e5968', chip: 'border:1px solid #ffffffb0;background:#ffffffd9;color:#4e5968' },
+      dark: { sky: '#0b1026', fog: [92, 178], exposure: .96, hemi: ['#8ea8f5', '#1b1528', .78], sun: ['#b9c9ff', 1.05], lamp: 1250, text: '#c9d2e4', chip: 'border:1px solid #ffffff24;background:#0f1220d9;color:#f3f4fb' }
+    };
+    const look = () => LOOKS[document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'];
+    let applyLook = () => {};
+    host.style.cssText = 'position:relative;width:100%;height:100%;min-height:300px;overflow:hidden;background:' + look().sky + ';isolation:isolate';
     const loading = document.createElement('div');
     loading.className = 'rail-scene-loading'; loading.textContent = '레일 구성 중';
-    loading.style.cssText = 'position:absolute;inset:0;display:grid;place-items:center;color:#c9d2e4;font-size:14px;font-weight:700;z-index:2';
+    loading.style.cssText = 'position:absolute;inset:0;display:grid;place-items:center;color:' + look().text + ';font-size:14px;font-weight:700;z-index:2';
     host.append(loading); container.replaceChildren(host);
     let destroyed = false, available = false, renderer, scene, camera, curve, types, frame = 0, observer;
     let visible = !document.hidden, paused = false, cameraMode = 'overview';
@@ -35,7 +42,8 @@
     const content = document.createElement('div');
     content.style.cssText = 'position:absolute;inset:0'; host.append(content);
     const caption = document.createElement('span'); caption.className = 'rail-scene-caption';
-    caption.style.cssText = 'position:absolute;left:15px;bottom:13px;padding:6px 10px;border:1px solid #ffffff24;border-radius:20px;background:#0a0f1ad9;backdrop-filter:blur(8px);font-size:10px;font-weight:700;color:#f4f2ec;pointer-events:none;z-index:1';
+    const captionBase = 'position:absolute;left:15px;bottom:13px;padding:6px 10px;border-radius:20px;backdrop-filter:blur(8px);font-size:10px;font-weight:700;pointer-events:none;z-index:1;';
+    caption.style.cssText = captionBase + look().chip;
     caption.textContent = '놀이공원 레일 · 정답 후 출발'; host.append(caption);
     const listeners = [];
     function listen(element, name, fn, settings) { element.addEventListener(name, fn, settings); listeners.push(() => element.removeEventListener(name, fn, settings)); }
@@ -129,18 +137,27 @@
       const T = await import('/vendor/three.module.min.mjs');
       if (destroyed) return controller;
       types = T;
-      scene = new T.Scene(); scene.background = new T.Color('#070b14'); scene.fog = new T.Fog('#070b14', 92, 178);
+      scene = new T.Scene(); scene.background = new T.Color(look().sky); scene.fog = new T.Fog(look().sky, look().fog[0], look().fog[1]);
       camera = new T.PerspectiveCamera(43, 1, .1, 240);
       renderer = new T.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'low-power' });
       const compact = (window.innerWidth || 1000) < 700; renderer.setPixelRatio(Math.min(compact ? 1.3 : 1.7, window.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
-      renderer.outputColorSpace = T.SRGBColorSpace; renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = .96;
+      renderer.outputColorSpace = T.SRGBColorSpace; renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = look().exposure;
       const canvas = renderer.domElement; canvas.style.cssText = 'width:100%;height:100%;display:block;touch-action:pan-y'; canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', '관람차와 회전목마 사이를 달리는 3D 영어 롤러코스터'); content.replaceChildren(canvas);
       listen(canvas, 'webglcontextlost', event => { event.preventDefault(); cancelAnimationFrame(frame); frame = 0; renderer?.dispose(); available = false; fallback(new Error('3D 연결 중단 · 2D 레일 표시')); schedule(); });
       listen(canvas, 'pointerdown', event => { if (cameraMode !== 'overview') return; drag = { x: event.clientX, y: event.clientY, angle: orbitAngle, pitch: orbitPitch }; if (event.pointerType !== 'touch') canvas.setPointerCapture?.(event.pointerId); });
       listen(canvas, 'pointermove', event => { if (!drag || cameraMode !== 'overview') return; orbitAngle = drag.angle - (event.clientX - drag.x) * .006; if (event.pointerType !== 'touch') orbitPitch = clamp(drag.pitch + (event.clientY - drag.y) * .003, .38, .92); place(true); schedule(); });
       const release = () => { drag = null; }; listen(canvas, 'pointerup', release); listen(canvas, 'pointercancel', release); listen(canvas, 'pointerleave', release);
-      scene.add(new T.HemisphereLight('#8ea8f5', '#1b1528', .78)); const parkLamp = new T.PointLight('#ffc45c', 1250, 120, 1.75); parkLamp.position.set(2, 26, 4); scene.add(parkLamp);
-      const sunlight = new T.DirectionalLight('#b9c9ff', 1.05); sunlight.position.set(-35, 62, 28); sunlight.castShadow = true; sunlight.shadow.mapSize.set(compact ? 1024 : 1536, compact ? 1024 : 1536); sunlight.shadow.camera.left = sunlight.shadow.camera.bottom = -56; sunlight.shadow.camera.right = sunlight.shadow.camera.top = 56; sunlight.shadow.camera.far = 140; sunlight.shadow.normalBias = .08; sunlight.shadow.bias = -.00015; scene.add(sunlight);
+      const hemi = new T.HemisphereLight('#fff6db', '#b5a3a5', 2.7); scene.add(hemi);
+      const parkLamp = new T.PointLight('#ffc45c', 0, 120, 1.75); parkLamp.position.set(2, 26, 4); scene.add(parkLamp);
+      const sunlight = new T.DirectionalLight('#fff0cb', 3.0);
+      applyLook = () => {
+        const v = look(); if (!scene || !renderer) return;
+        scene.background.set(v.sky); scene.fog.color.set(v.sky); scene.fog.near = v.fog[0]; scene.fog.far = v.fog[1];
+        renderer.toneMappingExposure = v.exposure; hemi.color.set(v.hemi[0]); hemi.groundColor.set(v.hemi[1]); hemi.intensity = v.hemi[2];
+        sunlight.color.set(v.sun[0]); sunlight.intensity = v.sun[1]; parkLamp.intensity = v.lamp;
+        host.style.background = v.sky; caption.style.cssText = captionBase + v.chip;
+      };
+      applyLook(); listen(document, 'aj-theme', applyLook); sunlight.position.set(-35, 62, 28); sunlight.castShadow = true; sunlight.shadow.mapSize.set(compact ? 1024 : 1536, compact ? 1024 : 1536); sunlight.shadow.camera.left = sunlight.shadow.camera.bottom = -56; sunlight.shadow.camera.right = sunlight.shadow.camera.top = 56; sunlight.shadow.camera.far = 140; sunlight.shadow.normalBias = .08; sunlight.shadow.bias = -.00015; scene.add(sunlight);
       const mat = (color, extra = {}) => { const material = new T.MeshStandardMaterial({ color, roughness: .88, flatShading: true, ...extra }); materials.add(material); return material; };
       const geo = geometry => { geometries.add(geometry); return geometry; };
       const box = geo(new T.BoxGeometry(1, 1, 1)), sphere = geo(new T.IcosahedronGeometry(1, 1)), cylinder = geo(new T.CylinderGeometry(1, 1, 1, 8)), cone = geo(new T.ConeGeometry(1, 1, 7));

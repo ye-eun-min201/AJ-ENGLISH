@@ -147,6 +147,7 @@
     if (!config || opened || seen(config.role) || appDialogActive()) return false;
     const workspace = document.querySelector('#teacher-workspace');
     if (config.role === 'admin' && workspace?.hidden) return false;
+    if (config.role === 'student' && window.AJTutorial) return window.AJTutorial.open({ onClose: complete => markSeen('student', complete) });
     return open('tour');
   }
   function performAction(item, role) {
@@ -160,7 +161,7 @@
     const button = event.target.closest('button,a');
     if (!button) { if (opened && event.target.hasAttribute?.('data-aj-help-backdrop')) close(); return; }
     if (button.hasAttribute('data-help')) { event.preventDefault(); open('help'); return; }
-    if (button.hasAttribute('data-tutorial')) { event.preventDefault(); open('tour'); return; }
+    if (button.hasAttribute('data-tutorial')) { event.preventDefault(); if (config?.role === 'student' && window.AJTutorial) { if (opened) close(); window.AJTutorial.open(); } else open('tour'); return; }
     if (!opened || !root?.contains(button)) return;
     if (button.hasAttribute('data-aj-help-close') || button.hasAttribute('data-aj-help-skip')) { close(); return; }
     if (button.hasAttribute('data-aj-help-complete')) { close({ complete: true }); return; }

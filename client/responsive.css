@@ -5,7 +5,7 @@ body.dashboard-shell .footer-links :is(button,a){min-height:44px;display:inline-
 body.dashboard-shell .footer-links button{background:none;border:0;color:inherit;cursor:pointer}
 body.dashboard-shell .dashboard-footer{flex-wrap:wrap;gap:12px 20px}
 body.dashboard-shell .dashboard-footer .footer-links{margin-left:auto}
-body.dashboard-shell .ds-welcome h2{font-size:24px;line-height:1.5;letter-spacing:-1px;font-weight:600;color:var(--park-ink-fg,#dfe8f7);margin:0 0 7px}
+body.dashboard-shell .ds-welcome h2{font-size:24px;line-height:1.5;letter-spacing:-1px;font-weight:600;color:var(--park-ink,#253650);margin:0 0 7px}
 body.dashboard-shell .ds-welcome h2>span{font-size:23px;display:inline-block;margin-left:4px}
 @media(max-width:1100px),(pointer:coarse){
   body.dashboard-shell :is(button,a.btn,a.slides-button,a.nav-item),body.aj-admin :is(button,a.button,a.nav-button){touch-action:manipulation}

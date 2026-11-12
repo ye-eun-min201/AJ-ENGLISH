@@ -1,0 +1,149 @@
+/* tutorial.css — 게임식 시작 안내 (tutorial.js). 색 변수는 stage.css 것을 그대로 쓴다. */
+html.tut-open{overflow:hidden}
+.tut-root{position:fixed;inset:0;z-index:6000;display:grid;place-items:center;background:var(--veil);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:tutFade .25s ease-out both;
+  --t0:linear-gradient(165deg,#faf5ff 0%,#ede9fe 55%,#ddd6fe 100%);--t1:linear-gradient(165deg,#f3fbff 0%,#dff1ff 55%,#cfe6ff 100%);--t2:linear-gradient(165deg,#fff8fa 0%,#ffe9f0 55%,#ffd9e6 100%);
+  --tut-paper:#fff;--tut-ink:#191f28;--tut-sub:#5b6470;--tut-face:#3b2a5e;--tut-dot:#fff;--tut-scene:rgba(255,255,255,.72);--tut-pilltext:#3730a3}
+html[data-theme="dark"] .tut-root{
+  --t0:linear-gradient(165deg,#1b1a3a 0%,#231f52 55%,#2b2568 100%);--t1:linear-gradient(165deg,#0f1d33 0%,#12294a 55%,#15335c 100%);--t2:linear-gradient(165deg,#2a1524 0%,#3a1a30 55%,#4a1f3b 100%);
+  --tut-paper:#20243c;--tut-ink:#f3f4fb;--tut-sub:#b3bad0;--tut-dot:rgba(255,255,255,.07);--tut-scene:rgba(255,255,255,.06);--tut-pilltext:#c7d2fe}
+@keyframes tutFade{from{opacity:0}to{opacity:1}}
+.tut-panel{position:relative;width:min(100vw,430px);height:min(100dvh,790px);overflow:hidden;background:var(--night);display:flex;flex-direction:column;animation:tutUp .45s cubic-bezier(.16,1,.3,1) both;color:var(--tut-ink)}
+@media (min-width:480px) and (min-height:700px){.tut-panel{border-radius:40px;box-shadow:0 40px 100px -30px var(--drop),0 0 0 4px var(--tut-paper)}}
+@keyframes tutUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.tut-panel>*{position:relative;z-index:1}
+.tut-tint{position:absolute !important;inset:0;opacity:0;transition:opacity .5s ease;pointer-events:none;z-index:0 !important}
+.tut-tint-0{background:var(--t0)}.tut-tint-1{background:var(--t1)}.tut-tint-2{background:var(--t2)}
+.tut-root[data-stage="0"] .tut-tint-0,.tut-root[data-stage="1"] .tut-tint-1,.tut-root[data-stage="2"] .tut-tint-2{opacity:1}
+.tut-dots{position:absolute !important;inset:0;pointer-events:none;z-index:0 !important;opacity:.75;background:radial-gradient(var(--tut-dot) 2.5px,transparent 3px) 0 0/28px 28px}
+
+/* 위쪽 */
+.tut-top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 0}
+.tut-pills{display:flex;gap:8px;align-items:center}
+.tut-pill{position:relative;display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border-radius:999px;background:var(--tut-paper);box-shadow:var(--lift);font:400 10px/1 var(--pixel) !important;color:var(--tut-pilltext);letter-spacing:.02em}
+.tut-pill *{font:inherit !important}
+.tut-coin{width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3b0 0 22%,var(--gold) 24% 100%);box-shadow:inset 0 0 0 2px #d99100}
+.tut-coinpill.is-bump [data-tut-coins]{display:inline-block;animation:tutNum .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes tutNum{from{transform:scale(1.5);color:var(--gold)}to{transform:none}}
+.tut-plus{position:absolute;right:-8px;top:-10px;color:var(--gold);text-shadow:1px 1px 0 var(--tut-paper);pointer-events:none;animation:tutPlus .9s cubic-bezier(.16,1,.3,1) forwards}
+@keyframes tutPlus{from{opacity:1;transform:translateY(0) scale(.6)}35%{transform:translateY(-10px) scale(1.2)}to{opacity:0;transform:translateY(-22px)}}
+.tut-skip{border:0;border-radius:999px;background:color-mix(in srgb,var(--tut-paper) 70%,transparent);color:var(--tut-sub);padding:9px 14px;min-height:36px;font-size:13px;font-weight:600;cursor:pointer}
+.tut-skip:hover{background:var(--tut-paper)}
+
+/* 스테이지 지도 */
+.tut-map{position:relative;margin:18px 24px 0;height:66px;flex:none}
+.tut-track{position:absolute;left:16%;right:16%;top:46px;height:5px;border-radius:999px;background:repeating-linear-gradient(90deg,var(--tut-paper) 0 8px,transparent 8px 15px)}
+.tut-track-fill{right:auto;width:0;background:linear-gradient(90deg,var(--lamp-hot),var(--lamp));transition:width .5s cubic-bezier(.16,1,.3,1)}
+.tut-node{position:absolute;top:48px;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;display:grid;place-items:center;background:var(--tut-paper);color:var(--lamp-hot);box-shadow:var(--lift);transition:background .3s,color .3s}
+.tut-node svg,.tut-back svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.tut-node.is-now{color:var(--lamp);box-shadow:0 0 0 3px var(--lamp),0 0 0 9px rgba(var(--lamp-glow),.16);animation:tutPulse 1.4s ease-in-out infinite}
+@keyframes tutPulse{50%{box-shadow:0 0 0 3px var(--lamp),0 0 0 13px rgba(var(--lamp-glow),.06)}}
+.tut-node.is-done{background:var(--lamp);color:var(--lamp-ink);animation:tutPopIn .4s cubic-bezier(.34,1.56,.64,1)}
+.tut-node.is-done svg{stroke-width:3}
+@keyframes tutPopIn{from{transform:scale(.4)}to{transform:none}}
+.tut-hopper{position:absolute;top:-10px;left:16%;translate:-50% 0;transition:left .5s cubic-bezier(.34,1.3,.64,1)}
+.tut-hopper .tut-guide{display:block;width:40px;height:44px;filter:drop-shadow(0 4px 5px rgba(109,91,208,.25));animation:tutBob 1.6s ease-in-out infinite}
+@keyframes tutBob{50%{transform:translateY(-4px)}}
+
+/* 슬라이드 */
+.tut-view{flex:1;min-height:0;overflow:hidden;touch-action:pan-y;margin-top:6px}
+.tut-slides{display:flex;height:100%;transition:transform .45s cubic-bezier(.16,1,.3,1)}
+.tut-slide{flex:0 0 100%;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:0 24px 10px;box-sizing:border-box}
+.tut-scene{position:relative;align-self:stretch;height:clamp(200px,34dvh,260px);flex:none;border-radius:32px;overflow:hidden;background:var(--tut-scene);box-shadow:inset 0 0 0 3px var(--tut-paper),0 14px 30px rgba(109,91,208,.14);display:grid;place-items:center}
+.tut-mission{margin:14px 0 0;align-self:center;padding:8px 14px;border-radius:999px;background:var(--lamp);color:var(--lamp-ink);font-size:13px;font-weight:800;letter-spacing:-.01em;box-shadow:0 3px 0 var(--lamp-deep)}
+.tut-slide.is-on .tut-mission:not(.is-done){animation:tutNudge 1.8s ease-in-out .8s infinite}
+@keyframes tutNudge{0%,60%,100%{transform:none}70%{transform:translateY(-4px)}85%{transform:translateY(1px)}}
+.tut-mission.is-done{background:var(--ok);color:#fff;box-shadow:0 3px 0 #077a4d;font-family:var(--pixel) !important;font-weight:400;font-size:11px;animation:tutPopIn .4s cubic-bezier(.34,1.56,.64,1)}
+.tut-step{margin-top:16px;padding:7px 11px;border-radius:999px;background:var(--tut-paper);color:var(--lamp-text);font-size:12px;font-weight:800;box-shadow:var(--lift)}
+.tut-slide h2{margin:10px 0 0;font-size:22px;line-height:1.35;letter-spacing:-.03em;font-weight:800;color:var(--tut-ink) !important;word-break:keep-all}
+.tut-desc{margin:8px 0 0;font-size:14px;line-height:1.65;color:var(--tut-sub);word-break:keep-all}
+
+/* 아래 */
+.tut-bottom{padding:0 24px calc(env(safe-area-inset-bottom,0px) + 20px);flex:none}
+.tut-dotsnav{display:flex;justify-content:center;gap:6px;margin-bottom:14px}
+.tut-dotsnav span{height:8px;width:8px;border-radius:999px;background:var(--tut-paper);transition:width .3s,background .3s}
+.tut-dotsnav span.is-on{width:24px;background:var(--lamp)}
+.tut-actions{display:flex;gap:8px}
+.tut-back{flex:none;width:56px;height:56px;border-radius:50%;border:0;background:var(--tut-paper);color:var(--lamp-text);display:grid;place-items:center;box-shadow:var(--lift);cursor:pointer}
+.tut-back[hidden],.tut-skip[hidden]{display:none}
+.tut-next{flex:1;height:56px;border-radius:999px;border:0;background:var(--lamp);color:var(--lamp-ink);font-size:16px;font-weight:700;letter-spacing:-.01em;cursor:pointer;box-shadow:var(--press);transition:transform .12s,box-shadow .12s}
+.tut-next:active,.tut-back:active{transform:translateY(3px);box-shadow:0 2px 0 var(--lamp-deep)}
+.tut-next.is-last{animation:tutBounce .6s cubic-bezier(.34,1.56,.64,1)}
+@keyframes tutBounce{from{transform:scale(.9)}to{transform:none}}
+.tut-root :is(button):focus-visible{outline:3px solid var(--lamp-hot) !important;outline-offset:3px}
+.tut-live{position:absolute !important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+
+/* 장면 1 — 카드 뒤집기 */
+.tut-card{position:relative;width:min(74%,230px);aspect-ratio:1.5;border:0;padding:0;background:none;cursor:pointer;perspective:800px;animation:tutFloat 2.6s ease-in-out infinite}
+@keyframes tutFloat{50%{transform:translateY(-6px) rotate(-1.5deg)}}
+.tut-card-face{position:absolute;inset:0;border-radius:22px;display:grid;place-content:center;gap:6px;text-align:center;backface-visibility:hidden;-webkit-backface-visibility:hidden;transition:transform .55s cubic-bezier(.34,1.3,.64,1);background:var(--tut-paper);color:var(--tut-ink);box-shadow:0 6px 0 rgba(109,91,208,.2),0 18px 30px -10px rgba(109,91,208,.35)}
+.tut-card-face small{font:400 9px/1 var(--pixel) !important;color:var(--lamp-text);letter-spacing:.06em}
+.tut-card-face b{font-size:30px;font-weight:800;letter-spacing:-.03em}
+.tut-card-face i{font-style:normal;font-size:12px;color:var(--tut-sub)}
+.tut-card-back{transform:rotateY(180deg);background:var(--lamp);color:var(--lamp-ink)}
+.tut-card-back small,.tut-card-back i{color:inherit;opacity:.85}
+.tut-card.is-flipped{animation:none}
+.tut-card.is-flipped .tut-card-front{transform:rotateY(-180deg)}
+.tut-card.is-flipped .tut-card-back{transform:none}
+.tut-spark{position:absolute;width:14px;height:14px;background:var(--gold);clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);animation:tutTwinkle 1.8s ease-in-out infinite}
+@keyframes tutTwinkle{0%,100%{transform:scale(.4);opacity:.3}50%{transform:scale(1);opacity:1}}
+
+/* 장면 2 — 기차 */
+[data-tut-scene="rail"]{grid-template-rows:1fr auto;place-items:stretch}
+.tut-rail{position:relative;overflow:hidden}
+.tut-sun{position:absolute;right:26px;top:14px;width:30px;height:30px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 7px rgba(245,179,1,.2)}
+.tut-cloud{position:absolute;width:54px;height:20px;border-radius:999px;background:var(--tut-paper);animation:tutDrift 5s ease-in-out infinite alternate}
+.tut-cloud:before,.tut-cloud:after{content:'';position:absolute;border-radius:50%;background:var(--tut-paper)}
+.tut-cloud:before{left:9px;top:-10px;width:24px;height:22px}.tut-cloud:after{left:27px;top:-6px;width:19px;height:17px}
+.tut-cloud-sm{scale:.7}
+@keyframes tutDrift{to{translate:14px 0}}
+.tut-track-line{position:absolute;left:0;right:0;bottom:12px;height:6px;background:repeating-linear-gradient(90deg,var(--lamp-hot) 0 14px,transparent 14px 22px);opacity:.7}
+.tut-stop{position:absolute;bottom:14px;width:12px;height:30px;border-radius:6px 6px 0 0;background:var(--lamp-deep)}
+.tut-stop-a{left:9%}.tut-stop-b{right:9%;background:var(--ticket)}
+.tut-stop-b em{position:absolute;left:50%;bottom:calc(100% + 4px);translate:-50% 0;padding:4px 6px;border-radius:6px;background:var(--ticket);color:var(--ticket-ink);font:400 8px/1 var(--pixel) !important}
+.tut-train{position:absolute;left:11%;bottom:14px;width:82px;transition:left 1.5s cubic-bezier(.5,0,.2,1)}
+.tut-train svg{display:block;width:100%}
+.tut-rail.is-go .tut-train{left:calc(86% - 82px)}
+.tut-puff{position:absolute;left:14px;top:-10px;width:12px;height:12px;border-radius:50%;background:var(--tut-paper);opacity:0}
+.tut-rail.is-go .tut-puff{animation:tutPuff .7s ease-out 3}
+.tut-rail.is-go .tut-puff-2{animation-delay:.3s}
+@keyframes tutPuff{from{opacity:.9;transform:none}to{opacity:0;transform:translate(-16px,-22px) scale(1.8)}}
+.tut-quiz{padding:10px 14px 14px;background:var(--tut-paper);border-radius:22px 22px 0 0}
+.tut-quiz p{margin:0 0 8px;font-size:15px;font-weight:800;color:var(--tut-ink);display:flex;align-items:center;gap:8px}
+.tut-quiz small{font:400 9px/1 var(--pixel) !important;color:var(--lamp-text)}
+.tut-options{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tut-options button{min-height:44px;border-radius:14px;border:2px solid var(--hair-2);background:transparent;color:var(--tut-ink);font-size:13px;font-weight:700;cursor:pointer;padding:6px 8px;transition:border-color .15s,background .15s}
+.tut-options button:hover:not(:disabled){border-color:var(--lamp)}
+.tut-options button.is-right{background:var(--ok);border-color:var(--ok);color:#fff}
+.tut-options button.is-wrong{animation:tutShake .4s;border-color:var(--ticket)}
+@keyframes tutShake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+
+/* 장면 3 — 수업 자료 */
+.tut-sheet{position:relative;width:min(80%,250px);padding:16px 16px 18px;border-radius:14px;background:var(--tut-paper);box-shadow:0 6px 0 rgba(109,91,208,.18),0 18px 30px -10px rgba(109,91,208,.3);display:grid;gap:9px;transform:rotate(-2deg)}
+.tut-sheet-tab{font:400 8px/1 var(--pixel) !important;color:var(--lamp-text)}
+.tut-sheet>b{font-size:14px;font-weight:800;color:var(--tut-ink);letter-spacing:-.02em}
+.tut-line{height:7px;border-radius:99px;background:var(--tint)}
+.tut-key{position:relative;border:0;background:none;padding:0;text-align:left;cursor:pointer;font:inherit}
+.tut-key mark{display:inline;padding:3px 5px;border-radius:6px;background:rgba(245,179,1,.28);color:var(--tut-ink);font-size:12.5px;font-weight:700;line-height:1.7;box-decoration-break:clone;-webkit-box-decoration-break:clone;transition:background .3s}
+.tut-key:not(.is-starred) mark{animation:tutGlow 1.6s ease-in-out infinite}
+@keyframes tutGlow{50%{background:rgba(245,179,1,.6)}}
+.tut-star{position:absolute;right:-12px;top:-16px;font-size:30px;line-height:1;color:var(--gold);text-shadow:0 2px 0 #c98500;transform:scale(0) rotate(-40deg);transition:transform .45s cubic-bezier(.34,1.7,.64,1)}
+.tut-key.is-starred .tut-star{transform:rotate(12deg)}
+.tut-pen{position:absolute;right:-18px;bottom:-14px;width:40px;animation:tutWrite 1.6s ease-in-out infinite}
+@keyframes tutWrite{50%{transform:translate(-8px,-5px) rotate(-8deg)}}
+.tut-chip-old{position:absolute;left:12px;bottom:12px;padding:6px 9px;border-radius:999px;background:var(--lamp);color:var(--lamp-ink);font-size:11px;font-weight:800}
+
+/* STAGE CLEAR */
+.tut-clear{position:absolute !important;inset:0;z-index:5 !important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:color-mix(in srgb,var(--night) 88%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:tutFade .25s both}
+.tut-clear-stars{display:flex;gap:10px;font-size:38px;color:var(--gold);text-shadow:0 3px 0 #c98500}
+.tut-clear-stars span{animation:tutStar .5s cubic-bezier(.34,1.7,.64,1) both}
+.tut-clear-stars span:nth-child(2){animation-delay:.12s;font-size:50px;margin-top:-10px}.tut-clear-stars span:nth-child(3){animation-delay:.24s}
+@keyframes tutStar{from{transform:scale(0) rotate(-60deg);opacity:0}to{transform:none;opacity:1}}
+.tut-clear-text{margin:6px 0 0;font:400 26px/1.1 var(--pixel) !important;color:var(--lamp-text);text-shadow:3px 3px 0 var(--lamp-soft);animation:tutPopIn .5s cubic-bezier(.34,1.56,.64,1) .2s both}
+.tut-clear-sub{margin:0;font-size:14px;font-weight:700;color:var(--tut-sub)}
+.tut-clear-char .tut-guide{display:block;width:120px;height:132px;animation:tutHop .6s cubic-bezier(.3,1.6,.6,1) .3s 3 both}
+@keyframes tutHop{50%{transform:translateY(-22px)}}
+
+@media (max-height:680px){.tut-map{margin-top:10px;height:58px}.tut-scene{height:clamp(170px,30dvh,220px)}.tut-slide h2{font-size:20px}.tut-step{margin-top:10px}.tut-mission{margin-top:10px}}
+@media (prefers-reduced-motion:reduce){
+  .tut-root,.tut-panel,.tut-root *{animation:none !important;transition:none !important}
+}
