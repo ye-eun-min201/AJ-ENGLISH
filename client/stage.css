@@ -606,3 +606,83 @@ body[data-view="profile"] .profile-nudge a{display:none}
 .lesson-row-actions a.button{text-decoration:none;display:inline-flex;align-items:center}
 .lesson-delete{color:var(--mist) !important}
 .lesson-delete.delete-confirm{background:var(--ticket) !important;color:var(--ticket-ink) !important;border-color:var(--ticket) !important}
+
+/* ==========================================================================
+   오늘의 퀘스트 판 (home-entry.js) — 첫 화면은 '눌러서 바로 시작'
+   ========================================================================== */
+.qb{display:grid;gap:18px}
+.qb-hero{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;padding:18px 22px;border-radius:32px;background:linear-gradient(135deg,var(--lamp-soft),var(--booth) 70%);border:1px solid var(--hair);box-shadow:var(--card)}
+.qb-char{width:112px;flex:none;animation:qbBob 2.4s ease-in-out infinite}
+.qb-char .qb-avatar{display:block;width:100%;height:auto;filter:drop-shadow(0 8px 10px rgba(var(--lamp-glow),.22))}
+@keyframes qbBob{50%{transform:translateY(-6px) rotate(-2deg)}}
+.qb-hello{margin:0;font-size:14px;font-weight:700;color:var(--mist)}
+body.dashboard-shell .home-entry .qb-say h1{margin:4px 0 10px !important;font-family:var(--display) !important;font-style:normal !important;font-weight:900 !important;font-size:clamp(30px,4.4vw,54px) !important;line-height:1.1 !important;letter-spacing:-.045em !important;color:var(--chalk) !important;text-shadow:none !important}
+.qb-chips{display:flex;flex-wrap:wrap;gap:8px}
+.qb-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;background:var(--booth);box-shadow:var(--lift);font-family:var(--pixel) !important;font-size:11px;color:var(--lamp-text);white-space:nowrap}
+.qb-coin{width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3b0 0 22%,var(--gold) 24% 100%);box-shadow:inset 0 0 0 2px #d99100}
+.qb-star{width:14px;height:14px;background:var(--gold);clip-path:polygon(50% 0,62% 36%,100% 38%,70% 60%,80% 100%,50% 76%,20% 100%,30% 60%,0 38%,38% 36%)}
+.qb-class{display:grid;justify-items:end;gap:3px;padding:12px 16px;border-radius:22px;background:var(--booth);border:1px solid var(--hair);text-align:right;min-width:150px}
+.qb-class>span{font-size:12px;font-weight:700;color:var(--dim)}
+.qb-class time{font-size:13px;font-weight:700;color:var(--chalk)}
+.qb-class p{margin:0;font-size:12.5px;color:var(--mist)}
+.qb-class p b{font-weight:800;color:var(--chalk)}
+body.dashboard-shell .qb-class .he-dday{position:static !important;font-family:var(--pixel) !important;font-size:12px !important;padding:6px 10px !important;border-radius:999px !important;background:var(--ticket) !important;color:var(--ticket-ink) !important;border:0 !important}
+
+.qb-quests{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;position:relative}
+.qb-quests>li{position:relative;min-width:0}
+.qb-quests>li+li:before{content:'';position:absolute;left:-14px;top:50%;width:14px;border-top:4px dotted var(--hair-2)}
+.qb-quest{position:relative;width:100%;height:100%;display:grid;justify-items:start;align-content:start;gap:6px;text-align:left;padding:18px 18px 16px;border-radius:26px;border:2px solid var(--hair-2);background:var(--booth);color:var(--chalk);cursor:pointer;box-shadow:0 6px 0 var(--booth-3);transition:transform .14s,box-shadow .14s,border-color .14s;font:inherit}
+.qb-quest:hover:not(:disabled){transform:translateY(-3px);box-shadow:0 9px 0 var(--booth-3);border-color:var(--lamp)}
+.qb-quest:active:not(:disabled){transform:translateY(4px);box-shadow:0 2px 0 var(--booth-3)}
+.qb-quest:disabled{opacity:.55;cursor:default}
+.qb-no{font-family:var(--pixel) !important;font-size:10px;color:var(--dim);letter-spacing:.04em}
+.qb-ico{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;background:var(--lamp-soft);color:var(--lamp-text);margin:2px 0 4px}
+.qb-ico svg,.qb-link svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.qb-quest strong{font-size:20px;font-weight:800;letter-spacing:-.03em;color:var(--chalk)}
+.qb-quest small{font-size:13px;line-height:1.5;color:var(--mist);word-break:keep-all;min-height:2.9em}
+.qb-meter{display:block;width:100%;height:8px;border-radius:99px;background:var(--tint);overflow:hidden}
+.qb-meter i{display:block;height:100%;border-radius:99px;background:var(--lamp)}
+.qb-meter-text{font-size:11.5px;color:var(--dim)}
+.qb-go{margin-top:6px;justify-self:stretch;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border-radius:999px;background:var(--booth-2);color:var(--lamp-text);font-size:15px;font-weight:800}
+.qb-go b{font-size:11px}
+.qb-quests>li.is-next .qb-quest{border-color:var(--lamp);box-shadow:0 6px 0 var(--lamp-deep)}
+.qb-quests>li.is-next .qb-quest:hover:not(:disabled){box-shadow:0 9px 0 var(--lamp-deep)}
+.qb-quests>li.is-next .qb-quest:active:not(:disabled){box-shadow:0 2px 0 var(--lamp-deep)}
+.qb-quests>li.is-next .qb-go{background:var(--lamp);color:var(--lamp-ink);animation:qbPulse 1.6s ease-in-out infinite}
+.qb-quests>li.is-next .qb-no{color:var(--ticket-ink);background:var(--ticket);padding:5px 8px;border-radius:999px}
+.qb-quests>li.is-next .qb-no:after{content:' · NEXT'}
+@keyframes qbPulse{50%{transform:scale(1.04)}}
+.qb-quests>li.is-done .qb-quest{background:color-mix(in srgb,var(--ok) 9%,var(--booth));border-color:color-mix(in srgb,var(--ok) 45%,transparent)}
+.qb-quests>li.is-done .qb-ico{background:var(--ok);color:#fff}
+.qb-quests>li.is-done .qb-ico svg{stroke-width:3}
+.qb-quests>li.is-done .qb-go{color:var(--ok)}
+body.dashboard-shell .home-entry .qb-next{width:100%;justify-content:space-between}
+.qb-more{display:flex;flex-wrap:wrap;gap:10px}
+.qb-link{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--hair);background:var(--booth);color:var(--mist);font-size:14px;font-weight:700;cursor:pointer;box-shadow:var(--lift)}
+.qb-link svg{width:20px;height:20px}
+.qb-link:hover:not(:disabled){color:var(--lamp-text);border-color:var(--lamp)}
+@media (max-width:860px){
+  .qb-hero{grid-template-columns:auto minmax(0,1fr);padding:14px 16px;border-radius:26px;gap:12px}
+  .qb-char{width:78px}
+  .qb-class{grid-column:1/-1;grid-auto-flow:column;justify-items:start;justify-content:space-between;align-items:center;text-align:left;min-width:0;padding:10px 14px}
+  .qb-class p{display:none}
+  .qb-quests{grid-template-columns:minmax(0,1fr);gap:12px}
+  .qb-quests>li+li:before{left:38px;top:-12px;width:0;height:12px;border-top:0;border-left:4px dotted var(--hair-2)}
+  .qb-quest{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:2px 12px;padding:14px;border-radius:22px}
+  .qb-no{grid-column:2;grid-row:1}
+  .qb-ico{grid-column:1;grid-row:1/4;margin:0;width:52px;height:52px}
+  .qb-quest strong{grid-column:2;grid-row:2;font-size:18px}
+  .qb-quest small{grid-column:2;grid-row:3;min-height:0;font-size:12.5px}
+  .qb-meter,.qb-meter-text{grid-column:1/-1}
+  .qb-go{grid-column:3;grid-row:1/4;margin:0;padding:0 14px;min-height:48px;white-space:nowrap}
+}
+@media (prefers-reduced-motion:reduce){.qb-char,.qb-quests>li.is-next .qb-go{animation:none}}
+
+/* 휴대폰에서 레일 퀘스트: 롤러코스터 장면이 문제 위에 붙어 따라오게 */
+@media (max-width:860px){
+  body.dashboard-shell .dashboard-header{position:static !important;top:auto !important}
+  body.dashboard-shell .rq-layout{overflow:clip !important}
+  body.dashboard-shell .rq-stage{position:sticky !important;top:0;z-index:20;box-shadow:0 10px 18px -12px var(--drop)}
+  body.dashboard-shell .rq-stage .rq-scene-host{flex:none !important;height:min(34dvh,240px) !important;min-height:160px !important}
+  body.dashboard-shell .rq-stage .rq-scene-host>div{min-height:0 !important}
+}

@@ -48,22 +48,50 @@
       const badge = $('[data-he-dday]'); badge.textContent = schedule.inClass ? '수업 중' : schedule.days === 0 ? 'D-DAY' : 'D-' + schedule.days;
       badge.classList.toggle('is-live', schedule.inClass); badge.setAttribute('aria-label', schedule.inClass ? '현재 수업 시간' : schedule.days === 0 ? '오늘 수업 예정' : '다음 수업까지 ' + schedule.days + '일');
     }
+    // 오늘의 퀘스트 판: 처음 보이는 것은 '눌러서 바로 시작하는 퀘스트' — 설명을 읽지 않아도 누르면 공부가 시작된다.
+    const ICON = {
+      rail: '<path d="M5 5h14a2 2 0 0 1 2 2v8a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a2 2 0 0 1 2-2Zm-2 6h18M8 21l1.5-3m6.5 3-1.5-3M8 14.5h.01M16 14.5h.01"/>',
+      words: '<path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H12v15H6.5A2.5 2.5 0 0 0 4 21.5Zm16 0A2.5 2.5 0 0 0 17.5 4H12v15h5.5a2.5 2.5 0 0 1 2.5 2.5Z"/>',
+      start: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4.5l3 2M9.5 2.5h5"/>',
+      slides: '<path d="M6 3h9l4 4v14H6ZM14 3v5h5M9 13h7M9 17h5"/>'
+    };
+    function railDone() { try { const saved = JSON.parse(localStorage.getItem('ajenglish-rail-daily-v2:' + kstDate(Date.now()) + ':words') || 'null'); return !!saved && saved.finished === true; } catch (_) { return false; } }
     function render() {
       if (destroyed) return;
-      const current = lesson(), progress = todayProgress(), account = !!(state.authenticated && state.user), room = state.room;
-      const accountLabel = !state.authenticated ? '로그인·캐릭터 설정' : !state.user ? '캐릭터 설정' : room ? '반 확인' : '반 코드 참여';
-      const accountNote = !state.authenticated ? '로그인 후 캐릭터 저장' : !state.user ? '별명·캐릭터 저장 후 계정 기록' : room ? String(room.name || '참여한 반') : '계정 설정 완료 · 반 참여 선택';
-      const timeText = progress.unknown ? '수업 시간 집계 확인' : '수업 기록 ' + progress.minutes + '분 / 목표 20분';
-      const completionLabel = progress.completed ? progress.seconds >= 1200 ? '오늘 20분 목표 완료' : '오늘 퀘스트 완료' : current.active ? '진행 중인 복습' : '오늘의 복습';
-      root.innerHTML = '<div class="he-grid"><div class="he-study"><p class="he-eyebrow">AJ ENGLISH · 주간 수업 복습</p><h1>오늘의 <em>20분</em> 복습</h1><p class="he-lesson"><span>DAY ' + esc(current.id) + '</span><strong>' + esc(current.title) + '</strong></p><div class="he-progress-heading"><span class="he-completion ' + (progress.completed ? 'is-complete' : '') + '">' + completionLabel + '</span><span data-he-time>' + timeText + '</span></div><div class="he-progress" role="progressbar" aria-label="오늘의 20분 수업 복습 목표" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + progress.percent + '" aria-valuetext="' + esc(timeText) + '"><i style="width:' + progress.percent + '%"></i></div><button type="button" class="he-start" data-he-action="start" ' + (busy || typeof initial.onStart !== 'function' ? 'disabled' : '') + '>' + actionLabel() + '<span aria-hidden="true">→</span></button><p class="he-main-note">듣기 5분 · 말하기 5분 · 대화 7분 · 퀴즈 3분</p>' + (progress.completed ? '<p class="he-record-note">오늘 첫 완료 기록 있음 · 추가 복습 가능</p>' : '') + '</div>' +
-        '<aside class="he-class" aria-label="정기 수업 일정"><div class="he-class-top"><span data-he-class-label>다음 수업</span><strong class="he-dday" data-he-dday></strong></div><time data-he-class-date></time><p class="he-class-time">일요일 <strong>16:00–17:00</strong> <span>KST</span></p><p class="he-class-note">주일 오후 예배 후 · 매주 1시간</p><div class="he-class-divider" aria-hidden="true"></div><p class="he-class-source">매주 수업 · 매일 20분 복습<br>레일 퀘스트 10문제와 별도 진행</p></aside></div>' +
-        '<section class="he-guide" aria-labelledby="he-guide-title"><div class="he-guide-title"><h2 id="he-guide-title">학습 순서</h2><p>반 참여는 선택 · 반 없이도 학습 가능</p></div><ol class="he-steps"><li class="he-step ' + (account ? 'is-complete' : '') + '"><span class="he-step-number" aria-hidden="true">01</span><div><h3>로그인·캐릭터</h3><p>' + esc(accountNote) + '</p><button type="button" class="he-step-action" data-he-action="join" ' + (busy || typeof initial.onJoin !== 'function' ? 'disabled' : '') + '>' + esc(accountLabel) + ' <span aria-hidden="true">↗</span></button></div></li><li class="he-step"><span class="he-step-number" aria-hidden="true">02</span><div><h3>단어 복습</h3><p>매일 영단어 · 말하기 문장 카드</p><button type="button" class="he-step-action" data-he-action="words" ' + (busy || typeof initial.onWords !== 'function' ? 'disabled' : '') + '>복습 카드 <span aria-hidden="true">↗</span></button></div></li><li class="he-step ' + (progress.completed ? 'is-complete' : '') + '"><span class="he-step-number" aria-hidden="true">03</span><div><h3>20분 퀘스트</h3><p>' + (progress.completed ? '오늘 완료 기록 있음 · 추가 복습 가능' : '상단 버튼으로 시작 · 완료 후 기록 저장') + '</p><span class="he-step-note">수업 시간만 목표에 반영</span></div></li></ol></section><p class="he-status" role="status" aria-live="polite">' + esc(error) + '</p>';
+      const current = lesson(), progress = todayProgress(), room = state.room;
+      const timeText = progress.unknown ? '수업 시간 집계 확인' : progress.minutes + '분 / 20분';
+      const name = state.user?.nickname ? String(state.user.nickname) : '';
+      const quests = [
+        { key: 'rail', title: '레일 퀘스트', note: '10문제 맞히고 기차 출발', done: railDone(), go: '출발' },
+        { key: 'words', title: '단어 카드', note: '오늘의 단어·문장 뒤집어 보기', done: false, go: '뒤집기', disabled: typeof initial.onWords !== 'function' },
+        { key: 'start', title: '20분 복습', note: 'DAY ' + current.id + ' · ' + current.title, done: progress.completed, go: current.active ? '이어하기' : progress.completed ? '한 번 더' : '시작', disabled: typeof initial.onStart !== 'function', meter: progress.percent, meterText: timeText }
+      ];
+      const next = quests.find(q => !q.done && !q.disabled) || quests[0], doneCount = quests.filter(q => q.done).length;
+      const avatar = window.CuteCharacters ? window.CuteCharacters.render(state.user?.avatar || { species: 0, outfit: 3, color: 3 }, 'qb-avatar') : '';
+      const points = finite(state.progress?.points) ? state.progress.points : 0, streak = finite(state.progress?.streak) ? state.progress.streak : 0;
+      root.innerHTML = '<div class="qb"><div class="qb-hero"><div class="qb-char" aria-hidden="true">' + avatar + '</div><div class="qb-say"><p class="qb-hello">' + (name ? esc(name) + ', ' : '') + '오늘의 퀘스트가 도착했어요</p><h1>눌러서 바로 <em>시작</em></h1><div class="qb-chips"><span class="qb-chip"><i class="qb-star" aria-hidden="true"></i>퀘스트 ' + doneCount + ' / ' + quests.length + '</span><span class="qb-chip"><i class="qb-coin" aria-hidden="true"></i>' + esc(points) + ' XP</span><span class="qb-chip">연속 ' + esc(streak) + '일</span></div></div>' +
+        '<aside class="qb-class" aria-label="정기 수업 일정"><span data-he-class-label>다음 수업</span><strong class="he-dday" data-he-dday></strong><time data-he-class-date></time><p>일요일 <b>16:00–17:00</b></p></aside></div>' +
+        '<ol class="qb-quests">' + quests.map((q, n) => '<li class="' + (q.done ? 'is-done' : q === next ? 'is-next' : '') + '"><button type="button" class="qb-quest" data-he-action="' + q.key + '" ' + (busy || q.disabled ? 'disabled' : '') + '><span class="qb-no">QUEST ' + (n + 1) + '</span><span class="qb-ico" aria-hidden="true"><svg viewBox="0 0 24 24">' + (q.done ? '<path d="m5 12.5 4.5 4.5L19 7.5"/>' : ICON[q.key]) + '</svg></span><strong>' + q.title + '</strong><small>' + esc(q.note) + '</small>' + (q.meter !== undefined ? '<span class="qb-meter" role="progressbar" aria-label="오늘의 20분 복습" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + q.meter + '" aria-valuetext="' + esc(q.meterText) + '"><i style="width:' + q.meter + '%"></i></span><span class="qb-meter-text" data-he-time>' + esc(q.meterText) + '</span>' : '') + '<span class="qb-go">' + (q.done ? '완료 · 한 번 더' : (busy === q.key ? '여는 중' : q.go)) + ' <b aria-hidden="true">▶</b></span></button></li>').join('') + '</ol>' +
+        '<button type="button" class="he-start qb-next" data-he-action="' + next.key + '" ' + (busy ? 'disabled' : '') + '>' + (busy ? '여는 중' : doneCount === quests.length ? '오늘 퀘스트 모두 완료 · 한 번 더 하기' : '다음 퀘스트 시작 · ' + next.title) + '<span aria-hidden="true">→</span></button>' +
+        '<div class="qb-more"><button type="button" class="qb-link" data-he-action="slides"><svg viewBox="0 0 24 24" aria-hidden="true">' + ICON.slides + '</svg>수업 자료 PDF 보기</button><button type="button" class="qb-link" data-he-action="join" ' + (busy || typeof initial.onJoin !== 'function' ? 'disabled' : '') + '>' + (!state.authenticated ? '로그인하고 기록 저장하기' : room ? '우리 반 · ' + esc(String(room.name || '참여한 반')) : '반 코드로 참여하기') + '</button></div></div>' +
+        '<p class="he-status" role="status" aria-live="polite">' + esc(error) + '</p>';
       updateSchedule();
+    }
+    function localAction(action) {
+      if (action === 'rail') {
+        const target = document.querySelector('#rail-quest-home'); if (!target) return false;
+        target.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+        const begin = target.querySelector('[data-rq-start]'); if (begin && !begin.disabled) begin.click(); else target.querySelector('button:not([disabled])')?.focus({ preventScroll: true });
+        return true;
+      }
+      if (action === 'slides') { const link = document.querySelector('.dashboard-nav [data-view="slides"]'); if (link) link.click(); else location.hash = '#slides'; return true; }
+      return false;
     }
     async function onClick(event) {
       const button = event.target.closest('[data-he-action]');
       if (!button || !root.contains(button) || button.disabled || destroyed || busy) return;
-      const action = button.dataset.heAction, callback = action === 'start' ? initial.onStart : action === 'join' ? initial.onJoin : initial.onWords;
+      const action = button.dataset.heAction; if (localAction(action)) return;
+      const callback = action === 'start' ? initial.onStart : action === 'join' ? initial.onJoin : initial.onWords;
       if (typeof callback !== 'function') return;
       const version = ++actionVersion, day = lesson().id; busy = action; error = ''; render();
       try { await callback(...(action === 'start' ? [day] : [])); }
