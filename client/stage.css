@@ -584,3 +584,21 @@ body[data-view="profile"] .profile-nudge a{display:none}
 .visibility-choice button[aria-pressed="true"] b{color:var(--lamp-text)}
 .visibility-choice button[aria-pressed="true"] b:before{content:'✓ '}
 @media (max-width:520px){.visibility-choice>div{grid-template-columns:1fr}}
+
+/* 관리자: 수업 목록 — 줄마다 공개/비공개·수정 (admin.js) */
+.chapter-list{display:grid;gap:12px}
+.lesson-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:16px 18px;border-radius:20px;border:1px solid var(--hair-2);background:var(--booth)}
+.lesson-row.active{border-color:var(--lamp)}
+.lesson-row-main{display:grid;gap:4px;min-width:0;flex:1 1 240px}
+.lesson-row-main b{font-family:var(--pixel) !important;font-weight:400;font-size:11px;color:var(--lamp-text)}
+.lesson-row-main strong{font-size:17px;font-weight:800;color:var(--chalk);letter-spacing:-.02em;word-break:keep-all}
+.lesson-row-main small{font-size:13px;color:var(--mist)}
+.lesson-seen{justify-self:start;font-style:normal;font-size:12.5px;font-weight:800;padding:5px 11px;border-radius:999px;margin-top:4px}
+.lesson-seen.on{background:color-mix(in srgb,var(--ok) 15%,var(--booth));color:var(--ok)}
+.lesson-seen.off{background:color-mix(in srgb,var(--ticket) 22%,var(--booth));color:var(--chalk)}
+.lesson-row-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lesson-toggle{display:inline-flex;padding:4px;border-radius:999px;background:var(--booth-3)}
+.lesson-toggle button{min-height:40px;padding:0 18px;border:0;border-radius:999px;background:transparent;color:var(--mist);font-size:14px;font-weight:800;cursor:pointer}
+.lesson-toggle button[aria-pressed="true"]{background:var(--lamp);color:var(--lamp-ink);box-shadow:0 2px 0 var(--lamp-deep)}
+.lesson-toggle button[data-quick-publish="draft"][aria-pressed="true"]{background:var(--chalk);color:var(--on-chalk);box-shadow:none}
+.lesson-toggle button:disabled{opacity:.6;cursor:wait}

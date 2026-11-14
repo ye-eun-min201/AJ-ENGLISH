@@ -165,13 +165,41 @@
       return '<article class="expression-item"><div class="expression-item-top"><span class="expression-meta"><b class="admin-type-badge ' + (expression.kind === '단어' ? 'word' : 'sentence') + '">' + kindLabel(expression.kind) + '</b> <span>·</span> ' + esc(expression.studyDay) + '일째 복습</span><span class="status-pill ' + p.type + '">' + esc(p.label) + '</span></div><h3 lang="en">' + esc(expression.en) + '</h3><p class="item-meaning">' + esc(expression.ko) + '</p>' + (expression.note ? '<p class="expression-note">' + esc(expression.note) + '</p>' : '') + '<div class="item-footer"><span class="item-chapter">' + (chapter ? esc(chapter.title) : '오늘의 표현') + '</span><div class="item-actions"><button type="button" data-edit-expression="' + esc(expression.id) + '">수정</button><button type="button" data-toggle-expression="' + esc(expression.id) + '">' + (expression.status === 'published' ? '비공개' : '학생 공개') + '</button><button class="delete" type="button" data-delete-expression="' + esc(expression.id) + '">삭제</button></div></div></article>';
     }).join('') : '<div class="empty-state"><span>Aa</span><h3>' + (state.expressions.length ? '검색 결과 없음' : '등록한 표현 없음') + '</h3><p>' + (state.expressions.length ? '검색어·공개 상태 확인' : '영어·한국어 뜻 입력 후 등록') + '</p></div>';
   }
+  function visibility(chapter) {
+    if (chapter.status !== 'published') return { seen: false, text: '학생에게 안 보임 · 비공개' };
+    const opensAt = availableAt(chapter);
+    return opensAt > Date.now() ? { seen: false, text: '아직 안 보임 · ' + dateTime(new Date(opensAt).toISOString()) + '부터' } : { seen: true, text: '학생에게 보임' };
+  }
   function renderChapters() {
     const currentId = value($('#chapter-form'), 'id');
     $('#chapter-count').textContent = state.chapters.length;
     $('#chapter-list').innerHTML = state.chapters.length ? [...state.chapters].sort((a, b) => Number(b.number) - Number(a.number)).map(chapter => {
-      const p = publication(chapter);
-      return '<button type="button" class="chapter-list-button ' + (String(chapter.id) === currentId ? 'active' : '') + '" data-edit-chapter="' + esc(chapter.id) + '"><span><b>수업 ' + esc(String(chapter.number).padStart(2, '0')) + '</b><em class="status-pill ' + p.type + '">' + esc(p.type === 'scheduled' ? '예약 중' : p.label) + '</em></span><strong>' + esc(chapter.title) + '</strong><small>' + esc(chapter.weekStart || '수업 주 미지정') + (chapter.pdf ? ' · PDF 교재' : '') + '</small></button>';
-    }).join('') : '<div class="empty-state"><span>▤</span><h3>등록한 수업 없음</h3><p>제목·내용 입력 후 수업 등록</p></div>';
+      const v = visibility(chapter), open = chapter.status === 'published';
+      return '<article class="lesson-row ' + (String(chapter.id) === currentId ? 'active' : '') + '"><div class="lesson-row-main"><b>수업 ' + esc(String(chapter.number).padStart(2, '0')) + '</b><strong>' + esc(chapter.title) + '</strong><small>' + esc(chapter.weekStart || '수업 주 미지정') + ' · ' + (chapter.pdf ? 'PDF ' + esc(formatSize(chapter.pdf.size)) : 'PDF 없음') + '</small><em class="lesson-seen ' + (v.seen ? 'on' : 'off') + '">' + esc(v.text) + '</em></div>' +
+        '<div class="lesson-row-actions"><div class="lesson-toggle" role="group" aria-label="학생 공개 여부"><button type="button" data-quick-publish="now" data-chapter="' + esc(chapter.id) + '" aria-pressed="' + open + '">공개</button><button type="button" data-quick-publish="draft" data-chapter="' + esc(chapter.id) + '" aria-pressed="' + !open + '">비공개</button></div><button type="button" class="button secondary" data-edit-chapter="' + esc(chapter.id) + '">수정</button></div></article>';
+    }).join('') : '<div class="empty-state"><span>▤</span><h3>등록한 수업 없음</h3><p>‘새 수업 등록 +’으로 첫 수업을 올려 보세요</p></div>';
+  }
+  /** 목록·수정 화면 어디서든: 공개/비공개를 누르는 즉시 저장한다. 공개는 '지금 학생에게 보임'을 뜻한다. */
+  async function quickPublish(id, mode, button) {
+    const chapter = chapterById(id); if (!chapter || chapterBusy) return;
+    const buttons = all('[data-quick-publish],[data-delivery-choice]'); buttons.forEach(b => b.disabled = true);
+    status('#chapter-list-status', mode === 'now' ? '공개로 바꾸는 중' : '비공개로 바꾸는 중');
+    try {
+      const weekStart = mode === 'now' && (!chapter.weekStart || chapter.weekStart > kstDate()) ? monday() : chapter.weekStart;
+      const result = await request('admin/chapter', { id: chapter.id, number: Number(chapter.number), title: chapter.title, weekStart, body: chapter.body || '', status: mode === 'now' ? 'published' : 'draft', publishAt: null });
+      replaceRecord('chapters', result.chapter); state.revision = result.revision;
+      const form = $('#chapter-form');
+      if (value(form, 'id') === String(id)) { setValue(form, 'weekStart', result.chapter.weekStart); populateDelivery(form, result.chapter, 'chapter'); syncWeekChoice(); renderPDF(result.chapter); }
+      renderCollections();
+      const v = visibility(result.chapter);
+      status('#chapter-list-status', '수업 ' + String(result.chapter.number).padStart(2, '0') + ' · ' + v.text + ' (저장 완료)'); status('#chapter-status', v.text + ' (저장 완료)');
+    } catch (error) { status('#chapter-list-status', '바꾸지 못했어요 · ' + (error.message || '다시 시도해 주세요'), true); status('#chapter-status', '바꾸지 못했어요 · ' + (error.message || '다시 시도해 주세요'), true); }
+    finally { all('[data-quick-publish],[data-delivery-choice]').forEach(b => b.disabled = false); }
+  }
+  function chapterScreen(mode) {
+    const editing = mode === 'edit';
+    $('#chapter-collection').hidden = editing; $('.chapter-editor-paper').hidden = !editing;
+    $('.simple-chapter-workspace').classList.toggle('list-open', !editing);
   }
   function renderCollections() { renderChapterOptions(); renderSummary(); renderExpressions(); renderChapters(); $('#simple-overview').textContent = '등록 자료 · 표현 ' + state.expressions.length + '개 · 수업 ' + state.chapters.length + '개'; }
 
@@ -496,12 +524,13 @@
   document.addEventListener('click', async event => {
     const button = event.target.closest('button'); if (!button) return;
     if (button.dataset.tab) { selectTab(button.dataset.tab); return; }
-    if (button.dataset.deliveryChoice) { const form = $('#chapter-form'); if (!chapterBusy) { setValue(form, 'delivery', button.dataset.deliveryChoice); updateSchedule(form, 'chapter'); } return; }
+    if (button.dataset.quickPublish) { await quickPublish(button.dataset.chapter, button.dataset.quickPublish, button); return; }
+    if (button.dataset.deliveryChoice) { const form = $('#chapter-form'); if (!chapterBusy) { setValue(form, 'delivery', button.dataset.deliveryChoice); updateSchedule(form, 'chapter'); if (value(form, 'id')) await quickPublish(value(form, 'id'), button.dataset.deliveryChoice, button); } return; }
     if (button.dataset.expressionKind) { setValue($('#expression-form'), 'kind', button.dataset.expressionKind === '단어' ? '단어' : '표현'); updateExpressionKind(); return; }
     if (button.hasAttribute('data-start-expression')) { newExpression(); $('#expression-collection').hidden = true; $('.simple-editor-layout').classList.remove('list-open'); selectTab('daily'); field($('#expression-form'),'en').focus(); return; }
-    if (button.hasAttribute('data-start-chapter')) { newChapter(); $('#chapter-collection').hidden = true; $('.simple-chapter-workspace').classList.remove('list-open'); selectTab('chapters'); field($('#chapter-form'),'title').focus(); return; }
+    if (button.hasAttribute('data-start-chapter')) { newChapter(); chapterScreen('edit'); selectTab('chapters'); field($('#chapter-form'),'title').focus(); return; }
     if (button.hasAttribute('data-toggle-expression-list') || button.hasAttribute('data-show-expressions')) { const collection = $('#expression-collection'); collection.hidden = button.hasAttribute('data-show-expressions') ? false : !collection.hidden; $('.simple-editor-layout').classList.toggle('list-open',!collection.hidden); selectTab('daily'); return; }
-    if (button.hasAttribute('data-toggle-chapter-list') || button.hasAttribute('data-show-chapters')) { const collection = $('#chapter-collection'); collection.hidden = button.hasAttribute('data-show-chapters') ? false : !collection.hidden; $('.simple-chapter-workspace').classList.toggle('list-open',!collection.hidden); selectTab('chapters'); return; }
+    if (button.hasAttribute('data-toggle-chapter-list') || button.hasAttribute('data-show-chapters')) { chapterScreen('list'); renderChapters(); selectTab('chapters'); return; }
     if (button.dataset.wizardNext || button.dataset.wizardPrev) { goWizardStep(button.dataset.wizardNext || button.dataset.wizardPrev); return; }
     if (button.hasAttribute('data-clear-pdf')) { if (!chapterBusy) { resetPDFSelection(); renderPDF(chapterById(value($('#chapter-form'),'id'))); if (wizardStep === 3) renderWizardSummary(); } return; }
     if (button.id === 'logout-button') {
@@ -516,8 +545,8 @@
     if (button.dataset.editExpression) { editExpression(button.dataset.editExpression); return; }
     if (button.dataset.toggleExpression) { await toggleExpression(button.dataset.toggleExpression, button); return; }
     if (button.dataset.deleteExpression) { await deleteExpression(button.dataset.deleteExpression, button); return; }
-    if (button.hasAttribute('data-new-chapter')) { newChapter(); selectTab('chapters'); field($('#chapter-form'), 'title').focus(); return; }
-    if (button.dataset.editChapter) { editChapter(button.dataset.editChapter); return; }
+    if (button.hasAttribute('data-new-chapter')) { newChapter(); chapterScreen('edit'); selectTab('chapters'); field($('#chapter-form'), 'title').focus(); return; }
+    if (button.dataset.editChapter) { editChapter(button.dataset.editChapter); chapterScreen('edit'); field($('#chapter-form'), 'title').focus(); return; }
     if (button.hasAttribute('data-preview-chapter')) { previewChapter(); return; }
     if (button.hasAttribute('data-pdf-publication-settings')) { if (!chapterBusy) { showWizardStep(1); $('#chapter-advanced').open = true; field($('#chapter-form'), 'delivery').focus(); } return; }
     if (button.hasAttribute('data-close-preview')) { closePreview(); return; }
