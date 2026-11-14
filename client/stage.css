@@ -686,3 +686,41 @@ body.dashboard-shell .home-entry .qb-next{width:100%;justify-content:space-betwe
   body.dashboard-shell .rq-stage .rq-scene-host{flex:none !important;height:min(34dvh,240px) !important;min-height:160px !important}
   body.dashboard-shell .rq-stage .rq-scene-host>div{min-height:0 !important}
 }
+
+/* ==========================================================================
+   덜어내기 — 꼭 필요한 것만 남긴다
+   ========================================================================== */
+/* 머리말: XP 하나, 판 전환, 로그인 상태, 내 캐릭터만 */
+body.dashboard-shell .dashboard-header :is(.dashboard-header-kicker,#today-date,.aj-save-status),
+body.dashboard-shell .aj-game-hud .aj-hud-stat:nth-child(n+2){display:none !important}
+body.dashboard-shell .dashboard-header{min-height:0 !important;padding-top:14px !important;padding-bottom:14px !important}
+/* 옆 메뉴 아래 장식 문구 */
+body.dashboard-shell .dashboard-sidebar-note{display:none !important}
+/* 첫 화면: 퀘스트 판과 레일 퀘스트만 */
+body.dashboard-shell[data-view="home"] .aj-dashboard-records{display:none !important}
+.qb-hero{grid-template-columns:auto minmax(0,1fr) !important}
+.qb-chip.qb-class{display:inline-flex;grid-auto-flow:initial;min-width:0;padding:8px 8px 8px 12px;border:0;border-radius:999px;text-align:left;gap:8px;align-items:center;font-family:var(--display) !important;font-size:12.5px;color:var(--mist);font-weight:700}
+.qb-chip.qb-class time{font-size:12.5px;color:var(--chalk)}
+body.dashboard-shell .qb-chip.qb-class .he-dday{font-size:10px !important;padding:4px 8px !important}
+/* 레일 퀘스트: 장면·문제·진행만 */
+body.dashboard-shell .rail-quest :is(.rq-footer,.rq-run-meta,.rq-map-link,.rq-scene-badge,.rq-camera,.rq-heading p,.rq-heading span){display:none !important}
+body.dashboard-shell .rail-quest .rq-heading{margin-bottom:12px !important}
+body.dashboard-shell .rail-quest .rq-heading h2{font-size:22px !important}
+@media (max-width:860px){ .qb-chip.qb-class{grid-column:auto;justify-content:flex-start} }
+/* 관리자 들어가는 길은 맨 아래 한 줄로 옮김 */
+body.dashboard-shell .dashboard-header .header-admin-link{display:none !important}
+@media (max-width:860px){
+  /* 휴대폰 머리말: 한 줄 — 판 전환 · 소리 · 로그인 · 내 캐릭터 */
+  body.dashboard-shell .dashboard-header{display:flex !important;align-items:center;justify-content:flex-end;gap:8px;padding:10px 14px !important;min-height:0 !important;height:auto !important}
+  body.dashboard-shell .dashboard-header>div:first-child{display:none !important}
+  body.dashboard-shell .dashboard-header-actions{display:flex !important;flex-wrap:nowrap !important;align-items:center;justify-content:flex-end;gap:8px !important;width:100% !important;grid-template-columns:none !important}
+  body.dashboard-shell .dashboard-header-actions>*{grid-column:auto !important;grid-row:auto !important;margin:0 !important}
+  body.dashboard-shell .dashboard-header :is(.aj-game-hud,.aj-help-entry){display:none !important}
+  body.dashboard-shell .dashboard-header .auth-pill{flex:1 1 auto;min-width:0}
+  body.dashboard-shell .dashboard-header .nav-user{flex:none}
+  /* 휴대폰 메뉴: 옆으로 미는 한 줄 */
+  body.dashboard-shell .dashboard-nav{display:flex !important;flex-wrap:nowrap !important;overflow-x:auto;gap:6px !important;padding-bottom:6px;scrollbar-width:none;grid-template-columns:none !important}
+  body.dashboard-shell .dashboard-nav::-webkit-scrollbar{display:none}
+  body.dashboard-shell .dashboard-nav .nav-item{flex:0 0 auto !important;width:auto !important;min-width:76px}
+  body.dashboard-shell .dashboard-sidebar-bottom{display:none !important}
+}
