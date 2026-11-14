@@ -747,3 +747,44 @@ body.aj-admin .lesson-row-actions .button{min-height:40px}
 body.aj-admin .chapter-list{grid-template-columns:minmax(0,1fr) !important}
 .lesson-toggle button,.lesson-row-actions .button{white-space:nowrap}
 @media (max-width:720px){.lesson-row-actions{width:100%}.lesson-toggle{flex:1 1 100%}.lesson-toggle button{flex:1}.lesson-row-actions .button{flex:1;justify-content:center;text-align:center}}
+
+/* ==========================================================================
+   간격 바로잡기 — 붙거나 겹쳐 보이던 곳
+   ========================================================================== */
+/* 관리자: 건너뛰기 링크는 키보드로 이동할 때만 보인다 */
+.skip-link:focus:not(:focus-visible){top:-80px !important}
+/* 관리자 옆 메뉴: 이름표와 메뉴 사이 */
+body.aj-admin .teacher-sidebar .wordmark{display:block;margin-bottom:26px !important}
+body.aj-admin .teacher-sidebar nav{display:grid;gap:8px}
+body.aj-admin .teacher-sidebar .nav-button{margin:0 !important}
+/* 관리자 화면 제목 줄: 제목과 '← 목록' 단추 */
+body.aj-admin .tab-panel .page-heading{display:flex !important;align-items:center !important;justify-content:space-between;gap:12px 16px;flex-wrap:wrap;margin:0 0 20px !important;padding:0 !important}
+body.aj-admin .simple-list-toggle{margin:0 !important;padding:0 16px !important;min-height:42px !important;border:1px solid var(--hair-2) !important;border-radius:999px !important;background:var(--booth) !important;color:var(--chalk) !important;text-decoration:none !important;white-space:nowrap;font-weight:700;line-height:1.2 !important;box-shadow:var(--lift)}
+/* 단계 표시·확인 상자를 한 가지 톤으로 */
+body.aj-admin .wizard-steps{gap:8px !important;margin:14px 0 20px !important}
+body.aj-admin .wizard-steps>span{background:var(--booth-2) !important;border:1px solid var(--hair) !important;color:var(--mist) !important;border-radius:999px !important;min-height:44px}
+body.aj-admin .wizard-steps>span.complete{background:var(--lamp-soft) !important;color:var(--lamp-text) !important}
+body.aj-admin .wizard-steps>span.active{background:var(--lamp) !important;border-color:var(--lamp) !important;color:var(--lamp-ink) !important}
+body.aj-admin .wizard-steps>span b{background:var(--booth) !important;color:var(--lamp-text) !important}
+body.aj-admin #wizard-summary{background:var(--booth-2) !important;border:1px solid var(--hair) !important;border-radius:18px !important}
+body.aj-admin .pdf-editor{padding:16px !important;border-radius:20px !important}
+body.aj-admin .pdf-editor .form-actions{gap:8px;flex-wrap:wrap;margin-top:12px}
+body.aj-admin .wizard-actions{gap:12px;flex-wrap:wrap;margin-top:20px !important;padding-top:18px !important}
+body.aj-admin .chapter-editor-paper,body.aj-admin .editor-paper,body.aj-admin .chapter-list-paper,body.aj-admin .collection-paper{padding:22px !important}
+@media (max-width:720px){
+  body.aj-admin .teacher-sidebar{padding:16px 16px 12px !important}
+  body.aj-admin .teacher-sidebar .wordmark{margin-bottom:14px !important}
+  body.aj-admin .teacher-sidebar nav{grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:6px}
+  body.aj-admin .teacher-sidebar .nav-button{justify-content:center;padding:10px 6px !important;font-size:14px}
+  body.aj-admin .teacher-sidebar .nav-symbol{display:none}
+  body.aj-admin .teacher-header{padding:10px 16px !important;min-height:0 !important;height:auto !important}
+  body.aj-admin .teacher-header>div:first-child{display:none !important}
+  body.aj-admin .teacher-header .header-actions{width:100%;display:flex !important;gap:8px;justify-content:flex-end}
+  body.aj-admin .teacher-header .header-actions .button{flex:1}
+  body.aj-admin #teacher-main{padding:18px 14px !important}
+  body.aj-admin .chapter-editor-paper,body.aj-admin .editor-paper,body.aj-admin .chapter-list-paper,body.aj-admin .collection-paper{padding:16px !important}
+  body.aj-admin .wizard-steps>span{font-size:12px;padding:6px 4px !important}
+}
+/* 학생: 캐릭터 화면 단추 사이, 복습 지도의 시작 단추 둘레 */
+body.dashboard-shell [data-open-room]{margin-top:10px !important}
+@media (max-width:860px){ body.dashboard-shell .quest-map-game .qm-start{margin:10px 0 !important} }
