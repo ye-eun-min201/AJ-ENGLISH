@@ -176,7 +176,7 @@
     $('#chapter-list').innerHTML = state.chapters.length ? [...state.chapters].sort((a, b) => Number(b.number) - Number(a.number)).map(chapter => {
       const v = visibility(chapter), open = chapter.status === 'published';
       return '<article class="lesson-row ' + (String(chapter.id) === currentId ? 'active' : '') + '"><div class="lesson-row-main"><b>수업 ' + esc(String(chapter.number).padStart(2, '0')) + '</b><strong>' + esc(chapter.title) + '</strong><small>' + esc(chapter.weekStart || '수업 주 미지정') + ' · ' + (chapter.pdf ? 'PDF ' + esc(formatSize(chapter.pdf.size)) : 'PDF 없음') + '</small><em class="lesson-seen ' + (v.seen ? 'on' : 'off') + '">' + esc(v.text) + '</em></div>' +
-        '<div class="lesson-row-actions"><div class="lesson-toggle" role="group" aria-label="학생 공개 여부"><button type="button" data-quick-publish="now" data-chapter="' + esc(chapter.id) + '" aria-pressed="' + open + '">공개</button><button type="button" data-quick-publish="draft" data-chapter="' + esc(chapter.id) + '" aria-pressed="' + !open + '">비공개</button></div><button type="button" class="button secondary" data-edit-chapter="' + esc(chapter.id) + '">수정</button></div></article>';
+        '<div class="lesson-row-actions"><div class="lesson-toggle" role="group" aria-label="학생 공개 여부"><button type="button" data-quick-publish="now" data-chapter="' + esc(chapter.id) + '" aria-pressed="' + open + '">공개</button><button type="button" data-quick-publish="draft" data-chapter="' + esc(chapter.id) + '" aria-pressed="' + !open + '">비공개</button></div>' + (chapter.pdf ? '<a class="button secondary" href="' + esc(chapter.pdf.url) + '" target="AJEnglishPDF" rel="noopener">PDF 열기 ↗</a>' : '') + '<button type="button" class="button secondary" data-edit-chapter="' + esc(chapter.id) + '">수정</button><button type="button" class="button secondary lesson-delete" data-remove-chapter="' + esc(chapter.id) + '">삭제</button></div></article>';
     }).join('') : '<div class="empty-state"><span>▤</span><h3>등록한 수업 없음</h3><p>‘새 수업 등록 +’으로 첫 수업을 올려 보세요</p></div>';
   }
   /** 목록·수정 화면 어디서든: 공개/비공개를 누르는 즉시 저장한다. 공개는 '지금 학생에게 보임'을 뜻한다. */
@@ -195,6 +195,27 @@
       status('#chapter-list-status', '수업 ' + String(result.chapter.number).padStart(2, '0') + ' · ' + v.text + ' (저장 완료)'); status('#chapter-status', v.text + ' (저장 완료)');
     } catch (error) { status('#chapter-list-status', '바꾸지 못했어요 · ' + (error.message || '다시 시도해 주세요'), true); status('#chapter-status', '바꾸지 못했어요 · ' + (error.message || '다시 시도해 주세요'), true); }
     finally { all('[data-quick-publish],[data-delivery-choice]').forEach(b => b.disabled = false); }
+  }
+  async function removeChapter(id, button) {
+    if (chapterBusy) return;
+    const key = 'chapter:' + id;
+    if (!deleteConfirmations.has(key)) {
+      button.textContent = '한 번 더 눌러 삭제'; button.classList.add('delete-confirm');
+      deleteConfirmations.set(key, setTimeout(() => { deleteConfirmations.delete(key); if (button.isConnected) { button.textContent = '삭제'; button.classList.remove('delete-confirm'); } }, 5000));
+      status('#chapter-list-status', '삭제하면 이 수업의 PDF와 학생 필기도 함께 지워지고 되돌릴 수 없어요. 맞으면 한 번 더 눌러 주세요.');
+      return;
+    }
+    clearTimeout(deleteConfirmations.get(key)); deleteConfirmations.delete(key); button.disabled = true;
+    try {
+      const result = await request('admin/chapter/remove', { id });
+      state.chapters = state.chapters.filter(item => String(item.id) !== String(id)); state.expressions.forEach(item => { if (String(item.chapterId) === String(id)) item.chapterId = null; }); state.revision = result.revision;
+      if (value($('#chapter-form'), 'id') === String(id)) newChapter();
+      renderCollections(); status('#chapter-list-status', '수업 삭제 완료 · 학생 화면에서도 빠졌어요'); notify(result.revision, 'chapter-remove', id);
+    } catch (error) { status('#chapter-list-status', '삭제하지 못했어요 · ' + (error.message || '다시 시도해 주세요'), true); if (button.isConnected) button.disabled = false; }
+  }
+  function expressionScreen(mode) {
+    const editing = mode === 'edit', layout = $('.simple-editor-layout');
+    $('#expression-collection').hidden = editing; layout.querySelector('.editor-paper').hidden = !editing; layout.classList.toggle('list-open', !editing);
   }
   function chapterScreen(mode) {
     const editing = mode === 'edit';
@@ -524,12 +545,13 @@
   document.addEventListener('click', async event => {
     const button = event.target.closest('button'); if (!button) return;
     if (button.dataset.tab) { selectTab(button.dataset.tab); return; }
+    if (button.dataset.removeChapter) { await removeChapter(button.dataset.removeChapter, button); return; }
     if (button.dataset.quickPublish) { await quickPublish(button.dataset.chapter, button.dataset.quickPublish, button); return; }
     if (button.dataset.deliveryChoice) { const form = $('#chapter-form'); if (!chapterBusy) { setValue(form, 'delivery', button.dataset.deliveryChoice); updateSchedule(form, 'chapter'); if (value(form, 'id')) await quickPublish(value(form, 'id'), button.dataset.deliveryChoice, button); } return; }
     if (button.dataset.expressionKind) { setValue($('#expression-form'), 'kind', button.dataset.expressionKind === '단어' ? '단어' : '표현'); updateExpressionKind(); return; }
-    if (button.hasAttribute('data-start-expression')) { newExpression(); $('#expression-collection').hidden = true; $('.simple-editor-layout').classList.remove('list-open'); selectTab('daily'); field($('#expression-form'),'en').focus(); return; }
+    if (button.hasAttribute('data-start-expression')) { newExpression(); expressionScreen('edit'); selectTab('daily'); field($('#expression-form'),'en').focus(); return; }
     if (button.hasAttribute('data-start-chapter')) { newChapter(); chapterScreen('edit'); selectTab('chapters'); field($('#chapter-form'),'title').focus(); return; }
-    if (button.hasAttribute('data-toggle-expression-list') || button.hasAttribute('data-show-expressions')) { const collection = $('#expression-collection'); collection.hidden = button.hasAttribute('data-show-expressions') ? false : !collection.hidden; $('.simple-editor-layout').classList.toggle('list-open',!collection.hidden); selectTab('daily'); return; }
+    if (button.hasAttribute('data-toggle-expression-list') || button.hasAttribute('data-show-expressions')) { expressionScreen('list'); selectTab('daily'); return; }
     if (button.hasAttribute('data-toggle-chapter-list') || button.hasAttribute('data-show-chapters')) { chapterScreen('list'); renderChapters(); selectTab('chapters'); return; }
     if (button.dataset.wizardNext || button.dataset.wizardPrev) { goWizardStep(button.dataset.wizardNext || button.dataset.wizardPrev); return; }
     if (button.hasAttribute('data-clear-pdf')) { if (!chapterBusy) { resetPDFSelection(); renderPDF(chapterById(value($('#chapter-form'),'id'))); if (wizardStep === 3) renderWizardSummary(); } return; }
@@ -541,8 +563,8 @@
       return;
     }
     if (button.hasAttribute('data-refresh')) { await refresh({ message: '자료 목록 새로고침 완료' }); return; }
-    if (button.hasAttribute('data-new-expression') || button.hasAttribute('data-reset-expression')) { newExpression(); selectTab('daily'); field($('#expression-form'), 'en').focus(); return; }
-    if (button.dataset.editExpression) { editExpression(button.dataset.editExpression); return; }
+    if (button.hasAttribute('data-new-expression') || button.hasAttribute('data-reset-expression')) { newExpression(); expressionScreen('edit'); selectTab('daily'); field($('#expression-form'), 'en').focus(); return; }
+    if (button.dataset.editExpression) { editExpression(button.dataset.editExpression); expressionScreen('edit'); return; }
     if (button.dataset.toggleExpression) { await toggleExpression(button.dataset.toggleExpression, button); return; }
     if (button.dataset.deleteExpression) { await deleteExpression(button.dataset.deleteExpression, button); return; }
     if (button.hasAttribute('data-new-chapter')) { newChapter(); chapterScreen('edit'); selectTab('chapters'); field($('#chapter-form'), 'title').focus(); return; }

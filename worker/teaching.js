@@ -232,6 +232,21 @@ export async function handleTeaching(request, env, now = Date.now(), baseCourses
         return json({ chapter: chapterView(await chapterRow(env.DB, id)), revision: await revision(env.DB) });
       }
       if (path === '/api/admin/chapter/delete' && request.method === 'POST') { const body = await jsonBody(request), id = identifier(body.id, '챕터'); if (!await chapterRow(env.DB, id)) fail(404, 'chapter_not_found', '챕터를 찾을 수 없어요.'); await env.DB.batch([env.DB.prepare("UPDATE teacher_chapters SET status = 'draft', updated_at = ? WHERE id = ?").bind(now, id), revisionStatement(env.DB, 'unpublish-chapter', now)]); return json({ unpublished: true, id, revision: await revision(env.DB) }); }
+      // 수업을 완전히 지운다: PDF·학생 필기까지 함께 지우고, 연결된 단어·문장은 수업 연결만 끊어 남긴다.
+      if (path === '/api/admin/chapter/remove' && request.method === 'POST') {
+        const body = await jsonBody(request), id = identifier(body.id, '챕터'); const chapter = await chapterRow(env.DB, id);
+        if (!chapter) fail(404, 'chapter_not_found', '챕터를 찾을 수 없어요.');
+        await env.DB.batch([
+          env.DB.prepare('UPDATE teacher_expressions SET chapter_id = NULL, updated_at = ? WHERE chapter_id = ?').bind(now, id),
+          env.DB.prepare('DELETE FROM teacher_notes WHERE chapter_id = ?').bind(id),
+          env.DB.prepare('DELETE FROM teacher_pdfs WHERE chapter_id = ?').bind(id),
+          env.DB.prepare('UPDATE learning_sessions SET chapter_id = NULL WHERE chapter_id = ?').bind(id),
+          env.DB.prepare('DELETE FROM teacher_chapters WHERE id = ?').bind(id),
+          revisionStatement(env.DB, 'remove-chapter', now)
+        ]);
+        if (chapter.object_key && env.BUCKET) try { await env.BUCKET.delete(chapter.object_key); } catch { console.error('Removed chapter PDF cleanup deferred'); }
+        return json({ removed: true, id, revision: await revision(env.DB) });
+      }
       if (path === '/api/admin/expression' && request.method === 'POST') {
         const body = await jsonBody(request), id = body.id ? identifier(body.id, '표현') : crypto.randomUUID();
         if (body.id && !await first(env.DB, 'SELECT id FROM teacher_expressions WHERE id = ? AND deleted_at IS NULL', id)) fail(404, 'expression_not_found', '표현을 찾을 수 없어요.');
