@@ -724,3 +724,26 @@ body.dashboard-shell .dashboard-header .header-admin-link{display:none !importan
   body.dashboard-shell .dashboard-nav .nav-item{flex:0 0 auto !important;width:auto !important;min-width:76px}
   body.dashboard-shell .dashboard-sidebar-bottom{display:none !important}
 }
+/* 학생 메뉴: 월간 MVP는 '게임 · MVP' 안으로 */
+body.dashboard-shell .dashboard-nav [data-view="rankings"]{display:none !important}
+.arcade-mvp{display:flex;justify-content:flex-end;margin:0 0 14px}
+
+/* ==========================================================================
+   관리자 화면 덜어내기 — 수업 · 단어·문장 · 학생 현황 세 가지만
+   ========================================================================== */
+body.aj-admin :is([data-tab="start"],.teacher-sidebar [data-help],.teacher-sidebar .student-nav,.sidebar-bottom,.sidebar-caption,.header-kicker,#teacher-date,.teacher-header [data-help],.simple-back,.al-scope,.al-table-note){display:none !important}
+body.aj-admin .tab-panel .page-heading>div>p,body.aj-admin .tab-panel .page-heading .eyebrow{display:none !important}
+body.aj-admin .tab-panel .page-heading h1{font-size:26px !important;margin:0 !important}
+body.aj-admin .tab-panel:has(#chapter-collection:not([hidden])) [data-toggle-chapter-list],body.aj-admin .tab-panel:has(#expression-collection:not([hidden])) [data-toggle-expression-list]{display:none !important}
+body.aj-admin #chapter-collection{display:flex;flex-direction:column}
+body.aj-admin #chapter-collection[hidden]{display:none}
+body.aj-admin #chapter-collection .form-actions{order:1;margin:4px 0 14px}
+body.aj-admin #chapter-collection .publish-hint{order:2}
+body.aj-admin #chapter-collection .form-status{order:3}
+body.aj-admin #chapter-collection .chapter-list{order:4}
+body.aj-admin .paper{background:var(--booth) !important;border:1px solid var(--hair) !important;border-radius:26px !important;box-shadow:var(--card) !important}
+body.aj-admin :is(.simple-advanced,.pdf-editor,.publish-box,.simple-bulk,details.paper){background:var(--booth-2) !important;border-color:var(--hair) !important}
+body.aj-admin .lesson-row-actions .button{min-height:40px}
+body.aj-admin .chapter-list{grid-template-columns:minmax(0,1fr) !important}
+.lesson-toggle button,.lesson-row-actions .button{white-space:nowrap}
+@media (max-width:720px){.lesson-row-actions{width:100%}.lesson-toggle{flex:1 1 100%}.lesson-toggle button{flex:1}.lesson-row-actions .button{flex:1;justify-content:center;text-align:center}}

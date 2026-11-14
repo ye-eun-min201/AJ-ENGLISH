@@ -103,7 +103,7 @@
       if (!data.authenticated) { showLogin(); return false; }
       state = { authenticated: true, revision: data.revision, chapters: Array.isArray(data.chapters) ? data.chapters : [], expressions: Array.isArray(data.expressions) ? data.expressions : [] };
       showWorkspace(); renderCollections();
-      if (options?.initialize) { newExpression(); newChapter(); selectTab('start'); }
+      if (options?.initialize) { newExpression(); newChapter(); selectTab('chapters'); }
       if (options?.message) status('#workspace-status', options.message);
       return true;
     } catch (error) {

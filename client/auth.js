@@ -32,4 +32,6 @@
     .then(status => { if (status && status.authenticated && footerButton) footerButton.hidden = false; show(status); })
     .catch(() => { /* 상태 확인 실패 시 아무것도 덧붙이지 않는다 */ });
   footerButton?.addEventListener('click', () => logout(footerButton));
+  // 캐릭터 화면의 '우리 반 입장' 단추 → 옆 메뉴의 반 입장과 같은 창을 연다 (휴대폰에서는 옆 메뉴 단추가 안 보이므로)
+  document.addEventListener('click', event => { if (event.target.closest('[data-open-room]')) document.getElementById('class-open')?.click(); });
 })();
