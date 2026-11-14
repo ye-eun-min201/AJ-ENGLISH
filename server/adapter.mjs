@@ -43,9 +43,22 @@ async function readBody(request, limit) {
 const partKey = (uploadId, index) => 'tmp-upload/' + uploadId + '/' + index;
 const validUpload = (uploadId, count) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(uploadId || '') && Number.isInteger(count) && count >= 1 && count <= MAX_PARTS;
 
+/** 로그인만 하면 바로 기록이 저장되도록, 캐릭터를 안 만든 계정에는 기본 캐릭터·별명을 넣어 둔다.
+ *  (캐릭터 화면에서 언제든 바꿀 수 있다 — 캐릭터 꾸미기는 선택 사항) */
+const profiled = new Set();
+async function ensureProfile(db, userId) {
+  if (profiled.has(userId)) return;
+  try {
+    let tail = 0; for (const ch of userId) tail = (tail * 31 + ch.charCodeAt(0)) % 9000;
+    await db.prepare('INSERT INTO profiles (user_id, public_id, nickname, avatar, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(user_id) DO NOTHING')
+      .bind(userId, crypto.randomUUID(), '학생 ' + (1000 + tail), JSON.stringify({ species: 0, skin: 0, hair: 0, eyes: 0, outfit: 0, accessory: 0, color: 0 }), Date.now()).run();
+    profiled.add(userId); if (profiled.size > 5000) profiled.clear();
+  } catch (error) { console.error('기본 캐릭터 준비 실패', error && error.message); }
+}
+
 /** 설정 점검표: 비밀값은 보여 주지 않고 '되어 있는지'만 알려 준다. 주소창에 /api/health 를 열어 확인. */
 async function health(request, origin, loginOrigin) {
-  const report = { 접속주소: origin, 로그인주소: loginOrigin, 주소일치: origin === loginOrigin, DB연결: false, DB쓰기: false, PDF보관: 'DB', 관리자비밀번호: !!process.env.ADMIN_PASSWORD, 로그인: providerStatus() };
+  const report = { 접속주소: origin, 로그인주소: loginOrigin, 주소일치: origin === loginOrigin, DB연결: false, DB쓰기: false, PDF보관: '-', 관리자비밀번호: !!process.env.ADMIN_PASSWORD, 로그인: providerStatus() };
   try {
     const db = await getDatabase();
     if (db) {
@@ -56,7 +69,21 @@ async function health(request, origin, loginOrigin) {
       report.학생수 = Number(await db.prepare('SELECT COUNT(*) AS n FROM profiles').first('n'));
       report.수업수 = Number(await db.prepare('SELECT COUNT(*) AS n FROM teacher_chapters').first('n'));
       report.PDF수 = Number(await db.prepare('SELECT COUNT(*) AS n FROM teacher_pdfs').first('n'));
-      report.PDF보관 = process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID ? 'Vercel Blob' : 'DB';
+      report.PDF보관 = process.env.AJ_LOCAL_BLOB_DIR ? '시험용 폴더' : process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID ? 'Vercel Blob' : 'DB';
+      // 수업마다: 학생에게 보이는 상태인지, PDF가 실제로 열리는지
+      const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date()), bucket = getBucket(db);
+      const rows = (await db.prepare('SELECT c.number, c.status, c.week_start, c.publish_at, p.object_key, p.size FROM teacher_chapters c LEFT JOIN teacher_pdfs p ON p.chapter_id = c.id ORDER BY c.number').all()).results || [];
+      report.수업목록 = [];
+      for (const row of rows.slice(0, 30)) {
+        const item = { 번호: row.number, 학생에게: row.status !== 'published' ? '안 보임(비공개)' : row.week_start > today ? '안 보임(' + row.week_start + '부터 공개)' : row.publish_at !== null && row.publish_at > Date.now() ? '안 보임(예약 시간 전)' : '보임' };
+        if (!row.object_key) item.PDF = '없음';
+        else try {
+          const found = bucket ? await bucket.get(row.object_key) : null;
+          if (!found) item.PDF = '기록은 있는데 파일을 못 찾음';
+          else { let bytes = 0; const reader = found.body.getReader(); for (;;) { const { done, value } = await reader.read(); if (done) break; bytes += value.byteLength; } item.PDF = bytes === Number(row.size) ? '열림(' + Math.round(bytes / 1024) + 'KB)' : '크기 다름(기록 ' + row.size + ', 실제 ' + bytes + ')'; }
+        } catch (error) { item.PDF = '읽기 실패: ' + String(error && error.message || error).slice(0, 160); }
+        report.수업목록.push(item);
+      }
     } else report.안내 = 'TURSO_DATABASE_URL 이 없습니다.';
   } catch (error) { report.오류 = String(error && error.message || error).slice(0, 300); }
   return json(report);
@@ -80,6 +107,7 @@ export async function handle(request) {
     if (!pathname.startsWith('/api/')) return new Response('Not found', { status: 404 });
 
     const user = await currentUser(request, db);
+    if (user) await ensureProfile(db, user.id);
     if (pathname === '/api/auth/status' && request.method === 'GET') return json({ authenticated: !!user, provider: user ? user.provider : null, providers: providerStatus() });
 
     // 서버 로직에 넘길 요청: 누가 보냈는지는 여기서만 정한다 (브라우저가 보낸 식별 헤더는 버림)

@@ -183,6 +183,7 @@
   }
   function updateSchedule(form, kind) {
     const mode = value(form, 'delivery'), input = field(form, 'publishAt');
+    if (kind === 'chapter') document.querySelectorAll('[data-delivery-choice]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.deliveryChoice === (mode === 'draft' ? 'draft' : 'now'))));
     const wrapper = document.querySelector('[data-schedule-field="' + kind + '"]');
     wrapper.hidden = mode !== 'scheduled'; input.required = mode === 'scheduled';
     window.AJFormGuidance?.refresh(input);
@@ -377,7 +378,7 @@
     savePDFButton.disabled = chapterBusy || fileChecking || !selectedFile;
     savePDFButton.textContent = chapterBusy ? 'PDF 저장 중' : pdf ? 'PDF 교체 저장' : 'PDF 저장';
     const opensAt = chapter ? availableAt(chapter) : 0;
-    $('#pdf-save-scope').textContent = !pdf ? 'PDF 저장은 파일 보관 · 학생 공개는 3단계 수업 등록' : live(chapter) ? '파일 저장 완료 · 학생 화면 공개 중' : chapter.status === 'published' ? '파일 저장 완료 · 현재 학생 비공개 · ' + dateTime(new Date(opensAt).toISOString()) + ' (KST) 공개 예정' : '파일 저장 완료 · 학생 비공개 · 3단계 수업 등록 필요';
+    $('#pdf-save-scope').textContent = !pdf ? 'PDF 저장 → 등록 내용 확인 → 수업 등록까지 눌러야 학생 화면에 적용돼요' : live(chapter) ? '파일 저장 완료 · 학생 화면 공개 중' : chapter.status === 'published' ? '파일 저장 완료 · 현재 학생 비공개 · ' + dateTime(new Date(opensAt).toISOString()) + ' (KST) 공개 예정' : '파일 저장 완료 · 학생 비공개 · 3단계 수업 등록 필요';
     $('#pdf-publication-settings').hidden = !pdf || live(chapter);
     $('#pdf-student-link').hidden = !pdf || !live(chapter);
     $('#pdf-student-link').href = exists ? '/?chapter=' + encodeURIComponent(chapter.id) + '#slides' : '/';
@@ -495,6 +496,7 @@
   document.addEventListener('click', async event => {
     const button = event.target.closest('button'); if (!button) return;
     if (button.dataset.tab) { selectTab(button.dataset.tab); return; }
+    if (button.dataset.deliveryChoice) { const form = $('#chapter-form'); if (!chapterBusy) { setValue(form, 'delivery', button.dataset.deliveryChoice); updateSchedule(form, 'chapter'); } return; }
     if (button.dataset.expressionKind) { setValue($('#expression-form'), 'kind', button.dataset.expressionKind === '단어' ? '단어' : '표현'); updateExpressionKind(); return; }
     if (button.hasAttribute('data-start-expression')) { newExpression(); $('#expression-collection').hidden = true; $('.simple-editor-layout').classList.remove('list-open'); selectTab('daily'); field($('#expression-form'),'en').focus(); return; }
     if (button.hasAttribute('data-start-chapter')) { newChapter(); $('#chapter-collection').hidden = true; $('.simple-chapter-workspace').classList.remove('list-open'); selectTab('chapters'); field($('#chapter-form'),'title').focus(); return; }

@@ -571,3 +571,16 @@ body.dashboard-shell .classroom-slides .slide-thumb.active{background:var(--lamp
 .profile-nudge small{font-size:12.5px;color:var(--mist);line-height:1.5}
 .profile-nudge a{flex:none;display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:999px;background:var(--lamp);color:var(--lamp-ink) !important;font-weight:800;font-size:14px;text-decoration:none;box-shadow:0 3px 0 var(--lamp-deep)}
 body[data-view="profile"] .profile-nudge a{display:none}
+
+/* 관리자: 학생 공개 / 비공개 고르기 (admin.js) */
+.visibility-choice{margin:18px 0 6px;display:grid;gap:10px}
+.visibility-choice>strong{font-size:15px;font-weight:800;color:var(--chalk);letter-spacing:-.02em}
+.visibility-choice>div{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.visibility-choice button{display:grid;gap:3px;text-align:left;padding:14px 16px;border-radius:18px;border:2px solid var(--hair-2);background:var(--booth);color:var(--chalk);cursor:pointer;min-height:64px;transition:border-color .15s,background .15s}
+.visibility-choice button b{font-size:16px;font-weight:800}
+.visibility-choice button small{font-size:12.5px;color:var(--mist);line-height:1.45}
+.visibility-choice button:hover{border-color:var(--lamp)}
+.visibility-choice button[aria-pressed="true"]{border-color:var(--lamp);background:var(--lamp-soft);box-shadow:0 3px 0 var(--lamp-deep)}
+.visibility-choice button[aria-pressed="true"] b{color:var(--lamp-text)}
+.visibility-choice button[aria-pressed="true"] b:before{content:'✓ '}
+@media (max-width:520px){.visibility-choice>div{grid-template-columns:1fr}}
