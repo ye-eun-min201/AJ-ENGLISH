@@ -1,0 +1,125 @@
+/* notebook.css — 수업 자료(PDF) 화면을 '공책' 짜임으로: 위는 얇은 제목 줄, 가운데는 PDF가 넓게,
+   아래에는 떠 있는 필기 도구 줄, 오른쪽 아래에는 쪽 번호. (slides.js의 .classroom-slides.nb)
+   예전 여러 파일의 배치 규칙을 덮어써야 해서 배치 속성에는 !important 를 쓴다. 색은 stage.css 변수. */
+body.dashboard-shell .classroom-slides.nb{padding:0 !important;overflow:clip;border-radius:28px !important;background:var(--booth) !important;border:1px solid var(--hair) !important}
+
+/* ---------- 위: 제목 줄 ---------- */
+body.dashboard-shell .classroom-slides.nb .nb-top{display:flex !important;flex-wrap:wrap;align-items:center !important;gap:10px 14px !important;padding:12px 16px !important;border-bottom:1px solid var(--hair) !important;background:var(--booth)}
+.nb .nb-title{min-width:0;flex:1 1 200px}
+.nb .nb-title .slides-eyebrow{display:none}
+body.dashboard-shell .classroom-slides.nb .nb-title h2{margin:0 !important;font-size:17px !important;line-height:1.35 !important;font-weight:800 !important;letter-spacing:-.02em !important;color:var(--chalk) !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.dashboard-shell .classroom-slides.nb .slides-chapter-meta{margin:2px 0 0 !important;font-size:12px !important;color:var(--dim) !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.dashboard-shell .classroom-slides.nb .slides-note-status{flex:none;margin:0 !important;padding:6px 11px;border-radius:999px;background:var(--booth-2);font-size:12px !important;font-weight:700;line-height:1.3 !important;color:var(--mist) !important;max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.dashboard-shell .classroom-slides.nb .slides-note-status.is-saved{color:var(--ok) !important}
+body.dashboard-shell .classroom-slides.nb .slides-note-status.is-error{background:color-mix(in srgb,var(--ticket) 22%,var(--booth));color:var(--chalk) !important}
+body.dashboard-shell .classroom-slides.nb .slides-course-select{flex:0 1 230px;min-width:150px !important;max-width:260px !important;width:auto !important;margin:0 !important;gap:0 !important;font-size:0 !important}
+body.dashboard-shell .classroom-slides.nb .slides-course-select select{min-height:40px !important;font-size:14px !important;border-radius:999px !important;padding:0 34px 0 14px !important;background-color:var(--booth-2) !important;border:1px solid var(--hair) !important;color:var(--chalk) !important}
+.nb .nb-top-actions{display:flex;align-items:center;gap:6px;flex:none}
+body.dashboard-shell .classroom-slides.nb .slides-zoom{margin:0 !important;font-size:0 !important;gap:0 !important}
+body.dashboard-shell .classroom-slides.nb .slides-zoom select{min-height:40px !important;max-width:132px !important;font-size:13px !important;border-radius:999px !important;padding:0 30px 0 12px !important;background-color:var(--booth-2) !important;border:1px solid var(--hair) !important;color:var(--chalk) !important}
+.nb .nb-icon{flex:none;width:40px;height:40px;border-radius:12px;border:0;background:transparent;color:var(--mist);display:grid;place-items:center;cursor:pointer;padding:0;text-decoration:none;transition:background .15s,color .15s}
+.nb .nb-icon:hover{background:var(--tint);color:var(--lamp-text)}
+.nb .nb-icon[aria-pressed="true"]{background:var(--lamp-soft);color:var(--lamp-text)}
+.nb .nb-icon[aria-disabled="true"],.nb .nb-icon:not([href]):is(a){opacity:.35;pointer-events:none}
+.nb svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* 지난 수업 */
+.nb .slides-past{margin:0;padding:10px 16px 2px;border-bottom:1px solid var(--hair);background:var(--booth)}
+.nb .slides-past>p{margin-bottom:6px}
+.nb .slides-past>p strong{font-size:13px}
+.nb .slides-past>p span{font-size:12px}
+.nb .slides-past-list{padding-bottom:10px}
+.nb .slides-past-list button{min-height:44px;padding:6px 14px 6px 6px}
+
+/* ---------- 가운데: 쪽 목록 | PDF | 글 메모 ---------- */
+body.dashboard-shell .classroom-slides.nb .slides-layout{display:grid !important;grid-template-columns:minmax(0,1fr) !important;gap:0 !important;padding:0 !important;align-items:stretch !important;background:var(--booth-2)}
+body.dashboard-shell .classroom-slides.nb:not(.is-thumbs-collapsed) .slides-layout{grid-template-columns:132px minmax(0,1fr) !important}
+body.dashboard-shell .classroom-slides.nb.is-notes-open .slides-layout{grid-template-columns:minmax(0,1fr) 320px !important}
+body.dashboard-shell .classroom-slides.nb.is-notes-open:not(.is-thumbs-collapsed) .slides-layout{grid-template-columns:132px minmax(0,1fr) 320px !important}
+body.dashboard-shell .classroom-slides.nb .slides-thumbnails{grid-column:auto !important;display:flex !important;flex-direction:column !important;gap:10px !important;width:auto !important;max-height:calc(100dvh - 190px) !important;overflow:hidden auto !important;padding:14px 10px !important;background:var(--booth);border-right:1px solid var(--hair)}
+body.dashboard-shell .classroom-slides.nb.is-thumbs-collapsed .slides-thumbnails{display:none !important}
+.nb .nb-work{position:relative;min-width:0;display:flex;flex-direction:column}
+body.dashboard-shell .classroom-slides.nb .slides-stage{grid-column:auto !important;flex:1;width:auto !important;min-height:calc(100dvh - 250px) !important;max-height:none !important;overflow:auto !important;padding:22px 22px 120px !important;border:0 !important;border-radius:0 !important;background:transparent !important}
+body.dashboard-shell .classroom-slides.nb .slides-paper{border-radius:6px;box-shadow:0 2px 0 var(--hair),0 18px 40px -18px var(--drop) !important}
+body.dashboard-shell .classroom-slides.nb .slides-render-status{background:transparent !important;border:0 !important;text-align:center;font-size:14px !important;color:var(--mist) !important;padding:60px 0 0}
+body.dashboard-shell .classroom-slides.nb .slides-empty{background:transparent !important;border:0 !important;color:var(--mist) !important}
+body.dashboard-shell .classroom-slides.nb .slides-empty :is(h3,strong,b){color:var(--chalk) !important}
+body.dashboard-shell .classroom-slides.nb .slides-notes-panel{display:none !important}
+body.dashboard-shell .classroom-slides.nb.is-notes-open .slides-notes-panel{display:flex !important;flex-direction:column;gap:10px;grid-column:auto !important;position:static !important;width:auto !important;padding:18px 16px !important;border:0 !important;border-left:1px solid var(--hair) !important;border-radius:0 !important;background:var(--booth) !important}
+body.dashboard-shell .classroom-slides.nb .slides-notes-panel h3{margin:0;font-size:16px;font-weight:800;color:var(--chalk) !important}
+.nb .slides-note-label{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.nb .slides-note-page{font-family:var(--pixel) !important;font-size:10px;color:var(--lamp-text)}
+body.dashboard-shell .classroom-slides.nb :is(.slides-storage-label,.slides-help){margin:0;font-size:12.5px !important;line-height:1.55 !important;color:var(--dim) !important}
+body.dashboard-shell .classroom-slides.nb .slides-text-label{display:flex;flex-direction:column;gap:6px;flex:1;font-size:13px !important;font-weight:700;color:var(--mist) !important}
+body.dashboard-shell .classroom-slides.nb .slides-note-text{flex:1;min-height:220px;width:100%;resize:vertical;border-radius:16px !important;border:1px solid var(--hair-2) !important;background:var(--booth-2) !important;color:var(--chalk) !important;padding:12px 14px;font-size:15px;line-height:1.6}
+.nb .slides-save-row{display:flex}
+.nb .slides-save-row .slides-button{flex:1}
+
+/* ---------- 아래에 떠 있는 필기 도구 줄 + 쪽 번호 ---------- */
+.nb .nb-float{position:sticky;bottom:14px;z-index:6;height:0;display:flex;justify-content:center;align-items:flex-end;pointer-events:none;padding:0 76px}
+.nb .nb-dock,.nb .nb-pager{pointer-events:auto;background:var(--booth);border:1px solid var(--hair);box-shadow:0 2px 0 var(--hair),0 16px 36px -14px var(--drop)}
+.nb .nb-dock{display:flex;align-items:center;gap:4px;max-width:100%;padding:7px 10px;border-radius:22px;overflow-x:auto;scrollbar-width:none;margin-bottom:0}
+.nb .nb-dock::-webkit-scrollbar{display:none}
+.nb .nb-sep{flex:none;width:1px;height:28px;background:var(--hair-2);margin:0 5px}
+body.dashboard-shell .classroom-slides.nb .slides-drawing-tools{display:flex !important;gap:2px !important;margin:0 !important;flex:none}
+.nb .nb-tool{flex:none;min-width:46px;height:48px;padding:0 8px;border:0;border-radius:14px;background:transparent;color:var(--mist);display:grid;place-items:center;align-content:center;gap:1px;cursor:pointer;transition:background .15s,color .15s,transform .12s}
+.nb .nb-tool span{font-size:10.5px;font-weight:700;line-height:1.1;letter-spacing:-.02em}
+.nb .nb-tool:hover:not(:disabled){background:var(--tint);color:var(--lamp-text)}
+.nb .nb-tool:active:not(:disabled){transform:translateY(1px)}
+.nb .nb-tool.active,.nb .nb-tool[aria-pressed="true"]{background:var(--lamp-soft);color:var(--lamp-text)}
+.nb .nb-tool:disabled{opacity:.32;cursor:default}
+body.dashboard-shell .classroom-slides.nb .slides-ink-options{display:flex !important;align-items:center;gap:10px !important;margin:0 !important;flex:none}
+body.dashboard-shell .classroom-slides.nb .slides-colors{display:flex !important;gap:6px !important;flex-wrap:nowrap !important}
+body.dashboard-shell .classroom-slides.nb .slides-color{width:26px !important;height:26px !important;min-width:26px !important;min-height:26px !important;border:3px solid var(--booth) !important;outline:1px solid var(--hair-2) !important;background:var(--ink-color) !important;background-clip:border-box !important;border-radius:50% !important;padding:0 !important}
+body.dashboard-shell .classroom-slides.nb .slides-color.active{outline:2px solid var(--lamp) !important;outline-offset:1px}
+body.dashboard-shell .classroom-slides.nb .slides-pen-width{width:auto !important;min-height:0 !important;flex-wrap:nowrap !important;gap:6px !important;font-size:11px !important;font-weight:700;color:var(--mist) !important;white-space:nowrap}
+body.dashboard-shell .classroom-slides.nb .slides-pen-width input{width:72px !important;min-width:72px !important;min-height:28px !important;accent-color:var(--lamp)}
+
+.nb .nb-pager{position:absolute;right:14px;bottom:0;display:grid;justify-items:center;gap:2px;width:54px;padding:8px 4px;border-radius:22px}
+body.dashboard-shell .classroom-slides.nb .slides-page-input{display:grid !important;justify-items:center;gap:3px !important;font-size:12px !important;color:var(--dim) !important}
+body.dashboard-shell .classroom-slides.nb .slides-page-input input{width:44px !important;min-height:30px !important;height:30px;padding:0 !important;border:0 !important;border-radius:8px !important;background:transparent !important;text-align:center;font-size:15px !important;font-weight:800;color:var(--chalk) !important}
+body.dashboard-shell .classroom-slides.nb .slides-page-input input:focus{background:var(--booth-2) !important}
+.nb .slides-page-input span{display:block;width:30px;padding-top:3px;border-top:1.5px solid var(--hair-2);text-align:center}
+.nb .slides-page-input b{font-weight:600}
+.nb .nb-pager button{width:42px;height:36px;min-height:0;border:0 !important;border-radius:12px;background:transparent !important;box-shadow:none !important;color:var(--mist);display:grid;place-items:center;cursor:pointer;padding:0}
+.nb .nb-pager button:hover:not(:disabled){background:var(--tint);color:var(--lamp-text)}
+.nb .nb-pager button:disabled{opacity:.3}
+
+/* 수업 본문 */
+body.dashboard-shell .classroom-slides.nb .slides-content-body{margin:0 !important;padding:22px 20px 26px !important;border-top:1px solid var(--hair);background:var(--booth)}
+
+/* 전체 화면 */
+body.dashboard-shell .classroom-slides.nb:is(.is-expanded,:fullscreen){padding:0 !important;border-radius:0 !important;display:flex;flex-direction:column;background:var(--booth-2) !important}
+body.dashboard-shell .classroom-slides.nb:is(.is-expanded,:fullscreen) .slides-layout{flex:1;min-height:0}
+body.dashboard-shell .classroom-slides.nb:is(.is-expanded,:fullscreen) .slides-stage{min-height:0 !important;max-height:none !important;height:100%}
+body.dashboard-shell .classroom-slides.nb:is(.is-expanded,:fullscreen) .nb-work{min-height:0;overflow:auto}
+body.dashboard-shell .classroom-slides.nb:is(.is-expanded,:fullscreen) .slides-past{display:none}
+
+/* 휴대폰 */
+@media (max-width:860px){
+  body.dashboard-shell .classroom-slides.nb{border-radius:20px !important}
+  body.dashboard-shell .classroom-slides.nb .nb-top{padding:10px 12px !important}
+  body.dashboard-shell .classroom-slides.nb .slides-note-status{order:5;max-width:none;flex:1 1 100%;text-align:center}
+  body.dashboard-shell .classroom-slides.nb .slides-course-select{flex:1 1 150px;max-width:none !important}
+  body.dashboard-shell .classroom-slides.nb .slides-zoom{display:none !important}
+  body.dashboard-shell .classroom-slides.nb .slides-layout,
+  body.dashboard-shell .classroom-slides.nb:not(.is-thumbs-collapsed) .slides-layout,
+  body.dashboard-shell .classroom-slides.nb.is-notes-open .slides-layout,
+  body.dashboard-shell .classroom-slides.nb.is-notes-open:not(.is-thumbs-collapsed) .slides-layout{grid-template-columns:minmax(0,1fr) !important}
+  body.dashboard-shell .classroom-slides.nb .slides-thumbnails{flex-direction:row !important;max-height:132px !important;overflow:auto hidden !important;border-right:0;border-bottom:1px solid var(--hair);padding:10px 12px !important}
+  body.dashboard-shell .classroom-slides.nb .slides-stage{min-height:62dvh !important;padding:12px 10px 150px !important}
+  body.dashboard-shell .classroom-slides.nb.is-notes-open .slides-notes-panel{border-left:0 !important;border-top:1px solid var(--hair) !important}
+  body.dashboard-shell .classroom-slides.nb .slides-note-text{min-height:140px}
+  .nb .nb-float{flex-direction:column;justify-content:flex-end;align-items:stretch;gap:8px;padding:0 8px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px)}
+  .nb .nb-dock{flex:none;max-width:100%;border-radius:20px;padding:6px 8px}
+  .nb .nb-pager{position:static;align-self:flex-end;order:-1;flex:none;grid-auto-flow:column;width:auto;padding:4px 8px;gap:4px;border-radius:999px}
+  body.dashboard-shell .classroom-slides.nb .slides-page-input{grid-auto-flow:column;align-items:center}
+  .nb .slides-page-input span{border-top:0;border-left:1.5px solid var(--hair-2);padding:0 0 0 6px;width:auto}
+  .nb .nb-tool{min-width:44px}
+  body.dashboard-shell .classroom-slides.nb .slides-pen-width{font-size:0 !important}
+}
+@media (prefers-reduced-motion:reduce){.nb *{transition:none !important}}
+/* 다른 파일의 기본 단추 색이 끼어들지 않게 */
+body.dashboard-shell .classroom-slides.nb :is(.nb-tool,.nb-icon,.nb-pager button){background:transparent !important;box-shadow:none !important;border:0 !important;min-height:0}
+body.dashboard-shell .classroom-slides.nb :is(.nb-tool,.nb-icon,.nb-pager button):hover:not(:disabled){background:var(--tint) !important}
+body.dashboard-shell .classroom-slides.nb :is(.nb-tool.active,.nb-tool[aria-pressed="true"],.nb-icon[aria-pressed="true"]){background:var(--lamp-soft) !important;color:var(--lamp-text) !important}
