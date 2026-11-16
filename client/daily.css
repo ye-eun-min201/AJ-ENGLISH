@@ -214,3 +214,14 @@ body.dashboard-shell .dialog .dialog-head .eyebrow,body.dashboard-shell .dialog 
 body.dashboard-shell .dialog .session-body p{color:var(--mist);opacity:1}
 body.dashboard-shell .dialog .phrase-card .phrase-ko{color:var(--chalk) !important;opacity:.86 !important;font-weight:500}
 body.dashboard-shell .dialog .phrase-card p{color:var(--chalk) !important;opacity:.9 !important}
+
+/* ───── 학생 리딩: 듣기 · 따라 읽기 · 해석 ───── */
+.rd-listen{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 18px}
+.rd-listen span{font-size:14px;color:var(--mist)}
+.rd-para{padding:12px 14px;margin:0 -14px;border-radius:16px;transition:background .2s}
+.rd-para.is-reading{background:var(--lamp-soft)}
+.rd-para-tools{display:flex;gap:8px;margin-top:8px}
+.rd-para-tools button{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--hair-2);background:var(--booth);color:var(--chalk);font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
+.rd-para-tools button:hover{border-color:var(--lamp);color:var(--lamp-text)}
+.rd-para-ko{margin:10px 0 0 !important;padding:10px 14px;border-radius:12px;background:var(--booth-2);font-family:inherit !important;font-size:15.5px !important;line-height:1.7 !important;color:var(--chalk) !important}
+.rd-body{gap:6px}

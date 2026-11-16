@@ -32,7 +32,7 @@ function expressionView(row) { return { id: row.id, chapterId: row.chapter_id, e
 const mondayOf = date => { const d = new Date(date + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7); return d.toISOString().slice(0, 10); };
 const weekdayOf = date => (new Date(date + 'T00:00:00Z').getUTCDay() + 6) % 7 + 1;
 const wordKey = value => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
-function readingView(row, words) { return { id: row.id, date: row.study_date, title: row.title, body: row.body, status: row.status, updatedAt: row.updated_at, words: words || [] }; }
+function readingView(row, words) { return { id: row.id, date: row.study_date, title: row.title, body: row.body, bodyKo: row.body_ko || '', status: row.status, updatedAt: row.updated_at, words: words || [] }; }
 const CHAPTER_SELECT = 'SELECT c.*, p.object_key, p.name AS pdf_name, p.size AS pdf_size, p.pages AS pdf_pages, t.name AS transcript_name, LENGTH(t.text) AS transcript_size, t.turns AS transcript_turns, t.visible AS transcript_visible, t.uploaded_at AS transcript_at FROM teacher_chapters c LEFT JOIN teacher_pdfs p ON p.chapter_id = c.id LEFT JOIN teacher_transcripts t ON t.chapter_id = c.id';
 async function chapterRow(db, id) { return first(db, CHAPTER_SELECT + ' WHERE c.id = ?', id); }
 async function revision(db) { return (await first(db, 'SELECT COALESCE(MAX(id),0) AS revision FROM teacher_revisions')).revision; }
@@ -306,7 +306,7 @@ export async function handleTeaching(request, env, now = Date.now(), baseCourses
         if (body.id && !previous) fail(404, 'reading_not_found', '리딩을 찾을 수 없어요.');
         const sameDay = await first(env.DB, 'SELECT id FROM teacher_readings WHERE study_date = ? AND id <> ?', body.date, id);
         if (sameDay) return json({ error: 'date_taken', message: '그 날짜에는 이미 올린 리딩이 있어요. 목록에서 그 날짜를 눌러 고쳐 주세요.', id: sameDay.id }, 409);
-        const title = string(body.title, 120, '제목'), text = string(body.body, 30000, '본문').replace(/\r\n?/g, '\n'), state = status(body.status);
+        const title = string(body.title, 120, '제목'), text = string(body.body, 30000, '본문').replace(/\r\n?/g, '\n'), textKo = string(body.bodyKo, 30000, '해석').replace(/\r\n?/g, '\n'), state = status(body.status);
         if (!Array.isArray(body.words) || body.words.length > 60) fail(400, 'invalid_words', '단어는 하루에 60개까지 올릴 수 있어요.');
         const words = [], seen = new Set();
         for (const item of body.words) {
@@ -316,7 +316,7 @@ export async function handleTeaching(request, env, now = Date.now(), baseCourses
         }
         if (!text && !words.length) fail(400, 'empty_reading', '본문이나 단어 중 하나는 넣어 주세요.');
         const existing = new Map((await all(env.DB, 'SELECT id, en FROM teacher_expressions WHERE reading_id = ? AND deleted_at IS NULL', id)).map(row => [wordKey(row.en), row.id])), day = weekdayOf(body.date), kept = new Set();
-        const statements = [env.DB.prepare('INSERT INTO teacher_readings (id, study_date, title, body, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET study_date = excluded.study_date, title = excluded.title, body = excluded.body, status = excluded.status, updated_at = excluded.updated_at').bind(id, body.date, title, text, state, now, now)];
+        const statements = [env.DB.prepare('INSERT INTO teacher_readings (id, study_date, title, body, body_ko, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET study_date = excluded.study_date, title = excluded.title, body = excluded.body, body_ko = excluded.body_ko, status = excluded.status, updated_at = excluded.updated_at').bind(id, body.date, title, text, textKo, state, now, now)];
         words.forEach((word, index) => {
           const wordId = existing.get(wordKey(word.en));
           if (wordId) { kept.add(wordId); statements.push(env.DB.prepare('UPDATE teacher_expressions SET en = ?, ko = ?, note = ?, example = ?, example_ko = ?, study_day = ?, study_date = ?, status = ?, updated_at = ? WHERE id = ?').bind(word.en, word.ko, word.note, word.example, word.exampleKo, day, body.date, state, now, wordId)); }
@@ -420,7 +420,7 @@ export async function handleTeaching(request, env, now = Date.now(), baseCourses
         if (!row || row.status !== 'published' || row.study_date > localDate(now)) fail(404, 'reading_not_found', '그 날짜에는 올라온 리딩이 없어요.');
         if (!request.headers.get('x-aj-user-id')) fail(401, 'sign_in_required', '리딩 본문은 로그인한 뒤에 볼 수 있어요.');
       }
-      return json({ id: row.id, date: row.study_date, title: row.title, body: row.body });
+      return json({ id: row.id, date: row.study_date, title: row.title, body: row.body, bodyKo: row.body_ko || '' });
     }
     if (path.startsWith('/api/transcript/') && request.method === 'GET') {
       let id; try { id = decodeURIComponent(path.slice('/api/transcript/'.length)); } catch { fail(400, 'invalid_id', '수업을 다시 선택해 주세요.'); }

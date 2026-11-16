@@ -64,7 +64,7 @@
   }
   const wordsToText = words => words.map((word, index) => [(index + 1) + '. ' + word.en, '뜻: ' + word.ko, word.example && 'Example: ' + word.example.replace(/\n/g, '\n- '), word.exampleKo && '해석: ' + word.exampleKo.replace(/\n/g, '\n- '), word.note && '참고: ' + word.note].filter(Boolean).join('\n')).join('\n\n');
   function edit(reading) {
-    field('rid').value = reading?.id || ''; field('date').value = reading?.date || A.kstDate(); field('title').value = reading?.title || ''; field('body').value = reading?.body || ''; field('words').value = reading ? wordsToText(reading.words) : '';
+    field('rid').value = reading?.id || ''; field('date').value = reading?.date || A.kstDate(); field('title').value = reading?.title || ''; field('body').value = reading?.body || ''; field('bodyKo').value = reading?.bodyKo || ''; field('words').value = reading ? wordsToText(reading.words) : '';
     $('#reading-editor-title').textContent = reading ? D.dateLabel(reading.date) + ' 리딩 고치기' : '오늘 리딩 올리기';
     say('#reading-status', ''); $('#reading-body-hint').textContent = ''; preview(); screen('edit'); field(reading ? 'body' : 'date').focus({ preventScroll: true }); window.scrollTo({ top: 0 });
   }
@@ -76,6 +76,9 @@
     parsedWords = D.parseWords(field('words').value);
     const paragraphs = D.paragraphs(body), found = new Set(); for (const paragraph of paragraphs) for (const piece of D.pieces(paragraph, parsedWords)) if (piece.word !== undefined) found.add(piece.word);
     if (body.trim()) $('#reading-body-hint').textContent = '문단 ' + paragraphs.length + '개로 나뉘어요';
+    const koCount = D.paragraphs(field('bodyKo').value).length, koOff = koCount > 0 && koCount !== paragraphs.length;
+    $('#reading-ko-hint').textContent = !koCount ? '해석을 넣으면 학생이 문단마다 ‘해석’을 눌러 볼 수 있어요.' : koOff ? '영어는 ' + paragraphs.length + '문단인데 해석은 ' + koCount + '문단이에요. 문단 수를 맞춰 주세요.' : '해석 ' + koCount + '문단 · 영어 문단과 수가 맞아요';
+    $('#reading-ko-hint').classList.toggle('error', koOff);
     const problems = parsedWords.filter(word => word.problems.length).length;
     $('#reading-words-hint').textContent = !field('words').value.trim() ? '붙여넣으면 아래에 단어 카드로 나눠 보여 드려요.' : !parsedWords.length ? '단어를 찾지 못했어요. ‘1. 단어’처럼 번호를 붙이거나, 단어를 한 줄에 하나씩 써 주세요.' : '단어 ' + parsedWords.length + '개로 나눴어요' + (paragraphs.length ? ' · 그중 ' + found.size + '개가 글에 나와서 색이 칠해져요' : '') + (problems ? ' · 고칠 곳 ' + problems + '개' : '');
     $('#reading-words-hint').classList.toggle('error', !!problems || (!!field('words').value.trim() && !parsedWords.length));
@@ -98,7 +101,7 @@
     if (broken) { say('#reading-status', '‘' + broken.en + '’ — ' + broken.problems[0] + '. 고친 뒤 다시 저장해 주세요.', true); field('words').focus(); return; }
     const buttons = form.querySelectorAll('[data-reading-save]'); buttons.forEach(b => b.disabled = true); say('#reading-status', '저장하는 중');
     try {
-      const id = field('rid').value, result = await A.request('admin/reading', { ...(id ? { id } : {}), date, title: field('title').value.trim(), body, status, words: parsedWords.map(({ en, ko, example, exampleKo, note }) => ({ en, ko, example, exampleKo, note })) });
+      const id = field('rid').value, result = await A.request('admin/reading', { ...(id ? { id } : {}), date, title: field('title').value.trim(), body, bodyKo: field('bodyKo').value.trim(), status, words: parsedWords.map(({ en, ko, example, exampleKo, note }) => ({ en, ko, example, exampleKo, note })) });
       A.setReadings([result.reading, ...readings().filter(reading => reading.id !== result.reading.id)], result.revision); A.notify(result.revision, 'reading');
       screen('list'); say('#reading-list-status', D.dateLabel(date) + ' 리딩 저장 완료 · 단어 ' + result.reading.words.length + '개 · ' + (status === 'published' ? (date <= A.kstDate() ? '학생에게 보여요' : '그 날짜가 되면 보여요') : '비공개'));
     } catch (error) { say('#reading-status', error.message, true); }
@@ -107,7 +110,7 @@
   async function publish(id, status) {
     const reading = readings().find(item => item.id === id); if (!reading || reading.status === status) return;
     try {
-      const result = await A.request('admin/reading', { id, date: reading.date, title: reading.title, body: reading.body, status, words: reading.words.map(({ en, ko, example, exampleKo, note }) => ({ en, ko, example, exampleKo, note })) });
+      const result = await A.request('admin/reading', { id, date: reading.date, title: reading.title, body: reading.body, bodyKo: reading.bodyKo || '', status, words: reading.words.map(({ en, ko, example, exampleKo, note }) => ({ en, ko, example, exampleKo, note })) });
       A.setReadings(readings().map(item => item.id === id ? result.reading : item), result.revision); A.notify(result.revision, 'reading');
       say('#reading-list-status', D.dateLabel(reading.date) + ' · ' + (status === 'published' ? '공개' : '비공개') + ' (저장 완료)');
     } catch (error) { say('#reading-list-status', error.message, true); }

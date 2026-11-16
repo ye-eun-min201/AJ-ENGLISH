@@ -27,7 +27,18 @@
       catch (error) { if (destroyed || version !== loadVersion) return; bodyState = { status: error.status === 401 ? 'login' : 'error', message: error.message }; }
       render();
     }
-    function select(next) { if (!next || next === date) return; date = next; closePop(); load(); }
+    // 소리 내어 읽어 주기: 브라우저의 읽어 주기 기능을 쓴다. 읽고 있는 문단에 색이 켜진다.
+    let reading_on = null; const shownKo = new Set();
+    function hush() { try { window.speechSynthesis?.cancel(); } catch (_) { /* 읽어 주기가 없는 브라우저 */ } reading_on = null; }
+    function speak(indexes, mark) {
+      const synth = window.speechSynthesis; if (!synth || !window.SpeechSynthesisUtterance) { options.say?.(D.paragraphs(bodyState.data.body)[indexes[0]] || ''); return; }
+      hush(); const paragraphs = D.paragraphs(bodyState.data.body), voice = synth.getVoices().find(v => v.lang === 'en-US') || synth.getVoices().find(v => /^en/i.test(v.lang)) || null;
+      indexes.forEach((index, order) => { const u = new SpeechSynthesisUtterance(paragraphs[index].replace(/^\d+\.\s*/, '')); u.lang = 'en-US'; u.rate = 0.9; if (voice) u.voice = voice;
+        u.onstart = () => { if (destroyed) return; reading_on = mark === 'all' ? 'all' : index; root.querySelectorAll('.rd-para').forEach(node => node.classList.toggle('is-reading', Number(node.dataset.rdPara) === index)); };
+        u.onend = u.onerror = () => { if (destroyed || order !== indexes.length - 1) return; reading_on = null; render(); }; synth.speak(u); });
+      reading_on = mark; render();
+    }
+    function select(next) { if (!next || next === date) return; hush(); shownKo.clear(); date = next; closePop(); load(); }
     function closePop() { root.querySelector('.rd-pop')?.remove(); root.querySelectorAll('.rd-w.is-open').forEach(node => node.classList.remove('is-open')); }
     function openPop(button) {
       const word = words()[Number(button.dataset.rdWord)]; if (!word) return; closePop(); button.classList.add('is-open');
@@ -46,7 +57,7 @@
       if (bodyState.status === 'loading') body = '<p class="rd-tip">글을 불러오는 중이에요…</p>';
       else if (bodyState.status === 'login') body = '<div class="rd-empty"><h2>글은 로그인하면 볼 수 있어요</h2><p>아래 단어는 지금도 볼 수 있어요.</p><a class="rd-btn is-main" href="/login?return_to=' + encodeURIComponent('/#reading') + '">카카오로 로그인</a></div>';
       else if (bodyState.status === 'error') body = '<div class="rd-empty"><h2>글을 불러오지 못했어요</h2><p>' + esc(bodyState.message || '') + '</p><button type="button" class="rd-btn" data-rd-retry>다시 불러오기</button></div>';
-      else if (bodyState.status === 'ready') body = (dayWords.length ? '<p class="rd-tip">색칠된 단어를 누르면 뜻이 나와요.</p>' : '') + '<div class="rd-body" lang="en">' + D.paragraphs(bodyState.data.body).map(paragraph => '<p>' + D.markHTML(paragraph, dayWords, 'button') + '</p>').join('') + '</div><div class="rd-done"><button type="button" class="rd-btn ' + (isDone(date) ? 'is-done' : 'is-main') + '" data-rd-done>' + (isDone(date) ? '다 읽었어요 ✓' : '다 읽었어요') + '</button></div>';
+      else if (bodyState.status === 'ready') body = (dayWords.length ? '<p class="rd-tip">색칠된 단어를 누르면 뜻이 나와요.</p>' : '') + '<div class="rd-listen"><button type="button" class="rd-btn" data-rd-say-all>' + (reading_on === 'all' ? '■ 멈추기' : '♪ 처음부터 끝까지 듣기') + '</button><span>문단마다 ‘듣기’를 누르고 따라 읽어 보세요.</span></div><div class="rd-body">' + D.paragraphs(bodyState.data.body).map((paragraph, index) => { const ko = D.paragraphs(bodyState.data.bodyKo || '')[index]; return '<div class="rd-para' + (reading_on === index ? ' is-reading' : '') + '" data-rd-para="' + index + '"><p lang="en">' + D.markHTML(paragraph, dayWords, 'button') + '</p><div class="rd-para-tools"><button type="button" data-rd-say-para="' + index + '">' + (reading_on === index ? '■ 멈추기' : '♪ 듣기') + '</button>' + (ko ? '<button type="button" data-rd-ko="' + index + '" aria-expanded="' + shownKo.has(index) + '">해석 ' + (shownKo.has(index) ? '접기' : '보기') + '</button>' : '') + '</div>' + (ko && shownKo.has(index) ? '<p class="rd-para-ko">' + esc(ko) + '</p>' : '') + '</div>'; }).join('') + '</div><div class="rd-done"><button type="button" class="rd-btn ' + (isDone(date) ? 'is-done' : 'is-main') + '" data-rd-done>' + (isDone(date) ? '다 읽었어요 ✓' : '다 읽었어요') + '</button></div>';
       root.innerHTML = '<div class="rd-week"><div class="rd-week-head"><div><strong>' + esc(D.weekLabel(date)) + '</strong>' + (lesson ? '<small>이 주 수업 · ' + esc(lesson.title) + '</small>' : '') + '</div><div class="rd-nav"><button type="button" data-rd-week="-1" aria-label="이전 주" ' + (at > 0 ? '' : 'disabled') + '>‹</button><button type="button" data-rd-week="1" aria-label="다음 주" ' + (at < all.length - 1 ? '' : 'disabled') + '>›</button></div></div><div class="rd-days">' + days + '</div></div>' +
         (item ? '<article class="rd-paper"><p class="rd-kicker">' + esc(D.dateLabel(date)) + (date === today ? ' · 오늘' : '') + '</p><h1>' + esc(item.title || '오늘의 리딩') + '</h1>' + (body || '<p class="rd-tip">이 날은 단어만 올라왔어요.</p>') + '</article>' : '') +
         (dayWords.length ? '<div class="rd-words-head"><h2>' + (date === today ? '오늘의 단어' : '이 날의 단어') + '</h2><span>' + dayWords.length + '개</span></div><ol class="rd-words">' + dayWords.map((word, index) => '<li class="rd-word" id="rd-word-' + index + '"><b>' + (index + 1) + '</b><div><h3 lang="en">' + esc(word.en) + '</h3><p class="rd-ko">' + esc(word.ko) + '</p>' + (word.example ? word.example.split('\n').map((line, n) => '<p class="rd-example" lang="en">' + D.markHTML(line, [word]) + '</p>' + ((word.exampleKo || '').split('\n')[n] ? '<p class="rd-example-ko">' + esc(word.exampleKo.split('\n')[n]) + '</p>' : '')).join('') : '') + (word.note ? '<p class="rd-note">참고 · ' + esc(word.note) + '</p>' : '') + '</div><button type="button" class="rd-say" data-rd-say="' + esc(word.en) + '" aria-label="' + esc(word.en) + ' 듣기">♪</button></li>').join('') + '</ol><div class="rd-done"><button type="button" class="rd-btn is-main" data-rd-go="words">단어 카드로 외우기</button><button type="button" class="rd-btn" data-rd-go="rail">문제로 풀어 보기</button></div>' : '');
@@ -58,6 +69,9 @@
       else if (data.rdWeek) { const all = weeks(), next = all[all.indexOf(D.mondayOf(date)) + Number(data.rdWeek)]; if (next) select(list().filter(item => D.mondayOf(item.date) === next)[0]?.date); }
       else if (data.rdWord !== undefined) openPop(button);
       else if ('rdPopClose' in data) closePop();
+      else if ('rdSayAll' in data) { if (reading_on === 'all') { hush(); render(); } else speak(D.paragraphs(bodyState.data.body).map((_, index) => index), 'all'); }
+      else if (data.rdSayPara !== undefined) { const index = Number(data.rdSayPara); if (reading_on === index) { hush(); render(); } else speak([index], index); }
+      else if (data.rdKo !== undefined) { const index = Number(data.rdKo); if (shownKo.has(index)) shownKo.delete(index); else shownKo.add(index); render(); }
       else if (data.rdSay) options.say?.(data.rdSay);
       else if ('rdRetry' in data) load();
       else if ('rdDone' in data) { remember([date]); render(); Promise.resolve(options.api('reading/read', { date })).catch(() => { /* 로그인 전이면 이 기기에만 남는다 */ }); }
@@ -70,7 +84,7 @@
     date = list()[0]?.date || null; if (date) load(); else render();
     current = {
       update(next) { if (destroyed) return; content = next || {}; if (!reading()) date = list()[0]?.date || null; if (bodyState.status === 'ready' || !date) render(); else load(); },
-      destroy() { destroyed = true; loadVersion++; root.removeEventListener('click', onClick); current = null; }
+      destroy() { hush(); destroyed = true; loadVersion++; root.removeEventListener('click', onClick); current = null; }
     };
     return current;
   }

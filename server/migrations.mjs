@@ -173,5 +173,11 @@ export const MIGRATIONS = [
       "INSERT INTO teacher_expressions (id, chapter_id, en, ko, note, kind, example, study_day, status, publish_at, created_at, updated_at) SELECT 'w2s-17', c.id, 'AI is a very effective way to study.', '인공지능은 공부하는 데 매우 효과적인 방법입니다.', '', '표현', '', 6, 'published', NULL, 1794801427179, 1794801427179 FROM teacher_chapters c WHERE c.title LIKE '%Week 2%' AND NOT EXISTS (SELECT 1 FROM teacher_expressions e WHERE e.chapter_id = c.id AND e.deleted_at IS NULL AND lower(e.en) = lower('AI is a very effective way to study.')) ORDER BY c.number DESC, c.created_at DESC LIMIT 1;",
       "INSERT INTO teacher_revisions (kind, created_at) VALUES ('seed-week2', 1794801427163);"
     ]
+  },
+  {
+    "name": "0011_reading_ko",
+    "statements": [
+      "ALTER TABLE teacher_readings ADD COLUMN body_ko TEXT NOT NULL DEFAULT '';"
+    ]
   }
 ];
