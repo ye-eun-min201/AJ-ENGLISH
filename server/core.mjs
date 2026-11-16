@@ -1181,7 +1181,7 @@ async function getTeachingContent(env, baseCourses = {}, now = Date.now()) {
 
 async function handleTeaching(request, env, now = Date.now(), baseCourses = {}) {
   const url = new URL(request.url), path = url.pathname;
-  if (!(path.startsWith('/api/admin/') || path === '/api/content' || path === '/api/notes' || path.startsWith('/api/pdf/') || path.startsWith('/api/transcript/') || path === '/api/reading' || path.startsWith('/api/reading/'))) return null;
+  if (!(path.startsWith('/api/admin/') || path === '/api/content' || path === '/api/notes' || path.startsWith('/api/pdf/') || path.startsWith('/api/transcript/') || path === '/api/reading' || path.startsWith('/api/reading/') || path === '/api/wordbook')) return null;
   try {
     if (!env.DB) fail(503, 'database_unavailable', '수업 저장소를 준비하고 있어요. 잠시 후 다시 시도해 주세요.');
     if (!['GET', 'POST', 'HEAD'].includes(request.method)) fail(405, 'method_not_allowed', '지원하지 않는 요청입니다.');
@@ -1367,6 +1367,16 @@ async function handleTeaching(request, env, now = Date.now(), baseCourses = {}) 
       }
       fail(404, 'not_found', '요청한 관리자 기능을 찾을 수 없어요.');
     }
+    // 따로 둔 단어장(토익 노랭이): 날짜별 단어를 로그인한 사람에게만 준다. day 없이 부르면 날마다 몇 개인지만 준다.
+    if (path === '/api/wordbook' && request.method === 'GET') {
+      if (!request.headers.get('x-aj-user-id') && !await adminSession(request, env, now)) fail(401, 'sign_in_required', '로그인한 뒤에 볼 수 있어요.');
+      if (url.searchParams.get('book') !== 'toeic') fail(404, 'book_not_found', '단어장을 찾을 수 없어요.');
+      const day = url.searchParams.get('day');
+      if (day === null) return json({ book: 'toeic', title: '토익 노랭이', days: (await all(env.DB, "SELECT day, COUNT(*) AS count FROM book_words WHERE book = 'toeic' GROUP BY day ORDER BY day")).map(row => ({ day: row.day, count: row.count })) });
+      if (!/^\d{1,2}$/.test(day)) fail(400, 'invalid_day', '날짜를 다시 골라 주세요.');
+      const pad = (value, size) => String(value).padStart(size, '0');
+      return json({ book: 'toeic', day: Number(day), cards: (await all(env.DB, "SELECT day, seq, en, ko FROM book_words WHERE book = 'toeic' AND day = ? ORDER BY seq", Number(day))).map(row => ({ id: 'toeic-d' + pad(row.day, 2) + '-' + pad(row.seq, 3), en: row.en, ko: row.ko })) });
+    }
     // 리딩 읽음 기록: '다 읽었어요'를 누르면 남긴다. 학생 현황에서 이번 달에 며칠 읽었는지 본다.
     if (path === '/api/reading/reads' && request.method === 'GET') {
       const userId = request.headers.get('x-aj-user-id');
@@ -1542,7 +1552,7 @@ async function handleActivity(request,env,content,fallback=[],now=Date.now()){
   const raw=await request.text();if(raw.length>100000)ae(413,'입력 내용이 너무 길어요.');let body;try{body=JSON.parse(raw);}catch{ae(400,'입력 형식을 확인해 주세요.');}if(!body||typeof body!=='object'||Array.isArray(body))ae(400,'입력 형식을 확인해 주세요.');
   const cards=acards(content,fallback),byId=new Map(cards.map(c=>[c.id,c]));
   if(p==='/api/study/cards'){
-   const c=byId.get(body.cardId);if(!c)ae(400,'현재 단어장의 항목을 선택해 주세요.');
+   const c=byId.get(body.cardId)||(/^toeic-d\d{2}-\d{3}$/.test(String(body.cardId))?{id:String(body.cardId)}:null);if(!c)ae(400,'현재 단어장의 항목을 선택해 주세요.');
    if(typeof body.known!=='boolean'&&body.known!==0&&body.known!==1)ae(400,'학습 상태를 확인해 주세요.');
    const previous=await af(db,'SELECT starred FROM study_cards WHERE user_id=? AND card_id=?',user,c.id);const star=body.starred===undefined?previous?.starred||0:Number(!!body.starred);
    await db.prepare('INSERT INTO study_cards (user_id,card_id,known,starred,attempts,updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id,card_id) DO UPDATE SET known=excluded.known,starred=excluded.starred,attempts=study_cards.attempts+excluded.attempts,updated_at=excluded.updated_at').bind(user,c.id,Number(!!body.known),star,body.review===false?0:1,now).run();

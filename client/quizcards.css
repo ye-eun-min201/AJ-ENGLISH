@@ -1,0 +1,58 @@
+/* 단어장 — 카드 한 장, 뒤집기, 옆으로 밀기. 화면은 움직이지 않는다. */
+html.qc-open,html.qc-open body{overflow:hidden !important;overscroll-behavior:none}
+.qc{position:fixed;inset:0;z-index:700;display:flex;flex-direction:column;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom));background:var(--scene,#f2f4f6);color:var(--chalk,#191f28);user-select:none;-webkit-user-select:none}
+.qc-top{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:8px}
+.qc-icon{width:44px;height:44px;border-radius:50%;border:1px solid var(--hair-2);background:var(--booth);color:var(--chalk);font-size:17px;cursor:pointer}
+.qc-tabs{display:flex;justify-self:center;padding:4px;border-radius:999px;background:var(--booth-3)}
+.qc-tabs button{min-height:38px;padding:0 16px;border:0;border-radius:999px;background:transparent;color:var(--mist);font:inherit;font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap}
+.qc-tabs button[aria-selected="true"]{background:var(--booth);color:var(--chalk);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.qc-sub{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.qc-pick{min-height:40px;max-width:68%;padding:0 12px;border-radius:12px;border:1px solid var(--hair-2);background:var(--booth);color:var(--chalk);font:inherit;font-size:14px;font-weight:700}
+.qc-total{font-size:13px;font-weight:700;color:var(--mist);white-space:nowrap}
+.qc-progress{height:5px;border-radius:999px;background:var(--booth-3);overflow:hidden}
+.qc-progress span{display:block;height:100%;border-radius:inherit;background:var(--lamp);transition:width .25s}
+.qc-count{display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:800}
+.qc-count .is-learning,.qc-done-score .is-learning{color:#d9730d}
+.qc-count .is-known,.qc-done-score .is-known{color:#12995f}
+.qc-count b{display:inline-grid;place-items:center;min-width:30px;height:30px;padding:0 8px;border-radius:999px;border:2px solid currentColor;font-size:14px}
+.qc-pos{color:var(--mist);font-weight:700}
+.qc-stage{position:relative;flex:1 1 auto;min-height:0;display:grid;place-items:center;perspective:1400px}
+.qc-edge{position:absolute;top:50%;transform:translateY(-50%);padding:8px 14px;border-radius:999px;font-size:14px;font-weight:800;opacity:0;transition:opacity .12s;pointer-events:none;z-index:2}
+.qc-edge.is-left{left:0;background:#fdebd8;color:#b25a07}
+.qc-edge.is-right{right:0;background:#d9f5e7;color:#0c7a4a}
+.qc-stage[data-lean="left"] .qc-edge.is-left,.qc-stage[data-lean="right"] .qc-edge.is-right{opacity:1}
+.qc-card{position:relative;width:min(560px,100%);height:min(100%,460px);transform-style:preserve-3d;transition:transform .32s cubic-bezier(.2,.8,.2,1);cursor:pointer;touch-action:none;outline:none}
+.qc-card:focus-visible .qc-face{box-shadow:0 0 0 3px var(--lamp)}
+.qc-card.is-flipped{transform:rotateY(180deg)}
+.qc-card.is-dragging{transition:none}
+.qc-card.fly-right{transform:translateX(130vw) rotate(18deg) !important;transition:transform .18s ease-in}
+.qc-card.fly-left{transform:translateX(-130vw) rotate(-18deg) !important;transition:transform .18s ease-in}
+.qc-face{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:26px 22px;border-radius:26px;background:var(--booth,#fff);border:1px solid var(--hair);box-shadow:0 10px 30px rgba(20,20,60,.10);backface-visibility:hidden;-webkit-backface-visibility:hidden;text-align:center;overflow:hidden}
+.qc-back{transform:rotateY(180deg)}
+.qc-front strong{font-size:clamp(30px,8vw,46px);font-weight:800;letter-spacing:-.02em;line-height:1.15;word-break:break-word}
+.qc-front small{position:absolute;bottom:18px;left:0;right:0;font-size:13px;color:var(--dim)}
+.qc-back strong{font-size:clamp(22px,5.6vw,30px);font-weight:800;line-height:1.35;word-break:keep-all}
+.qc-back p{margin:0;font-size:15.5px;line-height:1.55;color:var(--mist)}
+.qc-back .qc-ex-ko{font-size:14px;color:var(--dim)}
+.qc-say{position:absolute;top:14px;right:14px;width:44px;height:44px;border-radius:50%;border:1px solid var(--hair-2);background:var(--booth-2);color:var(--chalk);font-size:17px;cursor:pointer}
+.qc-foot{display:flex;align-items:center;justify-content:center;gap:16px}
+.qc-big{width:68px;height:68px;border-radius:50%;border:2px solid currentColor;background:var(--booth);font-size:26px;font-weight:800;cursor:pointer}
+.qc-big.is-learning{color:#d9730d}.qc-big.is-known{color:#12995f}
+.qc-big:active{transform:scale(.94)}
+.qc-round{width:46px;height:46px;border-radius:50%;border:1px solid var(--hair-2);background:var(--booth);color:var(--chalk);font-size:18px;cursor:pointer}
+.qc-round:disabled{opacity:.35;cursor:default}
+.qc-round[aria-pressed="true"]{background:var(--lamp);color:var(--lamp-ink);border-color:var(--lamp)}
+.qc-hint{margin:0;text-align:center;font-size:12.5px;color:var(--dim)}
+.qc-note,.qc-done{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;color:var(--mist);font-size:15px}
+.qc-done h2{margin:0;font-size:28px;font-weight:800;color:var(--chalk)}
+.qc-done-kicker{margin:0;font-size:13px;font-weight:800;color:var(--lamp-text)}
+.qc-done-score{display:flex;gap:26px;margin:4px 0 10px;font-size:14px;font-weight:800}
+.qc-done-score span{display:grid;gap:2px;justify-items:center}
+.qc-done-score b{font-size:34px}
+.qc-btn{min-height:50px;min-width:240px;padding:0 22px;border-radius:999px;border:1px solid var(--hair-2);background:var(--booth);color:var(--chalk);font:inherit;font-size:15px;font-weight:800;cursor:pointer}
+.qc-btn.is-main{background:var(--lamp);color:var(--lamp-ink);border-color:var(--lamp);box-shadow:0 4px 0 var(--lamp-deep)}
+@media (min-width:900px){.qc{padding-left:max(16px,calc(50vw - 380px));padding-right:max(16px,calc(50vw - 380px))}}
+@media (max-height:620px){.qc-hint{display:none}.qc-big{width:56px;height:56px;font-size:22px}}
+@media (prefers-reduced-motion:reduce){.qc-card,.qc-progress span,.qc-edge{transition:none}}
+.qc-sub .qc-pick{flex:1 1 0;min-width:0;width:auto !important;max-width:none}
+.qc-sub .qc-total{flex:none}

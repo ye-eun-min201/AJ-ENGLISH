@@ -112,7 +112,7 @@ export async function handleActivity(request,env,content,fallback=[],now=Date.no
   const raw=await request.text();if(raw.length>100000)ae(413,'입력 내용이 너무 길어요.');let body;try{body=JSON.parse(raw);}catch{ae(400,'입력 형식을 확인해 주세요.');}if(!body||typeof body!=='object'||Array.isArray(body))ae(400,'입력 형식을 확인해 주세요.');
   const cards=acards(content,fallback),byId=new Map(cards.map(c=>[c.id,c]));
   if(p==='/api/study/cards'){
-   const c=byId.get(body.cardId);if(!c)ae(400,'현재 단어장의 항목을 선택해 주세요.');
+   const c=byId.get(body.cardId)||(/^toeic-d\d{2}-\d{3}$/.test(String(body.cardId))?{id:String(body.cardId)}:null);if(!c)ae(400,'현재 단어장의 항목을 선택해 주세요.');
    if(typeof body.known!=='boolean'&&body.known!==0&&body.known!==1)ae(400,'학습 상태를 확인해 주세요.');
    const previous=await af(db,'SELECT starred FROM study_cards WHERE user_id=? AND card_id=?',user,c.id);const star=body.starred===undefined?previous?.starred||0:Number(!!body.starred);
    await db.prepare('INSERT INTO study_cards (user_id,card_id,known,starred,attempts,updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id,card_id) DO UPDATE SET known=excluded.known,starred=excluded.starred,attempts=study_cards.attempts+excluded.attempts,updated_at=excluded.updated_at').bind(user,c.id,Number(!!body.known),star,body.review===false?0:1,now).run();
