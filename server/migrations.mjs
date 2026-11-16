@@ -75,5 +75,21 @@ export const MIGRATIONS = [
       "CREATE INDEX auth_sessions_user_idx ON auth_sessions (user_id);",
       "CREATE INDEX auth_sessions_expiry_idx ON auth_sessions (expires_at);"
     ]
+  },
+  {
+    "name": "0007_transcripts",
+    "statements": [
+      "CREATE TABLE teacher_transcripts (\n  chapter_id TEXT PRIMARY KEY REFERENCES teacher_chapters(id),\n  name TEXT NOT NULL DEFAULT '',\n  text TEXT NOT NULL,\n  turns INTEGER NOT NULL DEFAULT 0,\n  visible INTEGER NOT NULL DEFAULT 0,\n  uploaded_at INTEGER NOT NULL\n);"
+    ]
+  },
+  {
+    "name": "0008_readings",
+    "statements": [
+      "CREATE TABLE teacher_readings (\n  id TEXT PRIMARY KEY,\n  study_date TEXT NOT NULL UNIQUE,\n  title TEXT NOT NULL DEFAULT '',\n  body TEXT NOT NULL DEFAULT '',\n  status TEXT NOT NULL DEFAULT 'draft',\n  created_at INTEGER NOT NULL,\n  updated_at INTEGER NOT NULL\n);",
+      "ALTER TABLE teacher_expressions ADD COLUMN example_ko TEXT NOT NULL DEFAULT '';",
+      "ALTER TABLE teacher_expressions ADD COLUMN study_date TEXT;",
+      "ALTER TABLE teacher_expressions ADD COLUMN reading_id TEXT;",
+      "CREATE INDEX teacher_expressions_reading ON teacher_expressions(reading_id);"
+    ]
   }
 ];

@@ -53,7 +53,8 @@
       rail: '<path d="M5 5h14a2 2 0 0 1 2 2v8a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a2 2 0 0 1 2-2Zm-2 6h18M8 21l1.5-3m6.5 3-1.5-3M8 14.5h.01M16 14.5h.01"/>',
       words: '<path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H12v15H6.5A2.5 2.5 0 0 0 4 21.5Zm16 0A2.5 2.5 0 0 0 17.5 4H12v15h5.5a2.5 2.5 0 0 1 2.5 2.5Z"/>',
       start: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4.5l3 2M9.5 2.5h5"/>',
-      slides: '<path d="M6 3h9l4 4v14H6ZM14 3v5h5M9 13h7M9 17h5"/>'
+      slides: '<path d="M6 3h9l4 4v14H6ZM14 3v5h5M9 13h7M9 17h5"/>',
+      reading: '<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3Zm0 13a3 3 0 0 1 3-3h11M9 8h6M9 11h4"/>'
     };
     function railDone() { try { const saved = JSON.parse(localStorage.getItem('ajenglish-rail-daily-v2:' + kstDate(Date.now()) + ':words') || 'null'); return !!saved && saved.finished === true; } catch (_) { return false; } }
     function render() {
@@ -66,6 +67,9 @@
         { key: 'words', title: '단어 카드', note: '오늘의 단어·문장 뒤집어 보기', done: false, go: '뒤집기', disabled: typeof initial.onWords !== 'function' },
         { key: 'start', title: '20분 복습', note: 'DAY ' + current.id + ' · ' + current.title, done: progress.completed, go: current.active ? '이어하기' : progress.completed ? '한 번 더' : '시작', disabled: typeof initial.onStart !== 'function', meter: progress.percent, meterText: timeText }
       ];
+      // 선생님이 올린 리딩이 있으면 맨 앞 퀘스트로 — 가장 최근 날짜의 글
+      const latest = Array.isArray(content.readings) ? content.readings[0] : null;
+      if (latest) quests.unshift({ key: 'reading', title: '오늘의 리딩', note: (window.AJDaily ? window.AJDaily.dateLabel(latest.date, false) + ' · ' : '') + (latest.title || '읽을 글') + (latest.words ? ' · 단어 ' + latest.words + '개' : ''), done: !!window.DailyReading?.isDone(latest.date), go: '읽기', disabled: typeof initial.onReading !== 'function' });
       const next = quests.find(q => !q.done && !q.disabled) || quests[0], doneCount = quests.filter(q => q.done).length;
       const avatar = window.CuteCharacters ? window.CuteCharacters.render(state.user?.avatar || { species: 0, outfit: 3, color: 3 }, 'qb-avatar') : '';
       const points = finite(state.progress?.points) ? state.progress.points : 0, streak = finite(state.progress?.streak) ? state.progress.streak : 0;
@@ -89,7 +93,7 @@
       const button = event.target.closest('[data-he-action]');
       if (!button || !root.contains(button) || button.disabled || destroyed || busy) return;
       const action = button.dataset.heAction; if (localAction(action)) return;
-      const callback = action === 'start' ? initial.onStart : action === 'join' ? initial.onJoin : initial.onWords;
+      const callback = action === 'start' ? initial.onStart : action === 'join' ? initial.onJoin : action === 'reading' ? initial.onReading : initial.onWords;
       if (typeof callback !== 'function') return;
       const version = ++actionVersion, day = lesson().id; busy = action; error = ''; render();
       try { await callback(...(action === 'start' ? [day] : [])); }

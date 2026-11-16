@@ -268,13 +268,29 @@
     return result;
   }
   function kindOf(card) { return card?.kind === '단어' ? '단어' : '표현'; }
+  // 선생님이 직접 올린 단어·문장(오늘의 단어, 주차 수업의 단어·문장)은 미리 준비된 오답이 없다.
+  // 그럴 때는 같은 묶음(같은 날짜 또는 같은 주차 수업)에 올라온 다른 것의 뜻을 보기로 쓴다. 모자라면 다른 묶음에서 채운다.
+  // 뜻의 낱말이 하나라도 겹치는 것(예: colleague와 coworker)은 헷갈리지 않게 보기에서 뺀다.
+  // 어느 묶음에도 속하지 않은 것은 지금처럼 보기를 만들지 않고 영어로 쓰게 한다.
+  function datedChoices(card, pool, limit) {
+    const list = Array.isArray(pool) ? pool : [], group = item => item && (item.studyDate || item.chapterId) || null;
+    const own = group(card) ? card : list.find(item => group(item) && english(item.en) === english(card.en)), mine = group(own); if (!mine) return [];
+    const kind = kindOf(card), terms = value => String(value || '').replace(/\([^)]*\)/g, '').split(/[,;\/·]/).map(korean).filter(Boolean), taken = new Set(terms(card.ko));
+    const others = list.filter(item => group(item) && item.ko && kindOf(item) === kind && english(item.en) !== english(card.en) && !terms(item.ko).some(term => taken.has(term)));
+    let start = 0; for (const letter of english(card.en)) start = (start * 31 + letter.charCodeAt(0)) % 9973;
+    const turn = rows => rows.length ? [...rows.slice(start % rows.length), ...rows.slice(0, start % rows.length)] : [], result = [], seen = new Set();
+    for (const item of [...turn(others.filter(item => group(item) === mine)), ...turn(others.filter(item => group(item) !== mine))]) {
+      if (result.length >= limit) break; const value = String(item.ko).trim(), key = korean(value); if (!key || seen.has(key)) continue; seen.add(key); result.push(value);
+    }
+    return result.length >= limit ? result : [];
+  }
   function distractors(card, pool = [], count = 3) {
     const limit = Number.isFinite(Number(count)) ? Math.max(0, Math.min(3, Math.floor(Number(count)))) : 3;
     if (!limit || !card || !String(card.ko || '').trim()) return [];
     const kind = kindOf(card), entry = bank.get(english(card.en));
     // Unknown words and sentences use English writing, never generated guesses.
     // The pool parameter is retained for the shared caller contract.
-    if (!entry || entry.kind !== kind) return [];
+    if (!entry || entry.kind !== kind) return datedChoices(card, pool, limit);
     const accepted = [card.ko, card.meaning, card.translation, ...(Array.isArray(card.acceptedMeanings) ? card.acceptedMeanings : []), ...(Array.isArray(card.synonyms) ? card.synonyms : [])]
       .filter(value => typeof value === 'string').flatMap(forms);
     const concepts = conceptSet(accepted), used = new Set(), usedForms = new Set(), usedConcepts = new Set(), result = [];
@@ -931,7 +947,8 @@ const FRUIT_DATA=[{"en": "orange", "ko": "오렌지", "fruit": "orange", "cat": 
 const FRUIT_DAYS=[{"id": 1, "title": "첫 과일 배송", "subtitle": "듣고 말해서 오렌지, 사과, 바나나를 보내요", "icon": "🍊", "phrases": [{"en": "orange", "ko": "오렌지", "fruit": "orange", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}, {"en": "apple", "ko": "사과", "fruit": "apple", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}, {"en": "banana", "ko": "바나나", "fruit": "banana", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}], "dialogue": [{"speaker": "A", "en": "What fruit would you like?", "ko": "어떤 과일을 드릴까요?"}, {"speaker": "B", "en": "An apple, please.", "ko": "사과 주세요."}, {"speaker": "A", "en": "Would you like an orange, too?", "ko": "오렌지도 드릴까요?"}, {"speaker": "B", "en": "Yes, please. Thank you!", "ko": "네, 주세요. 고마워요!"}], "prompt": "가장 좋아하는 과일을 고르고 I like…로 말해 보세요. 과일 이름을 바꿔 세 번 도전해요.", "example": "I like apples. I like oranges, too.", "quiz": [{"q": "오렌지를 영어로 말하면?", "options": ["apple", "orange", "banana"], "answer": 1, "explanation": "오렌지는 orange예요. 소리를 듣고 한 번 더 말해 보세요."}, {"q": "사과를 영어로 말하면?", "options": ["banana", "apple", "grape"], "answer": 1, "explanation": "사과는 apple예요. 소리를 듣고 한 번 더 말해 보세요."}, {"q": "바나나를 영어로 말하면?", "options": ["grape", "banana", "strawberry"], "answer": 1, "explanation": "바나나는 banana예요. 소리를 듣고 한 번 더 말해 보세요."}]}, {"id": 2, "title": "알록달록 과일 창고", "subtitle": "듣고 말해서 포도, 딸기, 수박를 보내요", "icon": "🍇", "phrases": [{"en": "grape", "ko": "포도", "fruit": "grape", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}, {"en": "strawberry", "ko": "딸기", "fruit": "strawberry", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}, {"en": "watermelon", "ko": "수박", "fruit": "watermelon", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}], "dialogue": [{"speaker": "A", "en": "What fruit would you like?", "ko": "어떤 과일을 드릴까요?"}, {"speaker": "B", "en": "An apple, please.", "ko": "사과 주세요."}, {"speaker": "A", "en": "Would you like an orange, too?", "ko": "오렌지도 드릴까요?"}, {"speaker": "B", "en": "Yes, please. Thank you!", "ko": "네, 주세요. 고마워요!"}], "prompt": "가장 좋아하는 과일을 고르고 I like…로 말해 보세요. 과일 이름을 바꿔 세 번 도전해요.", "example": "I like apples. I like oranges, too.", "quiz": [{"q": "포도를 영어로 말하면?", "options": ["strawberry", "grape", "watermelon"], "answer": 1, "explanation": "포도는 grape예요. 소리를 듣고 한 번 더 말해 보세요."}, {"q": "딸기를 영어로 말하면?", "options": ["watermelon", "strawberry", "orange"], "answer": 1, "explanation": "딸기는 strawberry예요. 소리를 듣고 한 번 더 말해 보세요."}, {"q": "수박를 영어로 말하면?", "options": ["orange", "watermelon", "apple"], "answer": 1, "explanation": "수박는 watermelon예요. 소리를 듣고 한 번 더 말해 보세요."}]}, {"id": 3, "title": "오렌지의 새 친구", "subtitle": "듣고 말해서 오렌지, 바나나, 딸기를 보내요", "icon": "🍓", "phrases": [{"en": "orange", "ko": "오렌지", "fruit": "orange", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}, {"en": "banana", "ko": "바나나", "fruit": "banana", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}, {"en": "strawberry", "ko": "딸기", "fruit": "strawberry", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}], "dialogue": [{"speaker": "A", "en": "What fruit would you like?", "ko": "어떤 과일을 드릴까요?"}, {"speaker": "B", "en": "An apple, please.", "ko": "사과 주세요."}, {"speaker": "A", "en": "Would you like an orange, too?", "ko": "오렌지도 드릴까요?"}, {"speaker": "B", "en": "Yes, please. Thank you!", "ko": "네, 주세요. 고마워요!"}], "prompt": "가장 좋아하는 과일을 고르고 I like…로 말해 보세요. 과일 이름을 바꿔 세 번 도전해요.", "example": "I like apples. I like oranges, too.", "quiz": [{"q": "오렌지를 영어로 말하면?", "options": ["apple", "orange", "banana"], "answer": 1, "explanation": "오렌지는 orange예요. 소리를 듣고 한 번 더 말해 보세요."}, {"q": "바나나를 영어로 말하면?", "options": ["grape", "banana", "strawberry"], "answer": 1, "explanation": "바나나는 banana예요. 소리를 듣고 한 번 더 말해 보세요."}, {"q": "딸기를 영어로 말하면?", "options": ["watermelon", "strawberry", "orange"], "answer": 1, "explanation": "딸기는 strawberry예요. 소리를 듣고 한 번 더 말해 보세요."}]}, {"id": 4, "title": "사과와 친구들의 모험", "subtitle": "듣고 말해서 사과, 포도, 수박를 보내요", "icon": "🍎", "phrases": [{"en": "apple", "ko": "사과", "fruit": "apple", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}, {"en": "grape", "ko": "포도", "fruit": "grape", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}, {"en": "watermelon", "ko": "수박", "fruit": "watermelon", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}], "dialogue": [{"speaker": "A", "en": "What fruit would you like?", "ko": "어떤 과일을 드릴까요?"}, {"speaker": "B", "en": "An apple, please.", "ko": "사과 주세요."}, {"speaker": "A", "en": "Would you like an orange, too?", "ko": "오렌지도 드릴까요?"}, {"speaker": "B", "en": "Yes, please. Thank you!", "ko": "네, 주세요. 고마워요!"}], "prompt": "가장 좋아하는 과일을 고르고 I like…로 말해 보세요. 과일 이름을 바꿔 세 번 도전해요.", "example": "I like apples. I like oranges, too.", "quiz": [{"q": "사과를 영어로 말하면?", "options": ["banana", "apple", "grape"], "answer": 1, "explanation": "사과는 apple예요. 소리를 듣고 한 번 더 말해 보세요."}, {"q": "포도를 영어로 말하면?", "options": ["strawberry", "grape", "watermelon"], "answer": 1, "explanation": "포도는 grape예요. 소리를 듣고 한 번 더 말해 보세요."}, {"q": "수박를 영어로 말하면?", "options": ["orange", "watermelon", "apple"], "answer": 1, "explanation": "수박는 watermelon예요. 소리를 듣고 한 번 더 말해 보세요."}]}, {"id": 5, "title": "세 가지 과일 미션", "subtitle": "듣고 말해서 바나나, 딸기, 오렌지를 보내요", "icon": "🍌", "phrases": [{"en": "banana", "ko": "바나나", "fruit": "banana", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}, {"en": "strawberry", "ko": "딸기", "fruit": "strawberry", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}, {"en": "orange", "ko": "오렌지", "fruit": "orange", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}], "dialogue": [{"speaker": "A", "en": "What fruit would you like?", "ko": "어떤 과일을 드릴까요?"}, {"speaker": "B", "en": "An apple, please.", "ko": "사과 주세요."}, {"speaker": "A", "en": "Would you like an orange, too?", "ko": "오렌지도 드릴까요?"}, {"speaker": "B", "en": "Yes, please. Thank you!", "ko": "네, 주세요. 고마워요!"}], "prompt": "가장 좋아하는 과일을 고르고 I like…로 말해 보세요. 과일 이름을 바꿔 세 번 도전해요.", "example": "I like apples. I like oranges, too.", "quiz": [{"q": "바나나를 영어로 말하면?", "options": ["grape", "banana", "strawberry"], "answer": 1, "explanation": "바나나는 banana예요. 소리를 듣고 한 번 더 말해 보세요."}, {"q": "딸기를 영어로 말하면?", "options": ["watermelon", "strawberry", "orange"], "answer": 1, "explanation": "딸기는 strawberry예요. 소리를 듣고 한 번 더 말해 보세요."}, {"q": "오렌지를 영어로 말하면?", "options": ["apple", "orange", "banana"], "answer": 1, "explanation": "오렌지는 orange예요. 소리를 듣고 한 번 더 말해 보세요."}]}, {"id": 6, "title": "나만의 과일 가게", "subtitle": "듣고 말해서 수박, 사과, 포도를 보내요", "icon": "🍉", "phrases": [{"en": "watermelon", "ko": "수박", "fruit": "watermelon", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}, {"en": "apple", "ko": "사과", "fruit": "apple", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}, {"en": "grape", "ko": "포도", "fruit": "grape", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}], "dialogue": [{"speaker": "A", "en": "What fruit would you like?", "ko": "어떤 과일을 드릴까요?"}, {"speaker": "B", "en": "An apple, please.", "ko": "사과 주세요."}, {"speaker": "A", "en": "Would you like an orange, too?", "ko": "오렌지도 드릴까요?"}, {"speaker": "B", "en": "Yes, please. Thank you!", "ko": "네, 주세요. 고마워요!"}], "prompt": "가장 좋아하는 과일을 고르고 I like…로 말해 보세요. 과일 이름을 바꿔 세 번 도전해요.", "example": "I like apples. I like oranges, too.", "quiz": [{"q": "수박를 영어로 말하면?", "options": ["orange", "watermelon", "apple"], "answer": 1, "explanation": "수박는 watermelon예요. 소리를 듣고 한 번 더 말해 보세요."}, {"q": "사과를 영어로 말하면?", "options": ["banana", "apple", "grape"], "answer": 1, "explanation": "사과는 apple예요. 소리를 듣고 한 번 더 말해 보세요."}, {"q": "포도를 영어로 말하면?", "options": ["strawberry", "grape", "watermelon"], "answer": 1, "explanation": "포도는 grape예요. 소리를 듣고 한 번 더 말해 보세요."}]}, {"id": 7, "title": "이번 주 배송왕", "subtitle": "듣고 말해서 딸기, 오렌지, 수박를 보내요", "icon": "🏆", "phrases": [{"en": "strawberry", "ko": "딸기", "fruit": "strawberry", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}, {"en": "orange", "ko": "오렌지", "fruit": "orange", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}, {"en": "watermelon", "ko": "수박", "fruit": "watermelon", "cat": "과일", "kind": "단어", "note": "영어 단어가 정확히 인식되면 같은 과일이 움직여요."}], "dialogue": [{"speaker": "A", "en": "What fruit would you like?", "ko": "어떤 과일을 드릴까요?"}, {"speaker": "B", "en": "An apple, please.", "ko": "사과 주세요."}, {"speaker": "A", "en": "Would you like an orange, too?", "ko": "오렌지도 드릴까요?"}, {"speaker": "B", "en": "Yes, please. Thank you!", "ko": "네, 주세요. 고마워요!"}], "prompt": "가장 좋아하는 과일을 고르고 I like…로 말해 보세요. 과일 이름을 바꿔 세 번 도전해요.", "example": "I like apples. I like oranges, too.", "quiz": [{"q": "딸기를 영어로 말하면?", "options": ["watermelon", "strawberry", "orange"], "answer": 1, "explanation": "딸기는 strawberry예요. 소리를 듣고 한 번 더 말해 보세요."}, {"q": "오렌지를 영어로 말하면?", "options": ["apple", "orange", "banana"], "answer": 1, "explanation": "오렌지는 orange예요. 소리를 듣고 한 번 더 말해 보세요."}, {"q": "수박를 영어로 말하면?", "options": ["orange", "watermelon", "apple"], "answer": 1, "explanation": "수박는 watermelon예요. 소리를 듣고 한 번 더 말해 보세요."}]}];
 const COURSE_DATA={fruit:FRUIT_DAYS,business:BUSINESS_DAYS,foundation:DAYS};
 const Teaching = (() => {
-const SESSION_TTL = 8 * 60 * 60 * 1000;
+// 관리자 로그인 유지 기간: 한 번 로그인한 브라우저는 여섯 달 동안 비밀번호를 다시 묻지 않는다. '로그아웃'을 누르면 바로 끝난다.
+const SESSION_TTL = 180 * 24 * 60 * 60 * 1000;
 const LOGIN_WINDOW = 15 * 60 * 1000;
 const MAX_PDF = 20 * 1024 * 1024;
 const COOKIE = 'teaching_admin';
@@ -956,9 +973,16 @@ function schedule(value) { if (value === undefined || value === null || value ==
 function status(value) { if (!['draft', 'published'].includes(value)) fail(400, 'invalid_status', '초안 또는 공개 상태를 선택해 주세요.'); return value; }
 function visibleChapter(chapter, now) { return chapter?.status === 'published' && chapter.week_start <= localDate(now) && (chapter.publish_at === null || chapter.publish_at <= now); }
 function pdfView(row) { return row?.object_key ? { url: '/api/pdf/' + encodeURIComponent(row.id || row.chapter_id) + '?v=' + encodeURIComponent(row.object_key.split('/').at(-1)), name: row.pdf_name || row.name, size: row.pdf_size ?? row.size, pages: row.pdf_pages ?? row.pages ?? null } : null; }
-function chapterView(row) { return { id: row.id, number: row.number, title: row.title, weekStart: row.week_start, body: row.body, status: row.status, publishAt: row.publish_at === null ? null : new Date(row.publish_at).toISOString(), createdAt: row.created_at, updatedAt: row.updated_at, pdf: pdfView(row) }; }
-function expressionView(row) { return { id: row.id, chapterId: row.chapter_id, en: row.en, ko: row.ko, note: row.note, kind: row.kind, example: row.example, studyDay: row.study_day, status: row.status, publishAt: row.publish_at === null ? null : new Date(row.publish_at).toISOString(), createdAt: row.created_at, updatedAt: row.updated_at }; }
-const CHAPTER_SELECT = 'SELECT c.*, p.object_key, p.name AS pdf_name, p.size AS pdf_size, p.pages AS pdf_pages FROM teacher_chapters c LEFT JOIN teacher_pdfs p ON p.chapter_id = c.id';
+function chapterView(row) { return { id: row.id, number: row.number, title: row.title, weekStart: row.week_start, body: row.body, status: row.status, publishAt: row.publish_at === null ? null : new Date(row.publish_at).toISOString(), createdAt: row.created_at, updatedAt: row.updated_at, pdf: pdfView(row), transcript: transcriptView(row) }; }
+// 녹음 글: 수업 녹음을 글로 바꾼 파일. 목록에는 요약만 싣고, 본문은 /api/transcript/<수업> 에서 따로 준다.
+function transcriptView(row) { return row?.transcript_at ? { name: row.transcript_name || '', size: row.transcript_size || 0, turns: row.transcript_turns || 0, visible: row.transcript_visible === 1, uploadedAt: row.transcript_at } : null; }
+function expressionView(row) { return { id: row.id, chapterId: row.chapter_id, en: row.en, ko: row.ko, note: row.note, kind: row.kind, example: row.example, exampleKo: row.example_ko || '', studyDay: row.study_day, studyDate: row.study_date || null, readingId: row.reading_id || null, status: row.status, publishAt: row.publish_at === null ? null : new Date(row.publish_at).toISOString(), createdAt: row.created_at, updatedAt: row.updated_at }; }
+// 오늘의 리딩: 날짜 하나에 본문 하나 + 그날의 단어들. 날짜가 곧 분류다(주차·요일은 날짜에서 계산한다).
+const mondayOf = date => { const d = new Date(date + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7); return d.toISOString().slice(0, 10); };
+const weekdayOf = date => (new Date(date + 'T00:00:00Z').getUTCDay() + 6) % 7 + 1;
+const wordKey = value => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+function readingView(row, words) { return { id: row.id, date: row.study_date, title: row.title, body: row.body, status: row.status, updatedAt: row.updated_at, words: words || [] }; }
+const CHAPTER_SELECT = 'SELECT c.*, p.object_key, p.name AS pdf_name, p.size AS pdf_size, p.pages AS pdf_pages, t.name AS transcript_name, LENGTH(t.text) AS transcript_size, t.turns AS transcript_turns, t.visible AS transcript_visible, t.uploaded_at AS transcript_at FROM teacher_chapters c LEFT JOIN teacher_pdfs p ON p.chapter_id = c.id LEFT JOIN teacher_transcripts t ON t.chapter_id = c.id';
 async function chapterRow(db, id) { return first(db, CHAPTER_SELECT + ' WHERE c.id = ?', id); }
 async function revision(db) { return (await first(db, 'SELECT COALESCE(MAX(id),0) AS revision FROM teacher_revisions')).revision; }
 const revisionStatement = (db, kind, now) => db.prepare('INSERT INTO teacher_revisions (kind, created_at) VALUES (?, ?)').bind(kind, now);
@@ -1105,28 +1129,34 @@ async function adminLearnerReport(env, url, now) {
 }
 
 async function getTeachingContent(env, baseCourses = {}, now = Date.now()) {
-  let rows = [], expressionRows = [], databaseRevision = 0;
-  if (env.DB) { [rows, expressionRows, databaseRevision] = await Promise.all([all(env.DB, CHAPTER_SELECT + ' ORDER BY c.week_start, c.number, c.created_at'), all(env.DB, 'SELECT * FROM teacher_expressions WHERE deleted_at IS NULL ORDER BY study_day, created_at, id'), revision(env.DB)]); }
-  const chapters = rows.filter(row => visibleChapter(row, now)).map(chapterView);
+  let rows = [], expressionRows = [], databaseRevision = 0, readingRows = [];
+  if (env.DB) { [rows, expressionRows, databaseRevision, readingRows] = await Promise.all([all(env.DB, CHAPTER_SELECT + ' ORDER BY c.week_start, c.number, c.created_at'), all(env.DB, 'SELECT * FROM teacher_expressions WHERE deleted_at IS NULL ORDER BY study_day, created_at, id'), revision(env.DB), all(env.DB, "SELECT id, study_date, title, LENGTH(body) AS size FROM teacher_readings WHERE status = 'published' AND study_date <= ? ORDER BY study_date DESC", localDate(now))]); }
+  const chapters = rows.filter(row => visibleChapter(row, now)).map(chapterView).map(chapter => ({ ...chapter, transcript: chapter.transcript?.visible ? chapter.transcript : null }));
   const visibleIds = new Set(chapters.map(chapter => chapter.id));
-  const expressions = expressionRows.filter(row => row.status === 'published' && (row.publish_at === null || row.publish_at <= now) && (!row.chapter_id || visibleIds.has(row.chapter_id))).map(expressionView);
+  const readingIds = new Set(readingRows.map(row => row.id));
+  const expressions = expressionRows.filter(row => row.reading_id ? readingIds.has(row.reading_id) : row.status === 'published' && (row.publish_at === null || row.publish_at <= now) && (!row.chapter_id || visibleIds.has(row.chapter_id))).map(expressionView);
+  const readings = readingRows.map(row => ({ id: row.id, date: row.study_date, title: row.title, hasBody: row.size > 0, words: expressions.filter(expression => expression.readingId === row.id).length }));
+  const latestStudyDate = readings.find(reading => reading.words > 0)?.date || null;
   const activeChapter = chapters.at(-1) || null;
-  const pool = expressions.filter(expression => !expression.chapterId || expression.chapterId === activeChapter?.id);
+  const pool = expressions.filter(expression => !expression.readingId && (!expression.chapterId || expression.chapterId === activeChapter?.id));
   const days = makeDays(pool, activeChapter, baseCourses.business || []);
-  const cardView = ({ id, en, ko, note, kind, example, studyDay, chapterId }) => ({ id, en, ko, note, kind, example, studyDay, chapterId });
-  const decks = chapters.map(chapter => ({ id: chapter.id, title: `${chapter.number}챕터 · ${chapter.title}`, chapterId: chapter.id, cards: expressions.filter(expression => expression.chapterId === chapter.id).map(cardView) })).filter(deck => deck.cards.length);
-  const unassigned = expressions.filter(expression => !expression.chapterId);
+  const cardView = ({ id, en, ko, note, kind, example, exampleKo, studyDay, studyDate, chapterId }) => ({ id, en, ko, note, kind, example, exampleKo, studyDay, studyDate, chapterId });
+  const decks = chapters.map(chapter => ({ id: chapter.id, title: `${chapter.number}주차 · ${chapter.title}`, chapterId: chapter.id, cards: expressions.filter(expression => expression.chapterId === chapter.id).map(cardView) })).filter(deck => deck.cards.length);
+  const unassigned = expressions.filter(expression => !expression.chapterId && !expression.readingId);
   if (unassigned.length) decks.push({ id: 'daily-expressions', title: '오늘의 표현', chapterId: null, cards: unassigned.map(cardView) });
+  // 매일 단어는 '그 주' 묶음으로 모은다. 최신 주가 맨 앞.
+  const weeks = new Map(); for (const expression of expressions) if (expression.readingId && expression.studyDate) { const key = mondayOf(expression.studyDate); if (!weeks.has(key)) weeks.set(key, []); weeks.get(key).push(expression); }
+  decks.unshift(...[...weeks.keys()].sort().reverse().map(key => ({ id: 'week-' + key, title: '매일 단어 · ' + Number(key.slice(5, 7)) + '월 ' + Number(key.slice(8)) + '일 주', chapterId: null, weekStart: key, cards: weeks.get(key).sort((a, b) => String(b.studyDate).localeCompare(String(a.studyDate))).map(cardView) })));
   for (const deck of decks) { const kinds = [...new Set(deck.cards.map(card => card.kind))]; deck.kind = kinds.length === 1 ? kinds[0] : 'mixed'; deck.categories = { words: deck.cards.filter(card => card.kind === '단어').map(card => card.id), speaking: deck.cards.filter(card => card.kind === '표현').map(card => card.id) }; }
-  const dailyWords = expressions.filter(expression => expression.kind === '단어');
+  const dailyWords = expressions.filter(expression => expression.kind === '단어').sort((a, b) => String(b.studyDate || '').localeCompare(String(a.studyDate || '')));
   const speakingExpressions = expressions.filter(expression => expression.kind === '표현');
-  const contentRevision = rows.length || expressionRows.length || databaseRevision ? Number.parseInt((await hash(JSON.stringify({ databaseRevision, chapters, expressions }))).slice(0, 12), 16) : 0;
-  return { content: { revision: contentRevision, activeChapter, chapters, expressions, days, decks, dailyWords, speakingExpressions, usingFallback: !pool.some(expression => expression.kind === '표현') }, courses: { ...baseCourses, business: days } };
+  const contentRevision = rows.length || expressionRows.length || readingRows.length || databaseRevision ? Number.parseInt((await hash(JSON.stringify({ databaseRevision, chapters, expressions, readings }))).slice(0, 12), 16) : 0;
+  return { content: { revision: contentRevision, activeChapter, chapters, expressions, days, decks, dailyWords, speakingExpressions, readings, latestStudyDate, usingFallback: !pool.some(expression => expression.kind === '표현') }, courses: { ...baseCourses, business: days } };
 }
 
 async function handleTeaching(request, env, now = Date.now(), baseCourses = {}) {
   const url = new URL(request.url), path = url.pathname;
-  if (!(path.startsWith('/api/admin/') || path === '/api/content' || path === '/api/notes' || path.startsWith('/api/pdf/'))) return null;
+  if (!(path.startsWith('/api/admin/') || path === '/api/content' || path === '/api/notes' || path.startsWith('/api/pdf/') || path.startsWith('/api/transcript/') || path === '/api/reading')) return null;
   try {
     if (!env.DB) fail(503, 'database_unavailable', '수업 저장소를 준비하고 있어요. 잠시 후 다시 시도해 주세요.');
     if (!['GET', 'POST', 'HEAD'].includes(request.method)) fail(405, 'method_not_allowed', '지원하지 않는 요청입니다.');
@@ -1154,11 +1184,11 @@ async function handleTeaching(request, env, now = Date.now(), baseCourses = {}) 
     if (path.startsWith('/api/admin/')) {
       if (!await adminSession(request, env, now)) return json({ authenticated: false, error: 'admin_auth_required', message: '관리자 로그인이 필요해요.' }, 401);
       if (['/api/admin/learners', '/api/admin/students'].includes(path) && request.method === 'GET') return json(await adminLearnerReport(env, url, now));
-      if (path === '/api/admin/state' && request.method === 'GET') { const [chapters, expressions, rev] = await Promise.all([all(env.DB, CHAPTER_SELECT + ' ORDER BY c.week_start DESC, c.number DESC'), all(env.DB, 'SELECT * FROM teacher_expressions WHERE deleted_at IS NULL ORDER BY updated_at DESC'), revision(env.DB)]); return json({ authenticated: true, revision: rev, chapters: chapters.map(chapterView), expressions: expressions.map(expressionView) }); }
+      if (path === '/api/admin/state' && request.method === 'GET') { const [chapters, expressions, rev] = await Promise.all([all(env.DB, CHAPTER_SELECT + ' ORDER BY c.week_start DESC, c.number DESC'), all(env.DB, 'SELECT * FROM teacher_expressions WHERE deleted_at IS NULL ORDER BY updated_at DESC'), revision(env.DB)]); const readingList = await all(env.DB, 'SELECT * FROM teacher_readings ORDER BY study_date DESC'); const views = expressions.map(expressionView); return json({ authenticated: true, revision: rev, chapters: chapters.map(chapterView), expressions: views.filter(view => !view.readingId), readings: readingList.map(row => readingView(row, views.filter(view => view.readingId === row.id).sort((a, b) => a.createdAt - b.createdAt || String(a.id).localeCompare(String(b.id))))) }); }
       if (path === '/api/admin/chapter' && request.method === 'POST') {
         const body = await jsonBody(request), id = body.id ? identifier(body.id, '챕터') : crypto.randomUUID();
         if (body.id && !await chapterRow(env.DB, id)) fail(404, 'chapter_not_found', '챕터를 찾을 수 없어요.');
-        if (!Number.isInteger(body.number) || body.number < 1 || body.number > 999) fail(400, 'invalid_number', '챕터 번호는 1~999로 입력해 주세요.');
+        if (!Number.isInteger(body.number) || body.number < 1 || body.number > 999) fail(400, 'invalid_number', '주차는 1~999 사이로 골라 주세요.');
         if (!validDate(body.weekStart)) fail(400, 'invalid_week', '수업 시작 날짜를 다시 선택해 주세요.');
         const title = string(body.title, 120, '챕터 제목', true), text = string(body.body, 50000, '수업 내용'), state = status(body.status), publishAt = schedule(body.publishAt);
         await env.DB.batch([env.DB.prepare('INSERT INTO teacher_chapters (id, number, title, week_start, body, status, publish_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET number = excluded.number, title = excluded.title, week_start = excluded.week_start, body = excluded.body, status = excluded.status, publish_at = excluded.publish_at, updated_at = excluded.updated_at').bind(id, body.number, title, body.weekStart, text, state, publishAt, now, now), revisionStatement(env.DB, 'chapter', now)]);
@@ -1173,12 +1203,72 @@ async function handleTeaching(request, env, now = Date.now(), baseCourses = {}) 
           env.DB.prepare('UPDATE teacher_expressions SET chapter_id = NULL, updated_at = ? WHERE chapter_id = ?').bind(now, id),
           env.DB.prepare('DELETE FROM teacher_notes WHERE chapter_id = ?').bind(id),
           env.DB.prepare('DELETE FROM teacher_pdfs WHERE chapter_id = ?').bind(id),
+          env.DB.prepare('DELETE FROM teacher_transcripts WHERE chapter_id = ?').bind(id),
           env.DB.prepare('UPDATE learning_sessions SET chapter_id = NULL WHERE chapter_id = ?').bind(id),
           env.DB.prepare('DELETE FROM teacher_chapters WHERE id = ?').bind(id),
           revisionStatement(env.DB, 'remove-chapter', now)
         ]);
         if (chapter.object_key && env.BUCKET) try { await env.BUCKET.delete(chapter.object_key); } catch { console.error('Removed chapter PDF cleanup deferred'); }
         return json({ removed: true, id, revision: await revision(env.DB) });
+      }
+      // 오늘의 리딩 저장: 날짜 하나에 본문과 단어를 한 번에. 같은 단어는 번호를 그대로 두어 학생의 외운 기록이 이어진다.
+      if (path === '/api/admin/reading' && request.method === 'POST') {
+        const body = await jsonBody(request), id = body.id ? identifier(body.id, '리딩') : crypto.randomUUID();
+        if (!validDate(body.date)) fail(400, 'invalid_date', '날짜를 다시 골라 주세요.');
+        const previous = body.id ? await first(env.DB, 'SELECT id, created_at FROM teacher_readings WHERE id = ?', id) : null;
+        if (body.id && !previous) fail(404, 'reading_not_found', '리딩을 찾을 수 없어요.');
+        const sameDay = await first(env.DB, 'SELECT id FROM teacher_readings WHERE study_date = ? AND id <> ?', body.date, id);
+        if (sameDay) return json({ error: 'date_taken', message: '그 날짜에는 이미 올린 리딩이 있어요. 목록에서 그 날짜를 눌러 고쳐 주세요.', id: sameDay.id }, 409);
+        const title = string(body.title, 120, '제목'), text = string(body.body, 30000, '본문').replace(/\r\n?/g, '\n'), state = status(body.status);
+        if (!Array.isArray(body.words) || body.words.length > 60) fail(400, 'invalid_words', '단어는 하루에 60개까지 올릴 수 있어요.');
+        const words = [], seen = new Set();
+        for (const item of body.words) {
+          const en = string(item?.en, 200, '단어', true), ko = string(item?.ko, 1000, '뜻', true), example = string(item?.example, 2000, '예문'), exampleKo = string(item?.exampleKo, 2000, '해석'), note = string(item?.note, 2000, '참고');
+          if (!/[a-z]/i.test(en)) fail(400, 'invalid_english', '단어 칸에는 영어가 있어야 해요: ' + en.slice(0, 30));
+          if (seen.has(wordKey(en))) continue; seen.add(wordKey(en)); words.push({ en, ko, example, exampleKo, note });
+        }
+        if (!text && !words.length) fail(400, 'empty_reading', '본문이나 단어 중 하나는 넣어 주세요.');
+        const existing = new Map((await all(env.DB, 'SELECT id, en FROM teacher_expressions WHERE reading_id = ? AND deleted_at IS NULL', id)).map(row => [wordKey(row.en), row.id])), day = weekdayOf(body.date), kept = new Set();
+        const statements = [env.DB.prepare('INSERT INTO teacher_readings (id, study_date, title, body, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET study_date = excluded.study_date, title = excluded.title, body = excluded.body, status = excluded.status, updated_at = excluded.updated_at').bind(id, body.date, title, text, state, now, now)];
+        words.forEach((word, index) => {
+          const wordId = existing.get(wordKey(word.en));
+          if (wordId) { kept.add(wordId); statements.push(env.DB.prepare('UPDATE teacher_expressions SET en = ?, ko = ?, note = ?, example = ?, example_ko = ?, study_day = ?, study_date = ?, status = ?, updated_at = ? WHERE id = ?').bind(word.en, word.ko, word.note, word.example, word.exampleKo, day, body.date, state, now, wordId)); }
+          else statements.push(env.DB.prepare("INSERT INTO teacher_expressions (id, chapter_id, en, ko, note, kind, example, example_ko, study_day, study_date, reading_id, status, publish_at, created_at, updated_at) VALUES (?, NULL, ?, ?, ?, '단어', ?, ?, ?, ?, ?, ?, NULL, ?, ?)").bind(crypto.randomUUID(), word.en, word.ko, word.note, word.example, word.exampleKo, day, body.date, id, state, now + index, now));
+        });
+        for (const wordId of existing.values()) if (!kept.has(wordId)) statements.push(env.DB.prepare('UPDATE teacher_expressions SET deleted_at = ?, updated_at = ? WHERE id = ?').bind(now, now, wordId));
+        statements.push(revisionStatement(env.DB, 'reading', now));
+        await env.DB.batch(statements);
+        const saved = await first(env.DB, 'SELECT * FROM teacher_readings WHERE id = ?', id);
+        return json({ reading: readingView(saved, (await all(env.DB, 'SELECT * FROM teacher_expressions WHERE reading_id = ? AND deleted_at IS NULL ORDER BY created_at, id', id)).map(expressionView)), revision: await revision(env.DB) });
+      }
+      if (path === '/api/admin/reading/remove' && request.method === 'POST') {
+        const body = await jsonBody(request), id = identifier(body.id, '리딩');
+        await env.DB.batch([env.DB.prepare('UPDATE teacher_expressions SET deleted_at = ?, updated_at = ? WHERE reading_id = ? AND deleted_at IS NULL').bind(now, now, id), env.DB.prepare('DELETE FROM teacher_readings WHERE id = ?').bind(id), revisionStatement(env.DB, 'reading-remove', now)]);
+        return json({ removed: true, id, revision: await revision(env.DB) });
+      }
+      // 녹음 글 올리기·바꾸기: 수업 한 개에 글 한 개. 처음엔 학생에게 숨긴 채로 저장한다.
+      if (path === '/api/admin/transcript' && request.method === 'POST') {
+        const body = await jsonBody(request), chapterId = identifier(body.chapterId, '수업');
+        if (!await chapterRow(env.DB, chapterId)) fail(404, 'chapter_not_found', '수업을 찾을 수 없어요.');
+        if (typeof body.text !== 'string' || !body.text.trim()) fail(400, 'empty_transcript', '글이 비어 있어요. 텍스트 파일을 다시 골라 주세요.');
+        if (body.text.length > 300000) fail(400, 'transcript_too_long', '녹음 글이 너무 길어요. 30만 자까지 올릴 수 있어요.');
+        const text = body.text.replace(/\r\n?/g, '\n').trim(), name = string(body.name, 200, '파일 이름'), turns = Number.isInteger(body.turns) && body.turns >= 0 && body.turns <= 100000 ? body.turns : 0;
+        const visible = body.visible === true ? 1 : body.visible === false ? 0 : null;
+        await env.DB.batch([env.DB.prepare('INSERT INTO teacher_transcripts (chapter_id, name, text, turns, visible, uploaded_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(chapter_id) DO UPDATE SET name = excluded.name, text = excluded.text, turns = excluded.turns, visible = CASE WHEN ? IS NULL THEN teacher_transcripts.visible ELSE excluded.visible END, uploaded_at = excluded.uploaded_at').bind(chapterId, name, text, turns, visible ?? 0, now, visible), revisionStatement(env.DB, 'transcript', now)]);
+        return json({ chapter: chapterView(await chapterRow(env.DB, chapterId)), revision: await revision(env.DB) });
+      }
+      if (path === '/api/admin/transcript/visible' && request.method === 'POST') {
+        const body = await jsonBody(request), chapterId = identifier(body.chapterId, '수업');
+        if (typeof body.visible !== 'boolean') fail(400, 'invalid_visible', '보임 또는 숨김을 골라 주세요.');
+        if (!await first(env.DB, 'SELECT chapter_id FROM teacher_transcripts WHERE chapter_id = ?', chapterId)) fail(404, 'transcript_not_found', '올린 녹음 글이 없어요.');
+        await env.DB.batch([env.DB.prepare('UPDATE teacher_transcripts SET visible = ? WHERE chapter_id = ?').bind(body.visible ? 1 : 0, chapterId), revisionStatement(env.DB, 'transcript-visible', now)]);
+        return json({ chapter: chapterView(await chapterRow(env.DB, chapterId)), revision: await revision(env.DB) });
+      }
+      if (path === '/api/admin/transcript/remove' && request.method === 'POST') {
+        const body = await jsonBody(request), chapterId = identifier(body.chapterId, '수업');
+        await env.DB.batch([env.DB.prepare('DELETE FROM teacher_transcripts WHERE chapter_id = ?').bind(chapterId), revisionStatement(env.DB, 'transcript-remove', now)]);
+        const chapter = await chapterRow(env.DB, chapterId);
+        return json({ chapter: chapter ? chapterView(chapter) : null, revision: await revision(env.DB) });
       }
       if (path === '/api/admin/expression' && request.method === 'POST') {
         const body = await jsonBody(request), id = body.id ? identifier(body.id, '표현') : crypto.randomUUID();
@@ -1222,6 +1312,28 @@ async function handleTeaching(request, env, now = Date.now(), baseCourses = {}) 
         return json({ chapterId, pdf: pdfView(await chapterRow(env.DB, chapterId)), revision: await revision(env.DB) });
       }
       fail(404, 'not_found', '요청한 관리자 기능을 찾을 수 없어요.');
+    }
+    // 리딩 본문: 공개된 날짜의 글을 로그인한 사람에게만 준다 (기사 글이라 아무에게나 열어 두지 않는다). 관리자는 언제나.
+    if (path === '/api/reading' && request.method === 'GET') {
+      const date = url.searchParams.get('date'); if (!validDate(date)) fail(400, 'invalid_date', '날짜를 다시 골라 주세요.');
+      const row = await first(env.DB, 'SELECT * FROM teacher_readings WHERE study_date = ?', date);
+      if (!(row && await adminSession(request, env, now))) {
+        if (!row || row.status !== 'published' || row.study_date > localDate(now)) fail(404, 'reading_not_found', '그 날짜에는 올라온 리딩이 없어요.');
+        if (!request.headers.get('x-aj-user-id')) fail(401, 'sign_in_required', '리딩 본문은 로그인한 뒤에 볼 수 있어요.');
+      }
+      return json({ id: row.id, date: row.study_date, title: row.title, body: row.body });
+    }
+    if (path.startsWith('/api/transcript/') && request.method === 'GET') {
+      let id; try { id = decodeURIComponent(path.slice('/api/transcript/'.length)); } catch { fail(400, 'invalid_id', '수업을 다시 선택해 주세요.'); }
+      identifier(id, '수업'); const chapter = await chapterRow(env.DB, id);
+      // 녹음 글에는 수업에서 오간 말이 그대로 담긴다. 관리자는 언제나, 학생은 '보임'으로 바꾼 글을 로그인한 뒤에만 본다.
+      const admin = !!(chapter?.transcript_at && await adminSession(request, env, now));
+      if (!admin) {
+        if (!chapter || !chapter.transcript_at || !visibleChapter(chapter, now) || chapter.transcript_visible !== 1) fail(404, 'transcript_not_found', '볼 수 있는 녹음 글이 없어요.');
+        if (!request.headers.get('x-aj-user-id')) fail(401, 'sign_in_required', '녹음 글은 로그인한 뒤에 볼 수 있어요.');
+      }
+      const row = await first(env.DB, 'SELECT name, text, uploaded_at FROM teacher_transcripts WHERE chapter_id = ?', id);
+      return json({ chapterId: id, title: chapter.title, name: row.name, text: row.text, uploadedAt: row.uploaded_at });
     }
     if (path.startsWith('/api/pdf/') && ['GET', 'HEAD'].includes(request.method)) {
       let id; try { id = decodeURIComponent(path.slice('/api/pdf/'.length)); } catch { fail(400, 'invalid_id', 'PDF를 다시 선택해 주세요.'); }
@@ -1293,7 +1405,9 @@ async function adailyStart(db,{user,room,collection,content,cards,now,practice})
  const isTeacher=card=>teacherIds.has(String(card.id))||teacherEnglish.has(anorm(card.en));
  const round=practice?(await af(db,"SELECT COUNT(*) AS n FROM activity_runs WHERE user_id=? AND local_date=? AND json_extract(challenge_json,'$.daily')=1 AND json_extract(challenge_json,'$.collection')=? AND json_extract(challenge_json,'$.practice')=1",user,date,collection)).n+1:0;
  const seed=adayHash(date+':'+collection+':'+round),ordered=[];
- for(const wasKnown of [false,true])for(const teacher of [true,false])ordered.push(...arotate(source.filter(card=>known(card)===wasKnown&&isTeacher(card)===teacher),seed));
+ // 가장 최근 날짜에 올라온 단어 중 아직 못 외운 것을 맨 먼저 낸다 — 오늘 올린 단어가 오늘 문제로 나오게.
+ const latest=content?.latestStudyDate||null,fresh=card=>!!latest&&card.studyDate===latest&&!known(card);if(collection==='words')ordered.push(...source.filter(fresh));
+ for(const wasKnown of [false,true])for(const teacher of [true,false])ordered.push(...arotate(source.filter(card=>known(card)===wasKnown&&isTeacher(card)===teacher&&!(collection==='words'&&fresh(card))),seed));
  const selected=Array.from({length:10},(_,index)=>ordered[index%ordered.length]),seen=new Set();
  const chosen=selected.map((card,index)=>{const key=anorm(card.en),repeated=seen.has(key);seen.add(key);const base=acard(card,index,collection),raw=globalThis.AJQuizOptions?.distractors?.(base,source,3)||[],wrong=[...new Set(raw.filter(x=>typeof x==='string'&&x.trim()&&x.trim()!==String(base.ko).trim()).map(x=>x.trim()))].slice(0,3);return{...base,distractors:wrong,answerType:wrong.length===3?'meaning':'english',review:known(card)||repeated,repeated};});
  const challenge={daily:true,practice:!!practice,date,collection,cards:chosen,allowedCardIds:[],reviewCount:chosen.filter(c=>c.review).length,repeatedPractice:chosen.some(c=>c.repeated),bankExhausted:source.every(known),note:chosen.some(c=>c.repeated)?'등록 문제 부족 · 일부 반복 복습':chosen.some(c=>c.review)?'미학습 문제 우선 · 일부 이전 문제 복습':''};

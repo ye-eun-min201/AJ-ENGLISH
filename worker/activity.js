@@ -41,7 +41,9 @@ async function adailyStart(db,{user,room,collection,content,cards,now,practice})
  const isTeacher=card=>teacherIds.has(String(card.id))||teacherEnglish.has(anorm(card.en));
  const round=practice?(await af(db,"SELECT COUNT(*) AS n FROM activity_runs WHERE user_id=? AND local_date=? AND json_extract(challenge_json,'$.daily')=1 AND json_extract(challenge_json,'$.collection')=? AND json_extract(challenge_json,'$.practice')=1",user,date,collection)).n+1:0;
  const seed=adayHash(date+':'+collection+':'+round),ordered=[];
- for(const wasKnown of [false,true])for(const teacher of [true,false])ordered.push(...arotate(source.filter(card=>known(card)===wasKnown&&isTeacher(card)===teacher),seed));
+ // 가장 최근 날짜에 올라온 단어 중 아직 못 외운 것을 맨 먼저 낸다 — 오늘 올린 단어가 오늘 문제로 나오게.
+ const latest=content?.latestStudyDate||null,fresh=card=>!!latest&&card.studyDate===latest&&!known(card);if(collection==='words')ordered.push(...source.filter(fresh));
+ for(const wasKnown of [false,true])for(const teacher of [true,false])ordered.push(...arotate(source.filter(card=>known(card)===wasKnown&&isTeacher(card)===teacher&&!(collection==='words'&&fresh(card))),seed));
  const selected=Array.from({length:10},(_,index)=>ordered[index%ordered.length]),seen=new Set();
  const chosen=selected.map((card,index)=>{const key=anorm(card.en),repeated=seen.has(key);seen.add(key);const base=acard(card,index,collection),raw=globalThis.AJQuizOptions?.distractors?.(base,source,3)||[],wrong=[...new Set(raw.filter(x=>typeof x==='string'&&x.trim()&&x.trim()!==String(base.ko).trim()).map(x=>x.trim()))].slice(0,3);return{...base,distractors:wrong,answerType:wrong.length===3?'meaning':'english',review:known(card)||repeated,repeated};});
  const challenge={daily:true,practice:!!practice,date,collection,cards:chosen,allowedCardIds:[],reviewCount:chosen.filter(c=>c.review).length,repeatedPractice:chosen.some(c=>c.repeated),bankExhausted:source.every(known),note:chosen.some(c=>c.repeated)?'등록 문제 부족 · 일부 반복 복습':chosen.some(c=>c.review)?'미학습 문제 우선 · 일부 이전 문제 복습':''};

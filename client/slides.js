@@ -52,8 +52,8 @@
       eraser: '<path d="M7.5 19.5 3.6 15.6a1.8 1.8 0 0 1 0-2.6l8.5-8.5a1.8 1.8 0 0 1 2.6 0l5.7 5.7a1.8 1.8 0 0 1 0 2.6l-6.7 6.7Zm0 0H20M8.5 8.2l7.3 7.3"/>'
     };
     container.innerHTML = '<section class="classroom-slides nb is-thumbs-collapsed" aria-label="챕터 PDF와 나의 필기">' +
-      '<header class="slides-heading nb-top"><div class="nb-title"><p class="slides-eyebrow">PDF CLASSROOM</p><h2>수업 자료 · PDF 필기</h2><p class="slides-chapter-meta"></p></div><p class="slides-note-status" role="status" aria-live="polite">메모 불러오는 중</p><label class="slides-course-select">수업 챕터<select aria-label="읽을 수업 챕터"></select></label>' +
-      '<div class="nb-top-actions"><label class="slides-zoom">크기 <select aria-label="PDF 확대 비율"><option value="fit">너비에 맞추기</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.25">125%</option><option value="1.5">150%</option><option value="2">200%</option></select></label><button type="button" class="nb-icon" data-slide-fullscreen aria-pressed="false" aria-label="전체 화면" title="전체 화면">' + icon('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>') + '</button><a class="nb-icon slides-open-original" target="_blank" rel="noopener" aria-label="PDF 원본을 새 창에서 열기" title="원본 열기">' + icon('<path d="M14 4h6v6M20 4l-9 9M18 13.5V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4.5"/>') + '</a><a class="nb-icon slides-download" aria-label="PDF 내려받기" title="PDF 내려받기">' + icon('<path d="M12 4v11m0 0-4-4m4 4 4-4M5 19.5h14"/>') + '</a></div></header><nav class="slides-past" aria-label="지난 수업 다시 보기" hidden><p><strong>지난 수업 다시 보기</strong><span>공개된 수업 자료는 계속 열어 볼 수 있어요</span></p><div class="slides-past-list"></div></nav>' +
+      '<header class="slides-heading nb-top"><div class="nb-title"><p class="slides-eyebrow">PDF CLASSROOM</p><h2>수업 자료 · PDF 필기</h2><p class="slides-chapter-meta"></p></div><p class="slides-note-status" role="status" aria-live="polite">메모 불러오는 중</p><label class="slides-course-select">주차<select aria-label="볼 수업 주차"></select></label>' +
+      '<div class="nb-top-actions"><button type="button" class="nb-transcript" data-slide-transcript hidden>녹음 글</button><label class="slides-zoom">크기 <select aria-label="PDF 확대 비율"><option value="fit">너비에 맞추기</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.25">125%</option><option value="1.5">150%</option><option value="2">200%</option></select></label><button type="button" class="nb-icon" data-slide-fullscreen aria-pressed="false" aria-label="전체 화면" title="전체 화면">' + icon('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>') + '</button><a class="nb-icon slides-open-original" target="_blank" rel="noopener" aria-label="PDF 원본을 새 창에서 열기" title="원본 열기">' + icon('<path d="M14 4h6v6M20 4l-9 9M18 13.5V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4.5"/>') + '</a><a class="nb-icon slides-download" aria-label="PDF 내려받기" title="PDF 내려받기">' + icon('<path d="M12 4v11m0 0-4-4m4 4 4-4M5 19.5h14"/>') + '</a></div></header><nav class="slides-past" aria-label="지난 수업 다시 보기" hidden><p><strong>지난 수업 다시 보기</strong><span>공개된 수업 자료는 계속 열어 볼 수 있어요</span></p><div class="slides-past-list"></div></nav>' +
       '<div class="slides-layout"><nav class="slides-thumbnails" aria-label="PDF 페이지 미리 보기"></nav><div class="nb-work"><main class="slides-stage"><p class="slides-render-status" role="status" aria-live="polite">수업 자료 불러오는 중</p><div class="slides-paper" hidden><canvas class="slides-pdf-canvas" role="img" aria-label="수업 PDF 페이지"></canvas><canvas class="slides-ink-canvas" data-tool="hand" aria-label="PDF 위에 직접 필기하는 영역"></canvas></div><div class="slides-empty" hidden></div></main>' +
       '<div class="nb-float"><div class="nb-dock" role="toolbar" aria-label="PDF 필기 도구"><button type="button" class="nb-tool" data-ink-undo disabled aria-label="되돌리기" title="되돌리기">' + icon('<path d="M9 7 4.5 11.5 9 16M5 11.5h9a5 5 0 0 1 0 10h-2"/>') + '</button><button type="button" class="nb-tool" data-ink-redo disabled aria-label="다시 하기" title="다시 하기">' + icon('<path d="M15 7l4.5 4.5L15 16m4-4.5h-9a5 5 0 0 0 0 10h2"/>') + '</button><i class="nb-sep"></i>' +
       '<div class="slides-drawing-tools" role="group" aria-label="필기 도구 고르기">' + [['hand', '이동'], ['pen', '펜'], ['highlighter', '형광펜'], ['eraser', '지우개']].map(([tool, label]) => '<button type="button" class="nb-tool' + (tool === 'hand' ? ' active' : '') + '" data-ink-tool="' + tool + '" aria-pressed="' + (tool === 'hand') + '" title="' + label + '">' + icon(TOOL_ICON[tool]) + '<span>' + label + '</span></button>').join('') + '</div><i class="nb-sep"></i>' +
@@ -74,18 +74,19 @@
       if (!chapter || !chapter.pdf || !chapter.pdf.url) return '';
       try { const url = new URL(chapter.pdf.url, window.location.href); return url.origin === window.location.origin && /^https?:$/.test(url.protocol) ? url.href : ''; } catch (_) { return ''; }
     }
-    function chapterLabel(chapter) { return (chapter.number ? 'CHAPTER ' + String(chapter.number).padStart(2, '0') + ' · ' : '') + (chapter.title || '수업 자료'); }
+    function chapterLabel(chapter) { return (chapter.number ? chapter.number + '주차 · ' : '') + (chapter.title || '수업 자료'); }
     function updateHeader() {
       select.innerHTML = chapters.map(chapter => '<option value="' + esc(chapter.id) + '">' + esc(chapterLabel(chapter)) + '</option>').join('');
       select.disabled = !chapters.length || state.transitioning;
       const past = $('.slides-past');
       if (past) {
         past.hidden = chapters.length < 2;
-        $('.slides-past-list').innerHTML = chapters.map(chapter => '<button type="button" data-slides-past="' + esc(chapter.id) + '"' + (state.chapter && state.chapter.id === chapter.id ? ' aria-current="true"' : '') + (state.transitioning ? ' disabled' : '') + '><b>' + esc(chapter.number ? String(chapter.number).padStart(2, '0') : '·') + '</b><span><strong>' + esc(chapter.title || '수업 자료') + '</strong><small>' + esc([chapter.weekStart ? chapter.weekStart + ' 주차' : '', chapter.pdf ? 'PDF' : '수업 메모'].filter(Boolean).join(' · ')) + '</small></span></button>').join('');
+        $('.slides-past-list').innerHTML = chapters.map(chapter => '<button type="button" data-slides-past="' + esc(chapter.id) + '"' + (state.chapter && state.chapter.id === chapter.id ? ' aria-current="true"' : '') + (state.transitioning ? ' disabled' : '') + '><b>' + esc(chapter.number ? chapter.number + '주차' : '·') + '</b><span><strong>' + esc(chapter.title || '수업 자료') + '</strong><small>' + esc([chapter.weekStart ? chapter.weekStart + ' 시작' : '', chapter.pdf ? 'PDF' : '수업 메모'].filter(Boolean).join(' · ')) + '</small></span></button>').join('');
       }
       if (state.chapter) select.value = state.chapter.id;
       $('.slides-heading h2').textContent = state.chapter ? state.chapter.title : '공개 수업 자료 없음';
-      $('.slides-chapter-meta').textContent = state.chapter ? [state.chapter.number ? '챕터 ' + state.chapter.number : '', state.chapter.weekStart ? state.chapter.weekStart + ' 주차' : '', state.chapter.pdf ? state.chapter.pdf.name : '수업 메모'].filter(Boolean).join(' · ') : '선생님 등록 자료 표시';
+      $('[data-slide-transcript]').hidden = !state.chapter?.transcript;
+      $('.slides-chapter-meta').textContent = state.chapter ? [state.chapter.number ? state.chapter.number + '주차' : '', state.chapter.weekStart ? state.chapter.weekStart + ' 주' : '', state.chapter.pdf ? state.chapter.pdf.name : '수업 메모'].filter(Boolean).join(' · ') : '선생님 등록 자료 표시';
       const body = state.chapter && (typeof state.chapter.body === 'string' ? state.chapter.body : state.chapter.body && state.chapter.body.text || '');
       $('.slides-content-body').hidden = !body;
       $('.slides-content-body > div').textContent = body || '';
@@ -410,6 +411,12 @@
       if (event.key === 'ArrowLeft') { event.preventDefault(); goToPage(state.page - 1); }
       if (event.key === 'ArrowRight') { event.preventDefault(); goToPage(state.page + 1); }
       if (event.key === 'Escape' && root.classList.contains('is-expanded')) { root.classList.remove('is-expanded'); if (state.zoom === 'fit') renderPage(); }
+    });
+    // 녹음 글: 선생님이 '학생도 보기'로 둔 수업에서만 단추가 보인다. 로그인한 뒤에 읽을 수 있다.
+    listen($('[data-slide-transcript]'), 'click', async () => {
+      const chapter = state.chapter, note = $('.slides-note-status'); if (!chapter || typeof options.api !== 'function') return;
+      try { const data = await options.api('transcript/' + encodeURIComponent(chapter.id)); window.AJTranscriptView?.open({ title: chapter.title, text: data.text }); }
+      catch (error) { if (note) note.textContent = error.status === 401 ? '녹음 글은 로그인한 뒤에 볼 수 있어요' : error.message || '녹음 글을 불러오지 못했어요'; }
     });
     listen(document, 'fullscreenchange', () => { $('[data-slide-fullscreen]').setAttribute('aria-pressed', document.fullscreenElement === root || root.classList.contains('is-expanded')); if (state.zoom === 'fit') renderPage(); });
     function resized() { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (!destroyed && state.zoom === 'fit' && pdfDoc) renderPage(); }, 180); }

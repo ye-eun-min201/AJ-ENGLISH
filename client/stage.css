@@ -774,7 +774,7 @@ body.aj-admin .chapter-editor-paper,body.aj-admin .editor-paper,body.aj-admin .c
 @media (max-width:720px){
   body.aj-admin .teacher-sidebar{padding:16px 16px 12px !important}
   body.aj-admin .teacher-sidebar .wordmark{margin-bottom:14px !important}
-  body.aj-admin .teacher-sidebar nav{grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:6px}
+  body.aj-admin .teacher-sidebar nav{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:6px}
   body.aj-admin .teacher-sidebar .nav-button{justify-content:center;padding:10px 6px !important;font-size:14px}
   body.aj-admin .teacher-sidebar .nav-symbol{display:none}
   body.aj-admin .teacher-header{padding:10px 16px !important;min-height:0 !important;height:auto !important}

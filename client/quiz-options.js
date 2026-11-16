@@ -267,13 +267,29 @@
     return result;
   }
   function kindOf(card) { return card?.kind === '단어' ? '단어' : '표현'; }
+  // 선생님이 직접 올린 단어·문장(오늘의 단어, 주차 수업의 단어·문장)은 미리 준비된 오답이 없다.
+  // 그럴 때는 같은 묶음(같은 날짜 또는 같은 주차 수업)에 올라온 다른 것의 뜻을 보기로 쓴다. 모자라면 다른 묶음에서 채운다.
+  // 뜻의 낱말이 하나라도 겹치는 것(예: colleague와 coworker)은 헷갈리지 않게 보기에서 뺀다.
+  // 어느 묶음에도 속하지 않은 것은 지금처럼 보기를 만들지 않고 영어로 쓰게 한다.
+  function datedChoices(card, pool, limit) {
+    const list = Array.isArray(pool) ? pool : [], group = item => item && (item.studyDate || item.chapterId) || null;
+    const own = group(card) ? card : list.find(item => group(item) && english(item.en) === english(card.en)), mine = group(own); if (!mine) return [];
+    const kind = kindOf(card), terms = value => String(value || '').replace(/\([^)]*\)/g, '').split(/[,;\/·]/).map(korean).filter(Boolean), taken = new Set(terms(card.ko));
+    const others = list.filter(item => group(item) && item.ko && kindOf(item) === kind && english(item.en) !== english(card.en) && !terms(item.ko).some(term => taken.has(term)));
+    let start = 0; for (const letter of english(card.en)) start = (start * 31 + letter.charCodeAt(0)) % 9973;
+    const turn = rows => rows.length ? [...rows.slice(start % rows.length), ...rows.slice(0, start % rows.length)] : [], result = [], seen = new Set();
+    for (const item of [...turn(others.filter(item => group(item) === mine)), ...turn(others.filter(item => group(item) !== mine))]) {
+      if (result.length >= limit) break; const value = String(item.ko).trim(), key = korean(value); if (!key || seen.has(key)) continue; seen.add(key); result.push(value);
+    }
+    return result.length >= limit ? result : [];
+  }
   function distractors(card, pool = [], count = 3) {
     const limit = Number.isFinite(Number(count)) ? Math.max(0, Math.min(3, Math.floor(Number(count)))) : 3;
     if (!limit || !card || !String(card.ko || '').trim()) return [];
     const kind = kindOf(card), entry = bank.get(english(card.en));
     // Unknown words and sentences use English writing, never generated guesses.
     // The pool parameter is retained for the shared caller contract.
-    if (!entry || entry.kind !== kind) return [];
+    if (!entry || entry.kind !== kind) return datedChoices(card, pool, limit);
     const accepted = [card.ko, card.meaning, card.translation, ...(Array.isArray(card.acceptedMeanings) ? card.acceptedMeanings : []), ...(Array.isArray(card.synonyms) ? card.synonyms : [])]
       .filter(value => typeof value === 'string').flatMap(forms);
     const concepts = conceptSet(accepted), used = new Set(), usedForms = new Set(), usedConcepts = new Set(), result = [];

@@ -101,7 +101,7 @@
     try {
       const data = await request('admin/state');
       if (!data.authenticated) { showLogin(); return false; }
-      state = { authenticated: true, revision: data.revision, chapters: Array.isArray(data.chapters) ? data.chapters : [], expressions: Array.isArray(data.expressions) ? data.expressions : [] };
+      state = { authenticated: true, revision: data.revision, chapters: Array.isArray(data.chapters) ? data.chapters : [], expressions: Array.isArray(data.expressions) ? data.expressions : [], readings: Array.isArray(data.readings) ? data.readings : [] };
       showWorkspace(); renderCollections();
       if (options?.initialize) { newExpression(); newChapter(); selectTab('chapters'); }
       if (options?.message) status('#workspace-status', options.message);
@@ -116,11 +116,11 @@
   }
 
   function selectTab(tab) {
-    currentTab = ['daily','chapters','learners'].includes(tab) ? tab : 'start';
+    currentTab = ['daily','chapters','learners','readings'].includes(tab) ? tab : 'start';
     $('#start-panel').hidden = currentTab !== 'start';
     $('#daily-panel').hidden = currentTab !== 'daily'; $('#chapters-panel').hidden = currentTab !== 'chapters';
-    $('#learners-panel').hidden = currentTab !== 'learners';
-    $('#workspace-heading').textContent = currentTab === 'daily' ? '단어·문장 관리' : currentTab === 'chapters' ? '주간 수업 관리' : currentTab === 'learners' ? '학생 학습 현황' : '관리자 메뉴';
+    $('#learners-panel').hidden = currentTab !== 'learners'; $('#readings-panel').hidden = currentTab !== 'readings';
+    $('#workspace-heading').textContent = currentTab === 'daily' ? '단어·문장' : currentTab === 'readings' ? '오늘의 리딩' : currentTab === 'chapters' ? '수업' : currentTab === 'learners' ? '학생 학습 현황' : '관리자 메뉴';
     all('[data-tab]').forEach(button => { const active = button.dataset.tab === currentTab; button.classList.toggle('active', active); button.setAttribute('aria-current', active ? 'page' : 'false'); });
     if (currentTab === 'learners' && state.authenticated) {
       if (learnersController) learnersController.update();
@@ -175,8 +175,12 @@
     $('#chapter-count').textContent = state.chapters.length;
     $('#chapter-list').innerHTML = state.chapters.length ? [...state.chapters].sort((a, b) => Number(b.number) - Number(a.number)).map(chapter => {
       const v = visibility(chapter), open = chapter.status === 'published';
-      return '<article class="lesson-row ' + (String(chapter.id) === currentId ? 'active' : '') + '"><div class="lesson-row-main"><b>수업 ' + esc(String(chapter.number).padStart(2, '0')) + '</b><strong>' + esc(chapter.title) + '</strong><small>' + esc(chapter.weekStart || '수업 주 미지정') + ' · ' + (chapter.pdf ? 'PDF ' + esc(formatSize(chapter.pdf.size)) : 'PDF 없음') + '</small><em class="lesson-seen ' + (v.seen ? 'on' : 'off') + '">' + esc(v.text) + '</em></div>' +
-        '<div class="lesson-row-actions"><div class="lesson-toggle" role="group" aria-label="학생 공개 여부"><button type="button" data-quick-publish="now" data-chapter="' + esc(chapter.id) + '" aria-pressed="' + open + '">공개</button><button type="button" data-quick-publish="draft" data-chapter="' + esc(chapter.id) + '" aria-pressed="' + !open + '">비공개</button></div>' + (chapter.pdf ? '<a class="button secondary" href="' + esc(chapter.pdf.url) + '" target="AJEnglishPDF" rel="noopener">PDF 열기 ↗</a>' : '') + '<button type="button" class="button secondary" data-edit-chapter="' + esc(chapter.id) + '">수정</button><button type="button" class="button secondary lesson-delete" data-remove-chapter="' + esc(chapter.id) + '">삭제</button></div></article>';
+      const t = chapter.transcript, wordCount = state.expressions.filter(e => String(e.chapterId) === String(chapter.id)).length, id = esc(chapter.id);
+      return '<article class="lesson-row ' + (String(chapter.id) === currentId ? 'active' : '') + '"><div class="lesson-row-main"><b>' + esc(Number(chapter.number)) + '주차</b><strong>' + esc(chapter.title) + '</strong><small>' + esc(chapter.weekStart ? chapter.weekStart + ' 주' : '수업 주 미지정') + '</small><em class="lesson-seen ' + (v.seen ? 'on' : 'off') + '">' + esc(v.text) + '</em></div>' +
+        '<div class="lesson-row-actions"><div class="lesson-toggle" role="group" aria-label="학생 공개 여부"><button type="button" data-quick-publish="now" data-chapter="' + id + '" aria-pressed="' + open + '">공개</button><button type="button" data-quick-publish="draft" data-chapter="' + id + '" aria-pressed="' + !open + '">비공개</button></div><button type="button" class="button secondary" data-edit-chapter="' + id + '">수정</button><button type="button" class="button secondary lesson-delete" data-remove-chapter="' + id + '">삭제</button></div>' +
+        '<div class="lesson-files" aria-label="이 수업에 넣은 자료"><div class="lesson-file"><span>교재</span>' + (chapter.pdf ? '<a class="lf-btn" href="' + esc(chapter.pdf.url) + '" target="AJEnglishPDF" rel="noopener">PDF 열기 ↗</a>' : '<button type="button" class="lf-btn is-add" data-edit-chapter="' + id + '">PDF 넣기 +</button>') + '</div>' +
+        '<div class="lesson-file"><span>녹음 글</span>' + (t ? '<button type="button" class="lf-btn" data-transcript-view="' + id + '">보기 · 말 ' + esc(t.turns) + '개</button><span class="lesson-toggle is-small" role="group" aria-label="녹음 글 공개 여부"><button type="button" data-transcript-visible="1" data-chapter="' + id + '" aria-pressed="' + !!t.visible + '">학생도 보기</button><button type="button" data-transcript-visible="0" data-chapter="' + id + '" aria-pressed="' + !t.visible + '">나만 보기</button></span><button type="button" class="lf-btn is-quiet" data-transcript-pick="' + id + '">바꾸기</button><button type="button" class="lf-btn is-quiet" data-transcript-remove="' + id + '">지우기</button>' : '<button type="button" class="lf-btn is-add" data-transcript-pick="' + id + '">녹음 글 올리기 +</button>') + '</div>' +
+        '<div class="lesson-file"><span>단어·문장</span><button type="button" class="lf-btn' + (wordCount ? '' : ' is-add') + '" data-chapter-words="' + id + '">' + (wordCount ? wordCount + '개 · 더 넣기' : '단어·문장 넣기 +') + '</button></div></div></article>';
     }).join('') : '<div class="empty-state"><span>▤</span><h3>등록한 수업 없음</h3><p>‘새 수업 등록 +’으로 첫 수업을 올려 보세요</p></div>';
   }
   /** 목록·수정 화면 어디서든: 공개/비공개를 누르는 즉시 저장한다. 공개는 '지금 학생에게 보임'을 뜻한다. */
@@ -192,7 +196,7 @@
       if (value(form, 'id') === String(id)) { setValue(form, 'weekStart', result.chapter.weekStart); populateDelivery(form, result.chapter, 'chapter'); syncWeekChoice(); renderPDF(result.chapter); }
       renderCollections();
       const v = visibility(result.chapter);
-      status('#chapter-list-status', '수업 ' + String(result.chapter.number).padStart(2, '0') + ' · ' + v.text + ' (저장 완료)'); status('#chapter-status', v.text + ' (저장 완료)');
+      status('#chapter-list-status', Number(result.chapter.number) + '주차 · ' + v.text + ' (저장 완료)'); status('#chapter-status', v.text + ' (저장 완료)');
     } catch (error) { status('#chapter-list-status', '바꾸지 못했어요 · ' + (error.message || '다시 시도해 주세요'), true); status('#chapter-status', '바꾸지 못했어요 · ' + (error.message || '다시 시도해 주세요'), true); }
     finally { all('[data-quick-publish],[data-delivery-choice]').forEach(b => b.disabled = false); }
   }
@@ -222,7 +226,7 @@
     $('#chapter-collection').hidden = editing; $('.chapter-editor-paper').hidden = !editing;
     $('.simple-chapter-workspace').classList.toggle('list-open', !editing);
   }
-  function renderCollections() { renderChapterOptions(); renderSummary(); renderExpressions(); renderChapters(); $('#simple-overview').textContent = '등록 자료 · 표현 ' + state.expressions.length + '개 · 수업 ' + state.chapters.length + '개'; }
+  function renderCollections() { renderChapterOptions(); renderSummary(); renderExpressions(); renderChapters(); $('#simple-overview').textContent = '등록 자료 · 표현 ' + state.expressions.length + '개 · 수업 ' + state.chapters.length + '개'; document.dispatchEvent(new CustomEvent('aj-admin-render')); }
 
   function populateDelivery(form, record, kind) {
     const scheduled = record?.status === 'published' && record.publishAt && Date.parse(record.publishAt) > Date.now();
@@ -238,7 +242,7 @@
     window.AJFormGuidance?.refresh(input);
     $('#' + kind + '-publish-hint').textContent = mode === 'draft' ? (kind === 'chapter' ? '비공개 · 학생에게 보이지 않아요. 나중에 공개로 바꿀 수 있어요.' : '초안 저장 · 학생 비공개') : mode === 'scheduled' ? '지정 시간에 공개 · 한국 시간(KST) 기준' : kind === 'expression' ? '학생 단어장에 공개 · 연결 수업의 공개 날짜 적용' : '공개 · 등록하면 학생 수업 자료에 바로 보여요. (수업 주를 다음 주로 고르면 그 주 월요일부터)';
     if (kind === 'expression') $('#save-expression').textContent = mode === 'draft' ? '초안 저장' : mode === 'scheduled' ? '예약 등록 ↗' : '학생 공개 ↗';
-    else { $('#save-chapter').textContent = mode === 'draft' ? '비공개로 저장' : '수업 등록 · 공개 ↗'; if (wizardStep === 3) renderWizardSummary(); }
+    else { $('#save-chapter').textContent = mode === 'draft' ? '저장 (비공개)' : '저장하고 공개'; if (wizardStep === 3) renderWizardSummary(); }
   }
   function deliveryPayload(form) {
     const mode = value(form, 'delivery');
@@ -327,8 +331,13 @@
   function nextMonday() { const date = new Date(monday() + 'T00:00:00Z'); date.setUTCDate(date.getUTCDate() + 7); return date.toISOString().slice(0,10); }
   function syncWeekChoice() {
     const chosen = value($('#chapter-form'), 'weekStart');
-    $('#chapter-week-choice').value = chosen === monday() ? 'this' : chosen === nextMonday() ? 'next' : 'custom';
-    $('#chapter-week-description').textContent = chosen > kstDate() ? chosen.replaceAll('-', '.') + ' 공개 예정' : '수업 등록 후 학생 공개';
+    const form = $('#chapter-form'), select = $('#chapter-week-choice'), id = value(form, 'id'), now = Math.max(1, Number(value(form, 'number')) || 1);
+    const used = new Map(state.chapters.filter(c => String(c.id) !== id).map(c => [Number(c.number), c.title]));
+    const last = Math.max(now, 12, ...state.chapters.map(c => Number(c.number) || 0)) + 3;
+    select.innerHTML = Array.from({ length: Math.min(999, last) }, (_, i) => i + 1).map(n => '<option value="' + n + '">' + n + '주차' + (used.has(n) ? ' · 이미 있음 (' + esc(String(used.get(n)).slice(0, 18)) + ')' : '') + '</option>').join('');
+    select.value = String(now);
+    $('#chapter-week-description').textContent = (used.has(now) ? now + '주차 수업이 이미 있어요. 다른 주차를 고르거나, 그대로 두면 같은 주차에 수업이 둘이 돼요. ' : '') + (chosen > kstDate() ? chosen.replaceAll('-', '.') + '부터 학생에게 보여요' : '');
+    $('#chapter-week-description').classList.toggle('error', used.has(now));
   }
   function chapterPayload() {
     const form = $('#chapter-form');
@@ -339,7 +348,7 @@
     if (!value(form, 'title').trim()) { showWizardStep(1); status('#chapter-status', '수업 제목 입력 필요', true); field(form, 'title').focus(); return false; }
     const number = Number(value(form, 'number'));
     if (!Number.isInteger(number) || number < 1 || number > 999 || !/^\d{4}-\d{2}-\d{2}$/.test(value(form, 'weekStart'))) {
-      showWizardStep(1); $('#chapter-advanced').open = true; status('#chapter-status', '추가 설정의 수업 번호·시작 날짜 확인', true); return false;
+      showWizardStep(1); $('#chapter-advanced').open = true; status('#chapter-status', '주차와 시작 날짜를 확인해 주세요', true); return false;
     }
     if (fileChecking) { status('#chapter-status', 'PDF 확인 중 · 완료 후 재시도'); return false; }
     if (requireMaterial && !value(form, 'body').trim() && !selectedFile && !chapterById(value(form, 'id'))?.pdf) {
@@ -403,6 +412,8 @@
       const message = messageFor(result.chapter, '수업', false);
       status('#chapter-status', message); $('#wizard-success-message').textContent = message; $('#wizard-success').hidden = false;
       notify(result.revision, 'chapter', result.chapter.id);
+      // 저장이 끝나면 목록으로 돌아가 결과를 바로 보여 준다
+      chapterScreen('list'); $('#wizard-success').hidden = true; status('#chapter-list-status', Number(result.chapter.number) + '주차 · ' + message); window.scrollTo({ top: 0 });
     } catch (error) {
       const partial = !uploadedChapter ? '' : live(uploadedChapter) ? 'PDF 교체는 학생 화면에 반영됨 · 수업 내용 저장 미완료 · ' : uploadedChapter.status === 'published' ? 'PDF 교체 저장 완료 · ' + dateTime(new Date(availableAt(uploadedChapter)).toISOString()) + ' (KST) 공개 예약 유지 · 수업 내용 저장 미완료 · ' : 'PDF 저장 완료 · 수업 공개 미완료 · 학생 비공개 · ';
       status('#chapter-status', partial + error.message + ' · 입력 내용 유지 · 수업 등록 재시도', true);
@@ -502,14 +513,16 @@
 
   function previewBulk() {
     bulkRows = $('#bulk-input').value.split(/\r?\n/).map((line, index) => ({ line, number: index + 1 })).filter(item => item.line.trim()).map(item => {
-      const cells = item.line.split('\t');
-      const en = (cells[0] || '').trim(), ko = (cells[1] || '').trim(), note = cells.slice(2).join('\t').trim();
+      // 탭이 없어도 된다: 'take a walk 산책하다'처럼 쓰면 한글이 시작되는 곳에서 영어와 뜻을 나눈다.
+      let cells = item.line.split('\t');
+      if (cells.length < 2) { const line = item.line.trim().replace(/^\d{1,2}\s*[.)]\s*/, ''); let cut = line.search(/[가-힣]/); if (cut > 0) { const open = line.lastIndexOf('(', cut); if (open >= 0 && !line.slice(open, cut).includes(')')) cut = open; cells = [line.slice(0, cut).replace(/[\s:：=|\-–—>→]+$/, ''), line.slice(cut)]; } }
+      const en = (cells[0] || '').trim(), ko = (cells[1] || '').replace(/\s*※\s*$/, '').trim(), note = cells.slice(2).join('\t').trim();
       return { number: item.number, en, ko, note, valid: !!en && !!ko && en.length <= 500 && ko.length <= 1000 && note.length <= 2000, saved: false };
     });
     renderBulk();
     const valid = bulkRows.length && bulkRows.length <= 30 && bulkRows.every(row => row.valid);
     document.querySelector('[data-save-bulk]').disabled = !valid;
-    status('#bulk-status', !bulkRows.length ? '등록할 표현 붙여넣기 필요' : bulkRows.length > 30 ? '한 번에 최대 30개 등록 가능' : valid ? bulkRows.length + '개 표현 확인 완료 · 공개 설정 후 저장' : '영어·한국어 뜻 누락 또는 길이 초과 · 해당 줄 확인', !valid);
+    status('#bulk-status', !bulkRows.length ? '등록할 표현 붙여넣기 필요' : bulkRows.length > 30 ? '한 번에 최대 30개 등록 가능' : valid ? bulkRows.length + '줄 잘 나뉘었어요 · 저장을 눌러 주세요' : '영어나 한국어 뜻이 빠진 줄이 있어요 · 빨간 줄을 고쳐 주세요', !valid);
   }
   function renderBulk() {
     $('#bulk-preview').innerHTML = bulkRows.length ? '<table class="bulk-preview-table"><thead><tr><th>줄</th><th>분류</th><th>영어</th><th>한국어 뜻</th><th>상태</th></tr></thead><tbody>' + bulkRows.map(row => '<tr><td>' + row.number + '</td><td>' + kindLabel(row.savedKind || $('#bulk-kind').value) + '</td><td>' + esc(row.en) + '</td><td>' + esc(row.ko) + '</td><td class="' + (row.saved ? 'saved' : row.valid ? '' : 'invalid') + '">' + (row.saved ? '✓ 저장 완료' : row.valid ? '등록 가능' : '확인 필요') + '</td></tr>').join('') + '</tbody></table>' : '';
@@ -541,7 +554,7 @@
       catch (error) { status('#login-status', error.message, true); $('#admin-password').value = ''; $('#admin-password').focus(); }
       finally { button.disabled = false; }
     } else if (formId === 'expression-form') { event.preventDefault(); await saveExpression(); }
-    else if (formId === 'chapter-form') { event.preventDefault(); if (wizardStep < 3) goWizardStep(wizardStep + 1); else await saveChapter(); }
+    else if (formId === 'chapter-form') { event.preventDefault(); await saveChapter(); }
   });
   document.addEventListener('click', async event => {
     const button = event.target.closest('button'); if (!button) return;
@@ -581,19 +594,17 @@
     if (event.target.dataset.scheduleSelect) updateSchedule(event.target.closest('form'), event.target.dataset.scheduleSelect);
     if (event.target.id === 'expression-status-filter' || event.target.id === 'expression-kind-filter') renderExpressions();
     if (event.target === field($('#expression-form'), 'kind')) updateExpressionKind();
-    if (event.target.id === 'bulk-kind') { renderBulk(); $('#bulk-input').placeholder = event.target.value === '단어' ? 'collaboration\t협업' : 'Please keep me in the loop.\t진행 상황을 공유해 주세요.'; }
+    if (event.target.id === 'bulk-kind') { renderBulk(); $('#bulk-input').placeholder = event.target.value === '단어' ? 'take a walk 산책하다\ncolleague 동료' : 'I prefer working alone. 저는 혼자 일하는 것을 선호합니다.'; if ($('#bulk-input').value.trim()) previewBulk(); }
     if (event.target.id === 'pdf-file') selectPDF(event.target.files?.[0]);
     if (event.target.id === 'chapter-week-choice') {
-      if (event.target.value === 'this') setValue($('#chapter-form'),'weekStart',monday());
-      else if (event.target.value === 'next') setValue($('#chapter-form'),'weekStart',nextMonday());
-      else { $('#chapter-advanced').open = true; field($('#chapter-form'),'weekStart').focus(); }
+      setValue($('#chapter-form'), 'number', event.target.value);
       syncWeekChoice(); if (wizardStep === 3) renderWizardSummary();
     }
-    if (event.target === field($('#chapter-form'),'weekStart')) { syncWeekChoice(); if (wizardStep === 3) renderWizardSummary(); }
+    if (event.target === field($('#chapter-form'),'weekStart') || event.target === field($('#chapter-form'),'number')) { syncWeekChoice(); if (wizardStep === 3) renderWizardSummary(); }
   });
   document.addEventListener('input', event => {
     if (event.target.id === 'expression-search') renderExpressions();
-    if (event.target.id === 'bulk-input') { bulkRows = []; document.querySelector('[data-save-bulk]').disabled = true; $('#bulk-preview').innerHTML = ''; status('#bulk-status', '입력 변경 · 등록할 표현 재확인 필요'); }
+    if (event.target.id === 'bulk-input') { if (event.target.value.trim()) previewBulk(); else { bulkRows = []; document.querySelector('[data-save-bulk]').disabled = true; $('#bulk-preview').innerHTML = ''; status('#bulk-status', ''); } }
   });
   const dropZone = $('#pdf-drop-zone');
   dropZone.addEventListener('click', event => { if (event.target !== $('#pdf-file') && !$('#pdf-file').disabled) $('#pdf-file').click(); });
@@ -609,6 +620,10 @@
   $('#teacher-date').textContent = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', weekday: 'short' }).format(new Date());
   $('#expression-chapter').required = false; $('#bulk-chapter').required = false;
   window.TeacherAdmin = { refresh, selectTab, goWizardStep, kstInputToISO, isoToKSTInput };
+  // 덧붙인 화면(오늘의 리딩·녹음 글)이 같이 쓰는 통로
+  window.AJAdmin = { request, esc, status, notify, selectTab, kstDate, monday, state: () => state,
+    setChapter(chapter, revision) { if (chapter) replaceRecord('chapters', chapter); if (revision != null) state.revision = revision; renderCollections(); },
+    setReadings(list, revision) { state.readings = list; if (revision != null) state.revision = revision; document.dispatchEvent(new CustomEvent('aj-admin-render')); } };
   window.AJHelp?.init({role:'admin',onAdminTab:tab=>{if(!state.authenticated){$('#admin-password').focus();return;}selectTab(tab);}});
   refresh({ initialize: true });
 })();
