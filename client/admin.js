@@ -533,14 +533,15 @@
   }
 
   document.addEventListener('submit', async event => {
-    const form = event.target;
-    if (form.id === 'login-form') {
+    // 폼 안에 name="id" 칸이 있으면 form.id 가 그 칸을 가리킨다. 그래서 속성으로 직접 읽는다.
+    const form = event.target, formId = form.getAttribute('id');
+    if (formId === 'login-form') {
       event.preventDefault(); const button = $('#login-button'); button.disabled = true; status('#login-status', '로그인 중');
       try { await request('admin/login', { password: $('#admin-password').value }); $('#admin-password').value = ''; await refresh({ initialize: true }); }
       catch (error) { status('#login-status', error.message, true); $('#admin-password').value = ''; $('#admin-password').focus(); }
       finally { button.disabled = false; }
-    } else if (form.id === 'expression-form') { event.preventDefault(); await saveExpression(); }
-    else if (form.id === 'chapter-form') { event.preventDefault(); if (wizardStep < 3) goWizardStep(wizardStep + 1); else await saveChapter(); }
+    } else if (formId === 'expression-form') { event.preventDefault(); await saveExpression(); }
+    else if (formId === 'chapter-form') { event.preventDefault(); if (wizardStep < 3) goWizardStep(wizardStep + 1); else await saveChapter(); }
   });
   document.addEventListener('click', async event => {
     const button = event.target.closest('button'); if (!button) return;
