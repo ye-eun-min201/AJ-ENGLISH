@@ -165,6 +165,7 @@
       return '<article class="expression-item"><div class="expression-item-top"><span class="expression-meta"><b class="admin-type-badge ' + (expression.kind === '단어' ? 'word' : 'sentence') + '">' + kindLabel(expression.kind) + '</b> <span>·</span> ' + esc(expression.studyDay) + '일째 복습</span><span class="status-pill ' + p.type + '">' + esc(p.label) + '</span></div><h3 lang="en">' + esc(expression.en) + '</h3><p class="item-meaning">' + esc(expression.ko) + '</p>' + (expression.note ? '<p class="expression-note">' + esc(expression.note) + '</p>' : '') + '<div class="item-footer"><span class="item-chapter">' + (chapter ? esc(chapter.title) : '오늘의 표현') + '</span><div class="item-actions"><button type="button" data-edit-expression="' + esc(expression.id) + '">수정</button><button type="button" data-toggle-expression="' + esc(expression.id) + '">' + (expression.status === 'published' ? '비공개' : '학생 공개') + '</button><button class="delete" type="button" data-delete-expression="' + esc(expression.id) + '">삭제</button></div></div></article>';
     }).join('') : '<div class="empty-state"><span>Aa</span><h3>' + (state.expressions.length ? '검색 결과 없음' : '등록한 표현 없음') + '</h3><p>' + (state.expressions.length ? '검색어·공개 상태 확인' : '영어·한국어 뜻 입력 후 등록') + '</p></div>';
   }
+  function dayText(date) { return new Intl.DateTimeFormat('ko-KR', { timeZone: 'UTC', month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(date + 'T00:00:00Z')); }
   function visibility(chapter) {
     if (chapter.status !== 'published') return { seen: false, text: '학생에게 안 보임 · 비공개' };
     const opensAt = availableAt(chapter);
@@ -176,7 +177,7 @@
     $('#chapter-list').innerHTML = state.chapters.length ? [...state.chapters].sort((a, b) => Number(b.number) - Number(a.number)).map(chapter => {
       const v = visibility(chapter), open = chapter.status === 'published';
       const t = chapter.transcript, wordCount = state.expressions.filter(e => String(e.chapterId) === String(chapter.id)).length, id = esc(chapter.id);
-      return '<article class="lesson-row ' + (String(chapter.id) === currentId ? 'active' : '') + '"><div class="lesson-row-main"><b>' + esc(Number(chapter.number)) + '주차</b><strong>' + esc(chapter.title) + '</strong><small>' + esc(chapter.weekStart ? chapter.weekStart + ' 주' : '수업 주 미지정') + '</small><em class="lesson-seen ' + (v.seen ? 'on' : 'off') + '">' + esc(v.text) + '</em></div>' +
+      return '<article class="lesson-row ' + (String(chapter.id) === currentId ? 'active' : '') + '"><div class="lesson-row-main"><b>' + esc(Number(chapter.number)) + '주차</b><strong>' + esc(chapter.title) + '</strong><small>' + esc(chapter.weekStart ? dayText(chapter.weekStart) + ' 수업' : '수업 날짜 없음') + '</small><em class="lesson-seen ' + (v.seen ? 'on' : 'off') + '">' + esc(v.text) + '</em></div>' +
         '<div class="lesson-row-actions"><div class="lesson-toggle" role="group" aria-label="학생 공개 여부"><button type="button" data-quick-publish="now" data-chapter="' + id + '" aria-pressed="' + open + '">공개</button><button type="button" data-quick-publish="draft" data-chapter="' + id + '" aria-pressed="' + !open + '">비공개</button></div><button type="button" class="button secondary" data-edit-chapter="' + id + '">수정</button><button type="button" class="button secondary lesson-delete" data-remove-chapter="' + id + '">삭제</button></div>' +
         '<div class="lesson-files" aria-label="이 수업에 넣은 자료"><div class="lesson-file"><span>교재</span>' + (chapter.pdf ? '<a class="lf-btn" href="' + esc(chapter.pdf.url) + '" target="AJEnglishPDF" rel="noopener">PDF 열기 ↗</a>' : '<button type="button" class="lf-btn is-add" data-edit-chapter="' + id + '">PDF 넣기 +</button>') + '</div>' +
         '<div class="lesson-file"><span>녹음 글</span>' + (t ? '<button type="button" class="lf-btn" data-transcript-view="' + id + '">보기 · 말 ' + esc(t.turns) + '개</button><span class="lesson-toggle is-small" role="group" aria-label="녹음 글 공개 여부"><button type="button" data-transcript-visible="1" data-chapter="' + id + '" aria-pressed="' + !!t.visible + '">학생도 보기</button><button type="button" data-transcript-visible="0" data-chapter="' + id + '" aria-pressed="' + !t.visible + '">나만 보기</button></span><button type="button" class="lf-btn is-quiet" data-transcript-pick="' + id + '">바꾸기</button><button type="button" class="lf-btn is-quiet" data-transcript-remove="' + id + '">지우기</button>' : '<button type="button" class="lf-btn is-add" data-transcript-pick="' + id + '">녹음 글 올리기 +</button>') + '</div>' +
@@ -316,7 +317,7 @@
     const form = $('#chapter-form');
     ['id', 'title', 'body'].forEach(name => setValue(form, name, ''));
     setValue(form, 'number', Math.min(999, Math.max(0, ...state.chapters.map(c => Number(c.number) || 0)) + 1));
-    setValue(form, 'weekStart', monday()); populateDelivery(form, null, 'chapter');
+    setValue(form, 'weekStart', kstDate()); populateDelivery(form, null, 'chapter');
     $('#chapter-editor-title').textContent = '수업 등록'; $('#chapter-advanced').open = false; $('#wizard-success').hidden = true; status('#chapter-status', ''); resetPDFSelection(); renderPDF(null); renderChapters(); syncWeekChoice(); showWizardStep(1);
   }
   function editChapter(id) {
@@ -336,7 +337,7 @@
     const last = Math.max(now, 12, ...state.chapters.map(c => Number(c.number) || 0)) + 3;
     select.innerHTML = Array.from({ length: Math.min(999, last) }, (_, i) => i + 1).map(n => '<option value="' + n + '">' + n + '주차' + (used.has(n) ? ' · 이미 있음 (' + esc(String(used.get(n)).slice(0, 18)) + ')' : '') + '</option>').join('');
     select.value = String(now);
-    $('#chapter-week-description').textContent = (used.has(now) ? now + '주차 수업이 이미 있어요. 다른 주차를 고르거나, 그대로 두면 같은 주차에 수업이 둘이 돼요. ' : '') + (chosen > kstDate() ? chosen.replaceAll('-', '.') + '부터 학생에게 보여요' : '');
+    $('#chapter-week-description').textContent = (used.has(now) ? now + '주차 수업이 이미 있어요. 다른 주차를 고르거나, 그대로 두면 같은 주차에 수업이 둘이 돼요. ' : '') + (chosen > kstDate() ? dayText(chosen) + '부터 학생에게 보여요 (그 전에는 안 보여요)' : chosen ? dayText(chosen) + ' 수업' : '');
     $('#chapter-week-description').classList.toggle('error', used.has(now));
   }
   function chapterPayload() {
@@ -348,7 +349,7 @@
     if (!value(form, 'title').trim()) { showWizardStep(1); status('#chapter-status', '수업 제목 입력 필요', true); field(form, 'title').focus(); return false; }
     const number = Number(value(form, 'number'));
     if (!Number.isInteger(number) || number < 1 || number > 999 || !/^\d{4}-\d{2}-\d{2}$/.test(value(form, 'weekStart'))) {
-      showWizardStep(1); $('#chapter-advanced').open = true; status('#chapter-status', '주차와 시작 날짜를 확인해 주세요', true); return false;
+      showWizardStep(1); $('#chapter-advanced').open = true; status('#chapter-status', '주차와 수업 날짜를 확인해 주세요', true); return false;
     }
     if (fileChecking) { status('#chapter-status', 'PDF 확인 중 · 완료 후 재시도'); return false; }
     if (requireMaterial && !value(form, 'body').trim() && !selectedFile && !chapterById(value(form, 'id'))?.pdf) {

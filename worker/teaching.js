@@ -219,7 +219,8 @@ export async function handleTeaching(request, env, now = Date.now(), baseCourses
     if (!env.DB) fail(503, 'database_unavailable', '수업 저장소를 준비하고 있어요. 잠시 후 다시 시도해 주세요.');
     if (!['GET', 'POST', 'HEAD'].includes(request.method)) fail(405, 'method_not_allowed', '지원하지 않는 요청입니다.');
     if (request.method === 'POST') originCheck(request);
-    if (path === '/api/content' && request.method === 'GET') return json((await getTeachingContent(env, baseCourses, now)).content);
+    // 우리 반 사이트: 수업 내용은 카카오로 로그인한 사람(또는 관리자)에게만 준다.
+    if (path === '/api/content' && request.method === 'GET') { if (!request.headers.get('x-aj-user-id') && !await adminSession(request, env, now)) return json({ error: 'sign_in_required', message: '카카오로 로그인한 뒤에 볼 수 있어요.' }, 401); return json((await getTeachingContent(env, baseCourses, now)).content); }
     if (path === '/api/admin/login' && request.method === 'POST') {
       if (typeof env.ADMIN_PASSWORD !== 'string' || !env.ADMIN_PASSWORD) fail(503, 'admin_unconfigured', '관리자 비밀번호 설정을 확인해 주세요.');
       const body = await jsonBody(request);
@@ -436,7 +437,7 @@ export async function handleTeaching(request, env, now = Date.now(), baseCourses
     if (path.startsWith('/api/pdf/') && ['GET', 'HEAD'].includes(request.method)) {
       let id; try { id = decodeURIComponent(path.slice('/api/pdf/'.length)); } catch { fail(400, 'invalid_id', 'PDF를 다시 선택해 주세요.'); }
       identifier(id, '챕터'); const chapter = await chapterRow(env.DB, id);
-      if (!chapter || !chapter.object_key || (!visibleChapter(chapter, now) && !await adminSession(request, env, now))) fail(404, 'pdf_not_found', '공개된 수업 PDF를 찾을 수 없어요.');
+      if (!chapter || !chapter.object_key || ((!visibleChapter(chapter, now) || !request.headers.get('x-aj-user-id')) && !await adminSession(request, env, now))) fail(404, 'pdf_not_found', '로그인한 뒤에 볼 수 있는 수업 PDF예요.');
       if (!env.BUCKET) fail(503, 'storage_unavailable', 'PDF 저장소를 준비하고 있어요.');
       const object = await env.BUCKET.get(chapter.object_key);
       if (!object) fail(404, 'pdf_not_found', 'PDF 파일을 찾을 수 없어요.');

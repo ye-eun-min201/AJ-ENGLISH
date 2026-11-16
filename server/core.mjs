@@ -1168,7 +1168,8 @@ async function handleTeaching(request, env, now = Date.now(), baseCourses = {}) 
     if (!env.DB) fail(503, 'database_unavailable', '수업 저장소를 준비하고 있어요. 잠시 후 다시 시도해 주세요.');
     if (!['GET', 'POST', 'HEAD'].includes(request.method)) fail(405, 'method_not_allowed', '지원하지 않는 요청입니다.');
     if (request.method === 'POST') originCheck(request);
-    if (path === '/api/content' && request.method === 'GET') return json((await getTeachingContent(env, baseCourses, now)).content);
+    // 우리 반 사이트: 수업 내용은 카카오로 로그인한 사람(또는 관리자)에게만 준다.
+    if (path === '/api/content' && request.method === 'GET') { if (!request.headers.get('x-aj-user-id') && !await adminSession(request, env, now)) return json({ error: 'sign_in_required', message: '카카오로 로그인한 뒤에 볼 수 있어요.' }, 401); return json((await getTeachingContent(env, baseCourses, now)).content); }
     if (path === '/api/admin/login' && request.method === 'POST') {
       if (typeof env.ADMIN_PASSWORD !== 'string' || !env.ADMIN_PASSWORD) fail(503, 'admin_unconfigured', '관리자 비밀번호 설정을 확인해 주세요.');
       const body = await jsonBody(request);
@@ -1385,7 +1386,7 @@ async function handleTeaching(request, env, now = Date.now(), baseCourses = {}) 
     if (path.startsWith('/api/pdf/') && ['GET', 'HEAD'].includes(request.method)) {
       let id; try { id = decodeURIComponent(path.slice('/api/pdf/'.length)); } catch { fail(400, 'invalid_id', 'PDF를 다시 선택해 주세요.'); }
       identifier(id, '챕터'); const chapter = await chapterRow(env.DB, id);
-      if (!chapter || !chapter.object_key || (!visibleChapter(chapter, now) && !await adminSession(request, env, now))) fail(404, 'pdf_not_found', '공개된 수업 PDF를 찾을 수 없어요.');
+      if (!chapter || !chapter.object_key || ((!visibleChapter(chapter, now) || !request.headers.get('x-aj-user-id')) && !await adminSession(request, env, now))) fail(404, 'pdf_not_found', '로그인한 뒤에 볼 수 있는 수업 PDF예요.');
       if (!env.BUCKET) fail(503, 'storage_unavailable', 'PDF 저장소를 준비하고 있어요.');
       const object = await env.BUCKET.get(chapter.object_key);
       if (!object) fail(404, 'pdf_not_found', 'PDF 파일을 찾을 수 없어요.');
@@ -1445,7 +1446,7 @@ async function adailyStart(db,{user,room,collection,content,cards,now,practice})
  const date=adate(now),goal=await af(db,"SELECT * FROM activity_runs WHERE user_id=? AND local_date=? AND json_extract(challenge_json,'$.daily')=1 AND json_extract(challenge_json,'$.collection')=? AND COALESCE(json_extract(challenge_json,'$.practice'),0)=0 LIMIT 1",user,date,collection);
  if(!practice&&goal)return adailyState(db,goal,now,true);
  if(practice){if(!goal?.finished_at)ae(409,'오늘 10문제 완료 후 추가 연습');const active=await af(db,"SELECT * FROM activity_runs WHERE user_id=? AND local_date=? AND json_extract(challenge_json,'$.daily')=1 AND json_extract(challenge_json,'$.collection')=? AND json_extract(challenge_json,'$.practice')=1 AND finished_at IS NULL LIMIT 1",user,date,collection);if(active)return adailyState(db,active,now,true);}
- const count=await af(db,'SELECT COUNT(*) AS n FROM activity_runs WHERE user_id=? AND local_date=?',user,date);if(count.n>=100)ae(429,'오늘의 연습 기록 한도');
+ const count=await af(db,'SELECT COUNT(*) AS n FROM activity_runs WHERE user_id=? AND local_date=?',user,date);if(count.n>=1000)ae(429,'오늘의 연습 기록 한도');
  const source=acollection(content,cards,collection);if(!source.length)ae(409,collection==='words'?'등록된 영단어 없음':'등록된 말하기 문장 없음');
  const mastered=await amastery(db,user),known=card=>mastered.english.has(anorm(card.en));
  const teacherIds=new Set((collection==='words'?content?.dailyWords||[]:content?.speakingExpressions||[]).map(c=>String(c.id))),teacherEnglish=new Set((collection==='words'?content?.dailyWords||[]:content?.speakingExpressions||[]).map(c=>anorm(c.en)));
@@ -1497,6 +1498,7 @@ async function handleActivity(request,env,content,fallback=[],now=Date.now()){
   // 주간 MVP: 일요일 오후 2시부터 다음 일요일 오후 2시까지 모은 점수(20분 공부·단어 카드·게임)로 가장 열심히 한 사람을 뽑아, 일요일 오후 2시에 발표한다.
   // 다음 발표 전까지는 가장 최근에 발표한 MVP를 보여 준다. 반에 들어 있는 학생에게는 같은 반 안에서, 반이 없으면 전체에서 뽑는다.
   if(p==='/api/mvp/week'&&request.method==='GET'){
+   if(!user)return aj({authenticated:false,week:null,winner:null,top:[]});
    const KST=32400000,today=new Date(now+KST).toISOString().slice(0,10),base=Date.parse(today+'T00:00:00Z')-KST,weekday=(new Date(today+'T00:00:00Z').getUTCDay()+6)%7;
    const monday=base-weekday*86400000,announceThis=monday+6*86400000+14*3600000,shown=now>=announceThis,end=shown?announceThis:announceThis-7*86400000,start=end-7*86400000;
    const score=async(from,to)=>aa(db,`SELECT p.public_id AS id,p.nickname,p.avatar,COALESCE(SUM(e.points),0) AS points,COUNT(DISTINCT CASE WHEN e.points>0 THEN e.local_date END) AS activeDays FROM profiles p LEFT JOIN (SELECT user_id,local_date,points FROM learning_rewards WHERE created_at>=? AND created_at<? UNION ALL SELECT user_id,local_date,points FROM activity_awards WHERE applied=1 AND created_at>=? AND created_at<?) e ON e.user_id=p.user_id WHERE (? IS NULL OR EXISTS (SELECT 1 FROM room_members m WHERE m.user_id=p.user_id AND m.room_id=?)) GROUP BY p.user_id`,from,to,from,to,room?.id||null,room?.id||null);
@@ -1537,7 +1539,7 @@ async function handleActivity(request,env,content,fallback=[],now=Date.now()){
    if(body.practice!==undefined&&typeof body.practice!=='boolean')ae(400,'추가 연습 설정 확인');
    if(body.daily===true){if(mode!=='listening'||!['words','speaking'].includes(body.collection))ae(400,'일일 문제 학습 분류 확인');return aj(await adailyStart(db,{user,room:room?.id||null,collection:body.collection,content,cards,now,practice:body.practice===true}));}
    if(body.practice===true)ae(400,'일일 문제의 추가 연습만 지원');
-   const count=await af(db,'SELECT COUNT(*) AS n FROM activity_runs WHERE user_id=? AND local_date=?',user,today);if(count.n>=100)ae(429,'오늘은 충분히 연습했어요. 포인트 없이 자유 연습을 이어갈 수 있어요.');
+   const count=await af(db,'SELECT COUNT(*) AS n FROM activity_runs WHERE user_id=? AND local_date=?',user,today);if(count.n>=1000)ae(429,'오늘은 충분히 연습했어요. 포인트 없이 자유 연습을 이어갈 수 있어요.');
    if(body.sourceRunId!==undefined&&(typeof body.sourceRunId!=='string'||body.sourceRunId.length>100))ae(400,'이전 게임 기록 확인');
    let challenge=null;
    if(body.sourceRunId){const old=await af(db,'SELECT challenge_json FROM activity_runs WHERE id=? AND user_id=? AND mode=?',body.sourceRunId,user,mode);if(old){const saved=adecode(old.challenge_json);if(Array.isArray(saved.cards)&&saved.cards.length===3)challenge=saved;}}

@@ -63,7 +63,7 @@
       const timeText = progress.unknown ? '수업 시간 집계 확인' : progress.minutes + '분 / 20분';
       const name = state.user?.nickname ? String(state.user.nickname) : '';
       const quests = [
-        { key: 'rail', title: '레일 퀘스트', note: '10문제 맞히고 기차 출발', done: railDone(), go: '출발' },
+        { key: 'rail', title: '레일 퀘스트', note: '게임 칸에서 몇 번이든 풀 수 있어요', done: railDone(), go: '출발' },
         { key: 'words', title: '단어 카드', note: '오늘의 단어·문장 뒤집어 보기', done: false, go: '뒤집기', disabled: typeof initial.onWords !== 'function' },
         { key: 'start', title: '20분 복습', note: 'DAY ' + current.id + ' · ' + current.title, done: progress.completed, go: current.active ? '이어하기' : progress.completed ? '한 번 더' : '시작', disabled: typeof initial.onStart !== 'function', meter: progress.percent, meterText: timeText }
       ];
@@ -93,7 +93,7 @@
       const button = event.target.closest('[data-he-action]');
       if (!button || !root.contains(button) || button.disabled || destroyed || busy) return;
       const action = button.dataset.heAction; if (localAction(action)) return;
-      const callback = action === 'start' ? initial.onStart : action === 'join' ? initial.onJoin : action === 'reading' ? initial.onReading : initial.onWords;
+      const callback = action === 'start' ? initial.onStart : action === 'join' ? initial.onJoin : action === 'reading' ? initial.onReading : action === 'rail' ? initial.onRail : initial.onWords;
       if (typeof callback !== 'function') return;
       const version = ++actionVersion, day = lesson().id; busy = action; error = ''; render();
       try { await callback(...(action === 'start' ? [day] : [])); }

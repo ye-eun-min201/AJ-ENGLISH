@@ -74,6 +74,7 @@
       if (!chapter || !chapter.pdf || !chapter.pdf.url) return '';
       try { const url = new URL(chapter.pdf.url, window.location.href); return url.origin === window.location.origin && /^https?:$/.test(url.protocol) ? url.href : ''; } catch (_) { return ''; }
     }
+    function dayText(date) { try { return new Intl.DateTimeFormat('ko-KR', { timeZone: 'UTC', month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(date + 'T00:00:00Z')); } catch (_) { return date; } }
     function chapterLabel(chapter) { return (chapter.number ? chapter.number + '주차 · ' : '') + (chapter.title || '수업 자료'); }
     function updateHeader() {
       select.innerHTML = chapters.map(chapter => '<option value="' + esc(chapter.id) + '">' + esc(chapterLabel(chapter)) + '</option>').join('');
@@ -81,12 +82,12 @@
       const past = $('.slides-past');
       if (past) {
         past.hidden = chapters.length < 2;
-        $('.slides-past-list').innerHTML = chapters.map(chapter => '<button type="button" data-slides-past="' + esc(chapter.id) + '"' + (state.chapter && state.chapter.id === chapter.id ? ' aria-current="true"' : '') + (state.transitioning ? ' disabled' : '') + '><b>' + esc(chapter.number ? chapter.number + '주차' : '·') + '</b><span><strong>' + esc(chapter.title || '수업 자료') + '</strong><small>' + esc([chapter.weekStart ? chapter.weekStart + ' 시작' : '', chapter.pdf ? 'PDF' : '수업 메모'].filter(Boolean).join(' · ')) + '</small></span></button>').join('');
+        $('.slides-past-list').innerHTML = chapters.map(chapter => '<button type="button" data-slides-past="' + esc(chapter.id) + '"' + (state.chapter && state.chapter.id === chapter.id ? ' aria-current="true"' : '') + (state.transitioning ? ' disabled' : '') + '><b>' + esc(chapter.number ? chapter.number + '주차' : '·') + '</b><span><strong>' + esc(chapter.title || '수업 자료') + '</strong><small>' + esc([chapter.weekStart ? dayText(chapter.weekStart) : '', chapter.pdf ? 'PDF' : '수업 메모'].filter(Boolean).join(' · ')) + '</small></span></button>').join('');
       }
       if (state.chapter) select.value = state.chapter.id;
       $('.slides-heading h2').textContent = state.chapter ? state.chapter.title : '공개 수업 자료 없음';
       $('[data-slide-transcript]').hidden = !state.chapter?.transcript;
-      $('.slides-chapter-meta').textContent = state.chapter ? [state.chapter.number ? state.chapter.number + '주차' : '', state.chapter.weekStart ? state.chapter.weekStart + ' 주' : '', state.chapter.pdf ? state.chapter.pdf.name : '수업 메모'].filter(Boolean).join(' · ') : '선생님 등록 자료 표시';
+      $('.slides-chapter-meta').textContent = state.chapter ? [state.chapter.number ? state.chapter.number + '주차' : '', state.chapter.weekStart ? dayText(state.chapter.weekStart) + ' 수업' : '', state.chapter.pdf ? state.chapter.pdf.name : '수업 메모'].filter(Boolean).join(' · ') : '선생님 등록 자료 표시';
       const body = state.chapter && (typeof state.chapter.body === 'string' ? state.chapter.body : state.chapter.body && state.chapter.body.text || '');
       $('.slides-content-body').hidden = !body;
       $('.slides-content-body > div').textContent = body || '';
