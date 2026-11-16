@@ -77,12 +77,23 @@ async function award(db,{id,user,room,category,mode,points,coins=0,seconds=0,now
 }
 export async function handleActivity(request,env,content,fallback=[],now=Date.now()){
  const url=new URL(request.url),p=url.pathname;
- if(!p.startsWith('/api/activity/')&&p!='/api/study/cards'&&p!='/api/mvp')return null;
+ if(!p.startsWith('/api/activity/')&&p!='/api/study/cards'&&p!='/api/mvp'&&p!='/api/mvp/week')return null;
  try{
   if(!env.DB)ae(503,'학습 저장소를 준비하고 있어요.');
   const db=env.DB,user=request.headers.get('x-aj-user-id'),today=adate(now),month=today.slice(0,7);
   const profile=user?await af(db,'SELECT * FROM profiles WHERE user_id=?',user):null;
   const room=user?await ar(db,user,profile):null;
+  // 주간 MVP: 일요일 오후 2시부터 다음 일요일 오후 2시까지 모은 점수(20분 공부·단어 카드·게임)로 가장 열심히 한 사람을 뽑아, 일요일 오후 2시에 발표한다.
+  // 다음 발표 전까지는 가장 최근에 발표한 MVP를 보여 준다. 반에 들어 있는 학생에게는 같은 반 안에서, 반이 없으면 전체에서 뽑는다.
+  if(p==='/api/mvp/week'&&request.method==='GET'){
+   const KST=32400000,today=new Date(now+KST).toISOString().slice(0,10),base=Date.parse(today+'T00:00:00Z')-KST,weekday=(new Date(today+'T00:00:00Z').getUTCDay()+6)%7;
+   const monday=base-weekday*86400000,announceThis=monday+6*86400000+14*3600000,shown=now>=announceThis,end=shown?announceThis:announceThis-7*86400000,start=end-7*86400000;
+   const score=async(from,to)=>aa(db,`SELECT p.public_id AS id,p.nickname,p.avatar,COALESCE(SUM(e.points),0) AS points,COUNT(DISTINCT CASE WHEN e.points>0 THEN e.local_date END) AS activeDays FROM profiles p LEFT JOIN (SELECT user_id,local_date,points FROM learning_rewards WHERE created_at>=? AND created_at<? UNION ALL SELECT user_id,local_date,points FROM activity_awards WHERE applied=1 AND created_at>=? AND created_at<?) e ON e.user_id=p.user_id WHERE (? IS NULL OR EXISTS (SELECT 1 FROM room_members m WHERE m.user_id=p.user_id AND m.room_id=?)) GROUP BY p.user_id`,from,to,from,to,room?.id||null,room?.id||null);
+   const rank=rows=>rows.map(r=>({id:r.id,nickname:r.nickname,avatar:adecode(r.avatar),points:Number(r.points)||0,activeDays:Number(r.activeDays)||0,isMe:!!profile&&r.id===profile.public_id})).sort((a,b)=>b.points-a.points||b.activeDays-a.activeDays||String(a.nickname).localeCompare(String(b.nickname)));
+   const done=rank(await score(start,end)).filter(r=>r.points>0),live=rank(await score(end,now+1)),mine=live.find(r=>r.isMe)||null;
+   const day=ms=>new Date(ms+KST).toISOString().slice(0,10);
+   return aj({authenticated:!!user,scope:room?{id:room.id,name:room.name}:null,week:{start:day(start),end:day(end),announcedAt:new Date(end).toISOString()},winner:done[0]||null,top:done.slice(0,3),nextAnnounceAt:new Date(shown?announceThis+7*86400000:announceThis).toISOString(),myPoints:mine?mine.points:0,myRank:mine&&mine.points>0?live.filter(r=>r.points>mine.points).length+1:null});
+  }
   if(p==='/api/mvp'&&request.method==='GET'){
    const selected=url.searchParams.get('month')||month;if(!/^20\d{2}-(0[1-9]|1[0-2])$/.test(selected))ae(400,'올바른 월을 선택해 주세요.');
    if(!room)return aj({authenticated:!!user,month:selected,room:null,categories:{overall:[],study:[],game:[]},winners:{overall:null,study:null,game:null}});

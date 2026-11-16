@@ -164,9 +164,10 @@ async function adminLearnerReport(env, url, now) {
     row.lastStudiedAt = Math.max(Number(row.lastStudiedAt || 0), Number(pass.lastStudiedAt || 0)) || null;
     row.lastStudiedInMonthAt = Math.max(Number(row.lastStudiedInMonthAt || 0), Number(pass.lastStudiedInMonthAt || 0)) || null;
   }
+  const readDays = new Map((await all(env.DB, 'SELECT p.public_id AS id, COUNT(*) AS days FROM reading_reads x JOIN profiles p ON p.user_id = x.user_id WHERE x.study_date LIKE ? GROUP BY p.public_id', month + '-%')).map(row => [row.id, row.days]));
   const byLearner = new Map();
   for (const { learnerId, isCurrent, ...room } of memberships) { if (!byLearner.has(learnerId)) byLearner.set(learnerId, []); byLearner.get(learnerId).push({ ...room, isCurrent: !!isCurrent }); }
-  const learners = rows.map(row => { const avatar = { species: 0 }; try { const parsed = JSON.parse(row.avatar || '{}'); if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) for (const [key, limit] of Object.entries({ species: 12, skin: 5, hair: 5, eyes: 3, outfit: 5, accessory: 5, color: 7 })) if (Number.isInteger(parsed[key]) && parsed[key] >= 0 && parsed[key] <= limit) avatar[key] = parsed[key]; } catch { /* Old malformed avatars use the UI fallback. */ } return { ...row, avatar, rooms: byLearner.get(row.id) || [] }; });
+  const learners = rows.map(row => { const avatar = { species: 0 }; try { const parsed = JSON.parse(row.avatar || '{}'); if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) for (const [key, limit] of Object.entries({ species: 12, skin: 5, hair: 5, eyes: 3, outfit: 5, accessory: 5, color: 7 })) if (Number.isInteger(parsed[key]) && parsed[key] >= 0 && parsed[key] <= limit) avatar[key] = parsed[key]; } catch { /* Old malformed avatars use the UI fallback. */ } return { ...row, avatar, rooms: byLearner.get(row.id) || [], readingDays: readDays.get(row.id) || 0 }; });
   const metrics = ['studySeconds','completedLessons','completedUniqueLessons','gameCount','quizAnswered','quizCorrect','gameQuestions','gameCorrect','studyPoints','gamePoints','points','activeDays','flashcardKnown','reviewedCards','reviewedCardCount'];
   const summary = { learnerCount: learners.length, activeLearners: learners.filter(learner => learner.activeDays > 0).length };
   for (const key of metrics) summary[key] = learners.reduce((sum, learner) => sum + Number(learner[key] || 0), 0);
@@ -191,23 +192,29 @@ export async function getTeachingContent(env, baseCourses = {}, now = Date.now()
   const activeChapter = chapters.at(-1) || null;
   const pool = expressions.filter(expression => !expression.readingId && (!expression.chapterId || expression.chapterId === activeChapter?.id));
   const days = makeDays(pool, activeChapter, baseCourses.business || []);
+  // 지난 주차 다시 풀기: 처음부터 들어 있던 기본 과정과, 문장이 올라온 주차마다 일주일 치 20분 공부를 만들어 둔다. 맨 끝이 이번 주.
+  const baseDays = baseCourses.business || [], ownSentences = pool.some(expression => expression.kind === '표현'), weeks = [];
+  if (baseDays.length) weeks.push(ownSentences ? { key: 'base', number: null, title: '기본 비즈니스 표현', days: baseDays } : { key: 'base', number: activeChapter?.number ?? null, title: activeChapter?.title || '기본 비즈니스 표현', days, current: true });
+  for (const chapter of chapters) { if (chapter.id === activeChapter?.id) continue; const own = expressions.filter(expression => !expression.readingId && expression.chapterId === chapter.id); if (own.some(expression => expression.kind === '표현')) weeks.push({ key: chapter.id, number: chapter.number, title: chapter.title, days: makeDays(own, chapter, baseDays) }); }
+  if (ownSentences) weeks.push({ key: activeChapter?.id || 'now', number: activeChapter?.number ?? null, title: activeChapter?.title || '이번 주 표현', days, current: true });
+  if (ownSentences && weeks[0]?.key === 'base' && !weeks.some(week => week.number === 1)) weeks[0].number = 1;
   const cardView = ({ id, en, ko, note, kind, example, exampleKo, studyDay, studyDate, chapterId }) => ({ id, en, ko, note, kind, example, exampleKo, studyDay, studyDate, chapterId });
   const decks = chapters.map(chapter => ({ id: chapter.id, title: `${chapter.number}주차 · ${chapter.title}`, chapterId: chapter.id, cards: expressions.filter(expression => expression.chapterId === chapter.id).map(cardView) })).filter(deck => deck.cards.length);
   const unassigned = expressions.filter(expression => !expression.chapterId && !expression.readingId);
   if (unassigned.length) decks.push({ id: 'daily-expressions', title: '오늘의 표현', chapterId: null, cards: unassigned.map(cardView) });
   // 매일 단어는 '그 주' 묶음으로 모은다. 최신 주가 맨 앞.
-  const weeks = new Map(); for (const expression of expressions) if (expression.readingId && expression.studyDate) { const key = mondayOf(expression.studyDate); if (!weeks.has(key)) weeks.set(key, []); weeks.get(key).push(expression); }
-  decks.unshift(...[...weeks.keys()].sort().reverse().map(key => ({ id: 'week-' + key, title: '매일 단어 · ' + Number(key.slice(5, 7)) + '월 ' + Number(key.slice(8)) + '일 주', chapterId: null, weekStart: key, cards: weeks.get(key).sort((a, b) => String(b.studyDate).localeCompare(String(a.studyDate))).map(cardView) })));
+  const wordWeeks = new Map(); for (const expression of expressions) if (expression.readingId && expression.studyDate) { const key = mondayOf(expression.studyDate); if (!wordWeeks.has(key)) wordWeeks.set(key, []); wordWeeks.get(key).push(expression); }
+  decks.unshift(...[...wordWeeks.keys()].sort().reverse().map(key => ({ id: 'week-' + key, title: '매일 단어 · ' + Number(key.slice(5, 7)) + '월 ' + Number(key.slice(8)) + '일 주', chapterId: null, weekStart: key, cards: wordWeeks.get(key).sort((a, b) => String(b.studyDate).localeCompare(String(a.studyDate))).map(cardView) })));
   for (const deck of decks) { const kinds = [...new Set(deck.cards.map(card => card.kind))]; deck.kind = kinds.length === 1 ? kinds[0] : 'mixed'; deck.categories = { words: deck.cards.filter(card => card.kind === '단어').map(card => card.id), speaking: deck.cards.filter(card => card.kind === '표현').map(card => card.id) }; }
   const dailyWords = expressions.filter(expression => expression.kind === '단어').sort((a, b) => String(b.studyDate || '').localeCompare(String(a.studyDate || '')));
   const speakingExpressions = expressions.filter(expression => expression.kind === '표현');
   const contentRevision = rows.length || expressionRows.length || readingRows.length || databaseRevision ? Number.parseInt((await hash(JSON.stringify({ databaseRevision, chapters, expressions, readings }))).slice(0, 12), 16) : 0;
-  return { content: { revision: contentRevision, activeChapter, chapters, expressions, days, decks, dailyWords, speakingExpressions, readings, latestStudyDate, usingFallback: !pool.some(expression => expression.kind === '표현') }, courses: { ...baseCourses, business: days } };
+  return { content: { revision: contentRevision, activeChapter, chapters, expressions, days, weeks, decks, dailyWords, speakingExpressions, readings, latestStudyDate, usingFallback: !pool.some(expression => expression.kind === '표현') }, courses: Object.defineProperty({ ...baseCourses, business: days }, 'weeks', { value: Object.fromEntries(weeks.map(week => [week.key, week.days])), enumerable: false }) };
 }
 
 export async function handleTeaching(request, env, now = Date.now(), baseCourses = {}) {
   const url = new URL(request.url), path = url.pathname;
-  if (!(path.startsWith('/api/admin/') || path === '/api/content' || path === '/api/notes' || path.startsWith('/api/pdf/') || path.startsWith('/api/transcript/') || path === '/api/reading')) return null;
+  if (!(path.startsWith('/api/admin/') || path === '/api/content' || path === '/api/notes' || path.startsWith('/api/pdf/') || path.startsWith('/api/transcript/') || path === '/api/reading' || path.startsWith('/api/reading/'))) return null;
   try {
     if (!env.DB) fail(503, 'database_unavailable', '수업 저장소를 준비하고 있어요. 잠시 후 다시 시도해 주세요.');
     if (!['GET', 'POST', 'HEAD'].includes(request.method)) fail(405, 'method_not_allowed', '지원하지 않는 요청입니다.');
@@ -261,6 +268,26 @@ export async function handleTeaching(request, env, now = Date.now(), baseCourses
         ]);
         if (chapter.object_key && env.BUCKET) try { await env.BUCKET.delete(chapter.object_key); } catch { console.error('Removed chapter PDF cleanup deferred'); }
         return json({ removed: true, id, revision: await revision(env.DB) });
+      }
+      // 반 관리: 선생님이 반을 만들고, 학생마다 소속 반을 하나 정한다(바꾸면 예전 반에서는 빠진다).
+      if (path === '/api/admin/room' && request.method === 'POST') {
+        const body = await jsonBody(request), name = string(body.name, 40, '반 이름', true), id = crypto.randomUUID(), letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = ''; for (const n of crypto.getRandomValues(new Uint8Array(6))) code += letters[n % letters.length];
+        await env.DB.prepare('INSERT INTO rooms (id, code, name, owner_id, created_at) VALUES (?, ?, ?, ?, ?)').bind(id, code, name, 'admin', now).run();
+        return json({ room: { id, name, code, memberCount: 0 } });
+      }
+      if (path === '/api/admin/room/assign' && request.method === 'POST') {
+        const body = await jsonBody(request), learner = await first(env.DB, 'SELECT user_id FROM profiles WHERE public_id = ?', identifier(body.learnerId, '학생'));
+        if (!learner) fail(404, 'learner_not_found', '학생을 찾을 수 없어요.');
+        const roomId = body.roomId ? identifier(body.roomId, '반') : null;
+        if (roomId && !await first(env.DB, 'SELECT id FROM rooms WHERE id = ?', roomId)) fail(404, 'room_not_found', '반을 찾을 수 없어요.');
+        await env.DB.batch([env.DB.prepare('DELETE FROM room_members WHERE user_id = ?').bind(learner.user_id), ...(roomId ? [env.DB.prepare('INSERT OR IGNORE INTO room_members (room_id, user_id, joined_at) VALUES (?, ?, ?)').bind(roomId, learner.user_id, now)] : []), env.DB.prepare('UPDATE profiles SET current_room_id = ? WHERE user_id = ?').bind(roomId, learner.user_id)]);
+        return json({ assigned: true, roomId });
+      }
+      if (path === '/api/admin/room/remove' && request.method === 'POST') {
+        const body = await jsonBody(request), roomId = identifier(body.roomId, '반');
+        await env.DB.batch([env.DB.prepare('UPDATE profiles SET current_room_id = NULL WHERE current_room_id = ?').bind(roomId), env.DB.prepare('DELETE FROM room_members WHERE room_id = ?').bind(roomId), env.DB.prepare('DELETE FROM rooms WHERE id = ?').bind(roomId)]);
+        return json({ removed: true, roomId });
       }
       // 오늘의 리딩 저장: 날짜 하나에 본문과 단어를 한 번에. 같은 단어는 번호를 그대로 두어 학생의 외운 기록이 이어진다.
       if (path === '/api/admin/reading' && request.method === 'POST') {
@@ -363,6 +390,18 @@ export async function handleTeaching(request, env, now = Date.now(), baseCourses
         return json({ chapterId, pdf: pdfView(await chapterRow(env.DB, chapterId)), revision: await revision(env.DB) });
       }
       fail(404, 'not_found', '요청한 관리자 기능을 찾을 수 없어요.');
+    }
+    // 리딩 읽음 기록: '다 읽었어요'를 누르면 남긴다. 학생 현황에서 이번 달에 며칠 읽었는지 본다.
+    if (path === '/api/reading/reads' && request.method === 'GET') {
+      const userId = request.headers.get('x-aj-user-id');
+      return json({ dates: userId ? (await all(env.DB, 'SELECT study_date FROM reading_reads WHERE user_id = ? ORDER BY study_date DESC LIMIT 400', userId)).map(row => row.study_date) : [] });
+    }
+    if (path === '/api/reading/read' && request.method === 'POST') {
+      const body = await jsonBody(request), userId = request.headers.get('x-aj-user-id');
+      if (!userId) fail(401, 'sign_in_required', '읽은 기록은 로그인하면 남아요.');
+      if (!validDate(body.date) || !await first(env.DB, "SELECT id FROM teacher_readings WHERE study_date = ? AND status = 'published' AND study_date <= ?", body.date, localDate(now))) fail(404, 'reading_not_found', '그 날짜에는 올라온 리딩이 없어요.');
+      await env.DB.prepare('INSERT OR IGNORE INTO reading_reads (user_id, study_date, read_at) VALUES (?, ?, ?)').bind(userId, body.date, now).run();
+      return json({ saved: true, date: body.date });
     }
     // 리딩 본문: 공개된 날짜의 글을 로그인한 사람에게만 준다 (기사 글이라 아무에게나 열어 두지 않는다). 관리자는 언제나.
     if (path === '/api/reading' && request.method === 'GET') {

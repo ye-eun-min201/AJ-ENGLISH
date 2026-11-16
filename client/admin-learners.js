@@ -42,17 +42,23 @@
       ];
       return '<dl class="al-summary">' + stats.map(([label, value, unit, note]) => '<div><dt>' + label + '</dt><dd>' + value + (unit ? ' <span>' + unit + '</span>' : '') + '</dd><small>' + note + '</small></div>').join('') + '</dl>';
     }
+    // 반 관리: 반을 만들고, 아래 표에서 학생마다 소속 반을 고른다.
+    function roomsHTML(rooms) {
+      const list = Array.isArray(rooms) ? rooms : [];
+      return '<section class="al-rooms" aria-label="반 관리"><h2>반</h2><p>반을 만든 뒤, 아래 표에서 학생 이름 밑의 칸으로 소속 반을 골라 주세요. 고르면 바로 저장돼요.</p><form class="al-room-form" data-al-room-form><input name="name" maxlength="40" placeholder="새 반 이름 (예: 주일 오후반)" aria-label="새 반 이름"><button type="submit" class="button primary">반 만들기</button></form><ul class="al-room-list">' + (list.length ? list.map(room => '<li><strong>' + esc(room.name || '이름 없는 반') + '</strong><span>' + number(room.memberCount) + '명 · 입장 코드 ' + esc(room.code || '') + '</span><button type="button" class="al-room-remove" data-al-room-remove="' + esc(room.id) + '">지우기</button></li>').join('') : '<li class="al-room-empty">아직 만든 반이 없어요.</li>') + '</ul><p class="al-room-status" data-al-room-status role="status" aria-live="polite"></p></section>';
+    }
     function learnerHTML(learner) {
-      const rooms = (Array.isArray(learner.rooms) ? learner.rooms : []).map(room => room.name || '이름 없는 반').join(' · ') || '소속 반 없음';
+      const mine = Array.isArray(learner.rooms) ? learner.rooms : [], currentRoom = (mine.find(room => room.isCurrent) || mine[0] || {}).id || '';
+      const rooms = '<select class="al-assign" data-al-assign="' + esc(learner.id) + '" aria-label="' + esc(learner.nickname || '학생') + ' 소속 반"><option value="">반 없음</option>' + (data?.rooms || []).map(room => '<option value="' + esc(room.id) + '"' + (room.id === currentRoom ? ' selected' : '') + '>' + esc(room.name || '이름 없는 반') + '</option>').join('') + '</select>';
       const name = learner.nickname || '닉네임 없음';
-      return '<tr class="al-student-row"><th scope="row"><div class="al-student"><span class="al-avatar" aria-hidden="true">' + avatarHTML(learner) + '</span><span><strong>' + esc(name) + '</strong><small>' + esc(rooms) + '</small></span></div></th><td data-label="수업 학습 시간"><strong>' + duration(learner.studySeconds) + '</strong></td><td data-label="수업 완료">' + number(learner.completedLessons) + '<span class="al-unit">회</span></td><td data-label="게임 완료">' + number(learner.gameCount) + '<span class="al-unit">회</span></td><td data-label="학습 XP">' + number(learner.studyPoints) + '</td><td data-label="게임 XP">' + number(learner.gamePoints) + '</td><td data-label="최근 학습"><time>' + dateTime(learner.lastStudiedInMonthAt) + '</time></td><td class="al-details-cell"><details class="al-student-details"><summary>' + esc(name) + ' 상세</summary><dl><div><dt>선택 월 학습일</dt><dd>' + number(learner.activeDays) + '일</dd></div><div><dt>수업 완료 · 중복 제외</dt><dd>' + number(learner.completedUniqueLessons) + '개</dd></div><div><dt>수업 퀴즈 정답</dt><dd>' + accuracy(learner.quizCorrect, learner.quizAnswered) + '</dd></div><div><dt>게임 정답</dt><dd>' + accuracy(learner.gameCorrect, learner.gameQuestions) + '</dd></div><div><dt>누적 암기 카드</dt><dd>' + number(learner.flashcardKnown) + '개</dd></div><div><dt>누적 복습 카드</dt><dd>' + number(learner.reviewedCardCount) + '개 · ' + number(learner.reviewedCards) + '회</dd></div><div><dt>전체 기간 최근 학습</dt><dd>' + dateTime(learner.lastStudiedAt) + '</dd></div></dl><p>누적 암기·복습 카드와 전체 기간 최근 학습은 조회 월과 무관한 기록.</p></details></td></tr>';
+      return '<tr class="al-student-row"><th scope="row"><div class="al-student"><span class="al-avatar" aria-hidden="true">' + avatarHTML(learner) + '</span><span><strong>' + esc(name) + '</strong><small>' + rooms + '</small></span></div></th><td data-label="수업 학습 시간"><strong>' + duration(learner.studySeconds) + '</strong></td><td data-label="수업 완료">' + number(learner.completedLessons) + '<span class="al-unit">회</span></td><td data-label="게임 완료">' + number(learner.gameCount) + '<span class="al-unit">회</span></td><td data-label="학습 XP">' + number(learner.studyPoints) + '</td><td data-label="게임 XP">' + number(learner.gamePoints) + '</td><td data-label="최근 학습"><time>' + dateTime(learner.lastStudiedInMonthAt) + '</time></td><td class="al-details-cell"><details class="al-student-details"><summary>' + esc(name) + ' 상세</summary><dl><div><dt>선택 월 학습일</dt><dd>' + number(learner.activeDays) + '일</dd></div><div><dt>리딩 읽은 날</dt><dd>' + number(learner.readingDays) + '일</dd></div><div><dt>수업 완료 · 중복 제외</dt><dd>' + number(learner.completedUniqueLessons) + '개</dd></div><div><dt>수업 퀴즈 정답</dt><dd>' + accuracy(learner.quizCorrect, learner.quizAnswered) + '</dd></div><div><dt>게임 정답</dt><dd>' + accuracy(learner.gameCorrect, learner.gameQuestions) + '</dd></div><div><dt>누적 암기 카드</dt><dd>' + number(learner.flashcardKnown) + '개</dd></div><div><dt>누적 복습 카드</dt><dd>' + number(learner.reviewedCardCount) + '개 · ' + number(learner.reviewedCards) + '회</dd></div><div><dt>전체 기간 최근 학습</dt><dd>' + dateTime(learner.lastStudiedAt) + '</dd></div></dl><p>누적 암기·복습 카드와 전체 기간 최근 학습은 조회 월과 무관한 기록.</p></details></td></tr>';
     }
     function render() {
       if (destroyed || !data) return;
       const normalized = search.trim().toLocaleLowerCase('ko-KR');
       const learners = data.learners.filter(learner => !normalized || String(learner.nickname || '').toLocaleLowerCase('ko-KR').includes(normalized));
       const content = $('[data-al-content]');
-      content.innerHTML = summaryHTML(data.summary) + '<div class="al-results-heading"><h2>학생별 학습 기록</h2><p>' + number(learners.length) + '명' + (normalized ? ' · 닉네임 검색 결과' : '') + ' <span>요약은 월·반 전체 기준</span></p></div>' + (learners.length ? '<div class="al-table-wrap" tabindex="0" role="region" aria-label="학생별 월간 학습 현황"><table class="al-table"><caption class="al-sr-only">' + esc(month) + ' 학생별 수업 학습 시간·완료 횟수·포인트·최근 학습 기록</caption><thead><tr><th scope="col">학생 · 반</th><th scope="col">수업 학습 시간</th><th scope="col">수업 완료</th><th scope="col">게임 완료</th><th scope="col">학습 XP</th><th scope="col">게임 XP</th><th scope="col">최근 학습 <small>선택 월</small></th><th scope="col">상세</th></tr></thead><tbody>' + learners.map(learnerHTML).join('') + '</tbody></table></div><p class="al-table-note">수업 완료 횟수는 재학습 포함 · 상세에서 중복 제외 수업 수와 누적 카드 기록 확인</p>' : '<div class="al-empty"><span aria-hidden="true">◎</span><h3>' + (normalized ? '검색 결과 없음' : '조회 학생 없음') + '</h3><p>' + (normalized ? '닉네임 확인 또는 검색어 변경' : roomId ? '선택한 반의 등록 학생 없음' : '계정과 캐릭터를 등록한 학생부터 표시. 학습 기록이 없으면 0으로 표시.') + '</p></div>');
+      content.innerHTML = roomsHTML(data.rooms) + summaryHTML(data.summary) + '<div class="al-results-heading"><h2>학생별 학습 기록</h2><p>' + number(learners.length) + '명' + (normalized ? ' · 닉네임 검색 결과' : '') + ' <span>요약은 월·반 전체 기준</span></p></div>' + (learners.length ? '<div class="al-table-wrap" tabindex="0" role="region" aria-label="학생별 월간 학습 현황"><table class="al-table"><caption class="al-sr-only">' + esc(month) + ' 학생별 수업 학습 시간·완료 횟수·포인트·최근 학습 기록</caption><thead><tr><th scope="col">학생 · 반</th><th scope="col">수업 학습 시간</th><th scope="col">수업 완료</th><th scope="col">게임 완료</th><th scope="col">학습 XP</th><th scope="col">게임 XP</th><th scope="col">최근 학습 <small>선택 월</small></th><th scope="col">상세</th></tr></thead><tbody>' + learners.map(learnerHTML).join('') + '</tbody></table></div><p class="al-table-note">수업 완료 횟수는 재학습 포함 · 상세에서 중복 제외 수업 수와 누적 카드 기록 확인</p>' : '<div class="al-empty"><span aria-hidden="true">◎</span><h3>' + (normalized ? '검색 결과 없음' : '조회 학생 없음') + '</h3><p>' + (normalized ? '닉네임 확인 또는 검색어 변경' : roomId ? '선택한 반의 등록 학생 없음' : '계정과 캐릭터를 등록한 학생부터 표시. 학습 기록이 없으면 0으로 표시.') + '</p></div>');
     }
     function renderRooms() {
       const select = $('[data-al-room]');
@@ -94,6 +100,24 @@
     function onClick(event) { if (event.target.closest('[data-al-retry]')) load(); }
     host.addEventListener('submit', onSubmit); host.addEventListener('change', onChange); host.addEventListener('input', onInput); host.addEventListener('click', onClick);
     load();
+    const roomNote = (message, error) => { const node = host.querySelector('[data-al-room-status]'); if (node) { node.textContent = message; node.classList.toggle('error', !!error); } };
+    let removeArmed = null;
+    host.addEventListener('submit', async event => {
+      const form = event.target.closest('[data-al-room-form]'); if (!form || destroyed) return; event.preventDefault();
+      const name = form.elements.name.value.trim(); if (!name) { roomNote('반 이름을 써 주세요.', true); form.elements.name.focus(); return; }
+      try { await config.request('admin/room', { name }); await load(); roomNote('‘' + name + '’ 반을 만들었어요.'); } catch (error) { roomNote(error.message, true); }
+    });
+    host.addEventListener('change', async event => {
+      const select = event.target.closest('[data-al-assign]'); if (!select || destroyed) return; select.disabled = true;
+      try { await config.request('admin/room/assign', { learnerId: select.dataset.alAssign, roomId: select.value || null }); const label = select.selectedOptions[0]?.textContent || ''; await load(); roomNote('소속 반 저장 완료 · ' + label); }
+      catch (error) { select.disabled = false; roomNote(error.message, true); }
+    });
+    host.addEventListener('click', async event => {
+      const button = event.target.closest('[data-al-room-remove]'); if (!button || destroyed) return;
+      if (removeArmed !== button.dataset.alRoomRemove) { removeArmed = button.dataset.alRoomRemove; button.textContent = '한 번 더 누르면 지워요'; setTimeout(() => { if (removeArmed === button.dataset.alRoomRemove) { removeArmed = null; if (button.isConnected) button.textContent = '지우기'; } }, 4000); return; }
+      removeArmed = null;
+      try { await config.request('admin/room/remove', { roomId: button.dataset.alRoomRemove }); await load(); roomNote('반을 지웠어요. 그 반 학생은 ‘반 없음’이 됐어요.'); } catch (error) { roomNote(error.message, true); }
+    });
     return {
       update(next) { if (destroyed) return; config = { ...config, ...(next || {}) }; if (next?.refresh !== false) return load(); },
       destroy() { if (destroyed) return; destroyed = true; sequence++; host.removeEventListener('submit', onSubmit); host.removeEventListener('change', onChange); host.removeEventListener('input', onInput); host.removeEventListener('click', onClick); host.removeAttribute('aria-busy'); host.replaceChildren(); data = null; }

@@ -91,5 +91,11 @@ export const MIGRATIONS = [
       "ALTER TABLE teacher_expressions ADD COLUMN reading_id TEXT;",
       "CREATE INDEX teacher_expressions_reading ON teacher_expressions(reading_id);"
     ]
+  },
+  {
+    "name": "0009_reading_reads",
+    "statements": [
+      "CREATE TABLE reading_reads (\n  user_id TEXT NOT NULL,\n  study_date TEXT NOT NULL,\n  read_at INTEGER NOT NULL,\n  PRIMARY KEY (user_id, study_date)\n);"
+    ]
   }
 ];

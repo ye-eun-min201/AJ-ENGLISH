@@ -137,3 +137,50 @@ html[data-theme="dark"] .trv-tone-0{color:#a5b4fc}html[data-theme="dark"] .trv-t
 .nb-transcript:hover{border-color:var(--lamp)}
 .nb-transcript[hidden]{display:none}
 #chapter-form #pdf-student-link,#chapter-form #chapter-student-link{display:none !important}
+
+/* ───── 주간 MVP: 첫 화면 띠와 발표 창 ───── */
+.mvpw{display:flex;align-items:center;gap:12px;margin:14px 0 4px;padding:12px 16px;border-radius:20px;background:color-mix(in srgb,var(--gold,#f5c518) 16%,var(--booth));border:1px solid color-mix(in srgb,var(--gold,#f5c518) 45%,var(--hair))}
+.mvpw.is-waiting{background:var(--booth);border-color:var(--hair)}
+.mvpw-mini{flex:0 0 48px;width:48px;height:48px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:var(--booth)}
+.mvpw-mini svg,.mvpw-mini .mvpw-avatar{width:48px;height:48px}
+.mvpw-cup{font-size:22px;color:#b7791f;background:color-mix(in srgb,var(--gold,#f5c518) 28%,var(--booth))}
+.mvpw strong{display:block;font-size:15.5px;font-weight:800;color:var(--chalk);word-break:keep-all}
+.mvpw small{display:block;margin-top:2px;font-size:13px;line-height:1.45;color:var(--mist);word-break:keep-all}
+.mvpw-pop{position:fixed;inset:0;z-index:1300;display:grid;place-items:center;padding:18px;background:rgba(20,20,40,.55)}
+.mvpw-card{width:min(400px,100%);padding:28px 24px 22px;border-radius:28px;text-align:center;background:var(--booth,#fff);color:var(--chalk,#191f28);box-shadow:0 26px 70px rgba(0,0,0,.3)}
+.mvpw-kicker{display:inline-block;margin:0 0 10px;padding:6px 14px;border-radius:999px;background:color-mix(in srgb,var(--gold,#f5c518) 35%,var(--booth));color:#7a5200;font-size:13px;font-weight:800}
+html[data-theme="dark"] .mvpw-kicker{color:#ffe08a}
+.mvpw-face{width:132px;height:132px;margin:0 auto 6px}
+.mvpw-face svg,.mvpw-face .mvpw-avatar{width:132px;height:132px}
+.mvpw-card h2{margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em}
+.mvpw-card h2 span{display:inline-block;margin-left:6px;padding:3px 10px;border-radius:999px;background:var(--lamp);color:var(--lamp-ink);font-size:13px;vertical-align:4px}
+.mvpw-score{margin:6px 0 0;font-size:15px;color:var(--mist)}
+.mvpw-score b{font-size:20px;color:var(--lamp-text)}
+.mvpw-top{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:6px;text-align:left}
+.mvpw-top li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 12px;border-radius:14px;background:var(--booth-2);font-size:14.5px}
+.mvpw-top li.is-me{box-shadow:inset 0 0 0 2px var(--lamp)}
+.mvpw-top b{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--booth-3);font-size:13px}
+.mvpw-top span{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mvpw-top em{font-style:normal;color:var(--mist);font-size:13px}
+.mvpw-close{margin-top:18px;min-height:50px;width:100%;border:0;border-radius:999px;background:var(--lamp);color:var(--lamp-ink);font:inherit;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 4px 0 var(--lamp-deep)}
+
+/* ───── 관리자: 학생 현황의 반 관리 ───── */
+.al-rooms{margin:0 0 18px;padding:18px 20px;border-radius:20px;border:1px solid var(--hair-2);background:var(--booth)}
+.al-rooms h2{margin:0 0 4px;font-size:18px}
+.al-rooms>p{margin:0 0 12px;font-size:14px;color:var(--mist)}
+.al-room-form{display:flex;gap:8px;flex-wrap:wrap}
+.al-room-form input{flex:1 1 220px;min-height:46px;padding:0 14px;border-radius:14px;border:1px solid var(--hair-2);background:var(--booth-2);color:var(--chalk);font:inherit;font-size:15px}
+.al-room-list{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}
+.al-room-list li{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-radius:14px;background:var(--booth-2);font-size:14.5px}
+.al-room-list li span{flex:1 1 140px;color:var(--mist);font-size:13px}
+.al-room-empty{color:var(--mist)}
+.al-room-remove{min-height:34px;padding:0 12px;border:1px solid var(--hair-2);border-radius:999px;background:transparent;color:var(--mist);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.al-room-status{margin:10px 0 0;font-size:14px;font-weight:700;color:var(--ok)}
+.al-room-status.error{color:#c9302c}
+.al-assign{min-height:36px;max-width:190px;margin-top:4px;padding:0 10px;border-radius:10px;border:1px solid var(--hair-2);background:var(--booth);color:var(--chalk);font:inherit;font-size:13px}
+
+/* 학생: 20분 복습 지도의 주차 고르기 */
+.week-pick{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px;padding:10px 14px;border-radius:20px;background:var(--booth);border:1px solid var(--hair)}
+.week-pick>span{font-size:13px;font-weight:800;color:var(--mist);margin-right:2px}
+.week-pick button{min-height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--hair-2);background:var(--booth);color:var(--chalk);font:inherit;font-size:14px;font-weight:800;cursor:pointer}
+.week-pick button[aria-pressed="true"]{background:var(--lamp);color:var(--lamp-ink);border-color:var(--lamp);box-shadow:0 3px 0 var(--lamp-deep)}

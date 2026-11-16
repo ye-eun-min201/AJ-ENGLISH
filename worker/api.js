@@ -15,7 +15,7 @@ async function owned(db, userId) { const rows = await all(db, 'SELECT item_id FR
 async function likesRemaining(db, userId, day) { if (!userId) return 5; const row = await first(db, 'SELECT COUNT(*) AS n FROM showcase_likes WHERE user_id = ? AND local_date = ?', userId, day); return Math.max(0, 5 - row.n); }
 async function showcasePost(db, id, roomId, userId) { const row = await first(db, 'SELECT s.id, s.user_id, s.sentence, s.meaning, s.tag, s.created_at AS createdAt, p.nickname, p.avatar, (SELECT COUNT(*) FROM showcase_likes l WHERE l.post_id = s.id) AS likes, EXISTS (SELECT 1 FROM showcase_likes l WHERE l.post_id = s.id AND l.user_id = ?) AS liked FROM showcase_posts s JOIN profiles p ON p.user_id = s.user_id WHERE s.id = ? AND s.room_id = ? AND s.deleted_at IS NULL', userId, id, roomId); if (!row) return null; const { user_id, ...post } = row; return { ...post, avatar: decodeAvatar(row.avatar), liked: !!post.liked, isMine: user_id === userId }; }
 function userView(profile) { return { id: profile.public_id, nickname: profile.nickname, avatar: decodeAvatar(profile.avatar), totalPoints: profile.total_points, coins: profile.coins, level: 1 + Math.floor(profile.total_points / 250) }; }
-function getLesson(courses, course, day) { const days = courses[course]; if (!Array.isArray(days) || !Number.isInteger(day) || day < 1 || day > 7) fail(400, 'invalid_lesson', '올바른 학습 미션을 선택해 주세요.'); const lesson = days.find(d => d.id === day) || days[day - 1]; if (!lesson || !Array.isArray(lesson.quiz) || !lesson.quiz.length) fail(400, 'invalid_lesson', '아직 준비되지 않은 미션입니다.'); return lesson; }
+function getLesson(courses, course, day, week) { const days = course === 'business' && typeof week === 'string' && week.length <= 100 && Array.isArray(courses.weeks?.[week]) ? courses.weeks[week] : courses[course]; if (!Array.isArray(days) || !Number.isInteger(day) || day < 1 || day > 7) fail(400, 'invalid_lesson', '올바른 학습 미션을 선택해 주세요.'); const lesson = days.find(d => d.id === day) || days[day - 1]; if (!lesson || !Array.isArray(lesson.quiz) || !lesson.quiz.length) fail(400, 'invalid_lesson', '아직 준비되지 않은 미션입니다.'); return lesson; }
 async function activeRoom(db, userId, profile) { if (!profile?.current_room_id) return null; return first(db, 'SELECT r.id, r.name, r.code, (SELECT COUNT(*) FROM room_members m WHERE m.room_id = r.id) AS memberCount FROM rooms r JOIN room_members m ON m.room_id = r.id AND m.user_id = ? WHERE r.id = ?', userId, profile.current_room_id); }
 async function readSession(db, userId, id) { if (typeof id !== 'string' || id.length > 100) fail(400, 'invalid_session', '학습 세션을 확인해 주세요.'); const session = await first(db, 'SELECT * FROM learning_sessions WHERE id = ? AND user_id = ?', id, userId); if (!session) fail(404, 'session_not_found', '이 계정의 학습 세션을 찾을 수 없습니다.'); return session; }
 function speechPasses(value) { try { const passed = JSON.parse(value || '[]'); return Array.isArray(passed) ? passed.filter(Number.isInteger).sort((a,b) => a-b) : []; } catch { return []; } }
@@ -186,7 +186,7 @@ export async function handleApi(request, env, courses, now = Date.now()) {
     }
 
     if (request.method === 'POST' && url.pathname === '/api/session/start') {
-      getLesson(courses, body.course, body.day);
+      getLesson(courses, body.course, body.day, body.week);
       let existing = await first(db, 'SELECT * FROM learning_sessions WHERE user_id = ? AND local_date = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1', userId, today);
       if (body.replaceLegacyFruit === true && body.course === 'business' && existing?.course === 'fruit') {
         // Explicit replacement retires only this user's unfinished obsolete draft.
@@ -200,7 +200,7 @@ export async function handleApi(request, env, courses, now = Date.now()) {
       if (existing) return json({ session: await sessionView(db, existing, courses, now), resumed: true });
       const room = await activeRoom(db, userId, profile);
       const id = crypto.randomUUID();
-      await db.prepare('INSERT OR IGNORE INTO learning_sessions (id, user_id, room_id, course, day, local_date, started_at,lesson_json,chapter_id) VALUES (?, ?, ?, ?, ?, ?, ?,?,?)').bind(id, userId, room?.id || null, body.course, body.day, today, now,JSON.stringify(getLesson(courses,body.course,body.day)),getLesson(courses,body.course,body.day).chapterId||null).run();
+      await db.prepare('INSERT OR IGNORE INTO learning_sessions (id, user_id, room_id, course, day, local_date, started_at,lesson_json,chapter_id) VALUES (?, ?, ?, ?, ?, ?, ?,?,?)').bind(id, userId, room?.id || null, body.course, body.day, today, now,JSON.stringify(getLesson(courses,body.course,body.day,body.week)),getLesson(courses,body.course,body.day,body.week).chapterId||null).run();
       const created = await first(db, 'SELECT * FROM learning_sessions WHERE user_id = ? AND local_date = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1', userId, today);
       return json({ session: await sessionView(db, created, courses, now), resumed: created?.id !== id });
     }

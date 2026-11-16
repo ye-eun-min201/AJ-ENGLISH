@@ -4,6 +4,7 @@
   const KEY = 'ajenglish-reading-done-v1';
   const doneMap = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (_) { return {}; } };
   const isDone = date => doneMap()[date] === true;
+  const remember = dates => { const map = doneMap(); dates.forEach(date => { map[date] = true; }); try { localStorage.setItem(KEY, JSON.stringify(map)); } catch (_) { /* 저장을 못 해도 읽기는 된다 */ } };
   const kstToday = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   let current = null;
 
@@ -59,11 +60,13 @@
       else if ('rdPopClose' in data) closePop();
       else if (data.rdSay) options.say?.(data.rdSay);
       else if ('rdRetry' in data) load();
-      else if ('rdDone' in data) { const map = doneMap(); map[date] = true; try { localStorage.setItem(KEY, JSON.stringify(map)); } catch (_) { /* 기록 없이도 읽기는 된다 */ } render(); }
+      else if ('rdDone' in data) { remember([date]); render(); Promise.resolve(options.api('reading/read', { date })).catch(() => { /* 로그인 전이면 이 기기에만 남는다 */ }); }
       else if (data.rdGo === 'words') options.onWords?.();
       else if (data.rdGo === 'rail') options.onRail?.();
     }
     root.addEventListener('click', onClick);
+    // 계정에 남은 읽음 기록을 가져와 다른 기기에서 읽은 날도 표시한다
+    Promise.resolve(options.api('reading/reads')).then(data => { if (!destroyed && Array.isArray(data?.dates) && data.dates.length) { remember(data.dates); render(); } }).catch(() => {});
     date = list()[0]?.date || null; if (date) load(); else render();
     current = {
       update(next) { if (destroyed) return; content = next || {}; if (!reading()) date = list()[0]?.date || null; if (bodyState.status === 'ready' || !date) render(); else load(); },
