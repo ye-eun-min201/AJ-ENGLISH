@@ -198,7 +198,12 @@ export async function handleApi(request, env, courses, now = Date.now()) {
         existing = await first(db, 'SELECT * FROM learning_sessions WHERE user_id = ? AND local_date = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1', userId, today);
       }
       // 한 시간 넘게 열어 둔 채 잊은 수업은 시간을 처음부터 다시 잰다 (몇 시간 전에 눌러 둔 것이 '288분'처럼 보이지 않게).
-      if (existing && now - existing.started_at > 3600000) { await db.prepare('UPDATE learning_sessions SET started_at = ? WHERE id = ? AND finished_at IS NULL').bind(now, existing.id).run(); existing = { ...existing, started_at: now }; }
+      if (existing && now - existing.started_at > 3600000) {
+        // 문제를 하나도 풀지 않은 채 잊은 수업은 지우고 지금 내용(이번 주 수업)으로 새로 시작한다. 풀던 것이 있으면 시간만 다시 잰다.
+        const answered = await first(db, 'SELECT COUNT(*) AS n FROM quiz_answers WHERE session_id = ?', existing.id);
+        if (!answered?.n) { await db.prepare('DELETE FROM learning_sessions WHERE id = ? AND user_id = ? AND finished_at IS NULL AND NOT EXISTS (SELECT 1 FROM learning_rewards r WHERE r.id = learning_sessions.id)').bind(existing.id, userId).run(); existing = await first(db, 'SELECT * FROM learning_sessions WHERE user_id = ? AND local_date = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1', userId, today); }
+        if (existing) { await db.prepare('UPDATE learning_sessions SET started_at = ? WHERE id = ? AND finished_at IS NULL').bind(now, existing.id).run(); existing = { ...existing, started_at: now }; }
+      }
       if (existing) return json({ session: await sessionView(db, existing, courses, now), resumed: true });
       const room = await activeRoom(db, userId, profile);
       const id = crypto.randomUUID();
