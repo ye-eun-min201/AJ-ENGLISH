@@ -202,3 +202,15 @@ body[data-auth="out"]>*:not(#aj-gate):not(#aj-inapp-bar){display:none !important
 #aj-nick .aj-gate-btn{background:var(--lamp,#4f46e5);color:var(--lamp-ink,#fff)}
 .aj-nick-later{min-height:44px;border:0;background:transparent;color:var(--mist,#4e5968);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
 .aj-nick-status{min-height:20px;font-size:14px !important;font-weight:700;color:#c9302c !important}
+
+/* ───── 20분 공부 창: 흐리던 글씨를 또렷하게 ───── */
+body.dashboard-shell .dialog .steps .step{opacity:1 !important;color:var(--mist) !important;border-color:var(--hair-2) !important}
+body.dashboard-shell .dialog .steps .step b{opacity:1 !important;color:var(--chalk) !important;background:var(--booth-3) !important}
+body.dashboard-shell .dialog .steps .step.done{color:var(--chalk) !important}
+body.dashboard-shell .dialog .steps .step.active{color:var(--on-chalk) !important}
+body.dashboard-shell .dialog .steps .step.active b{color:inherit !important;background:transparent !important}
+body.dashboard-shell .dialog .timer small{color:var(--mist) !important;font-weight:700}
+body.dashboard-shell .dialog .dialog-head .eyebrow,body.dashboard-shell .dialog .session-body .eyebrow{color:var(--mist) !important;opacity:1 !important}
+body.dashboard-shell .dialog .session-body p{color:var(--mist);opacity:1}
+body.dashboard-shell .dialog .phrase-card .phrase-ko{color:var(--chalk) !important;opacity:.86 !important;font-weight:500}
+body.dashboard-shell .dialog .phrase-card p{color:var(--chalk) !important;opacity:.9 !important}
