@@ -64,7 +64,7 @@
       const name = state.user?.nickname ? String(state.user.nickname) : '';
       const quests = [
         { key: 'rail', title: '레일 퀘스트', note: '게임 칸에서 몇 번이든 풀 수 있어요', done: today ? !!today.rail : railDone(), go: '출발' },
-        { key: 'words', title: '단어 카드', note: '오늘의 단어·문장 뒤집어 보기', done: !!today?.words, go: '뒤집기', disabled: typeof initial.onWords !== 'function' },
+        { key: 'words', title: '단어 카드', note: (content.decks || []).find(deck => String(deck.id).startsWith('day-')) ? '오늘의 단어 ' + (content.decks.find(deck => String(deck.id).startsWith('day-')).cards || []).length + '개만 외우기' : '오늘의 단어·문장 뒤집어 보기', done: !!today?.words, go: '뒤집기', disabled: typeof initial.onWords !== 'function' },
         { key: 'start', title: '20분 복습', note: (content.activeChapter?.number && !content.usingFallback ? content.activeChapter.number + '주차 · ' : '') + 'DAY ' + current.id + ' · ' + current.title, done: progress.completed || !!today?.study, go: current.active ? '이어하기' : progress.completed ? '한 번 더' : '시작', disabled: typeof initial.onStart !== 'function', meter: progress.percent, meterText: timeText }
       ];
       // 선생님이 올린 리딩이 있으면 맨 앞 퀘스트로 — 가장 최근 날짜의 글

@@ -214,6 +214,8 @@ export async function getTeachingContent(env, baseCourses = {}, now = Date.now()
   // 매일 단어는 '그 주' 묶음으로 모은다. 최신 주가 맨 앞.
   const wordWeeks = new Map(); for (const expression of expressions) if (expression.readingId && expression.studyDate) { const key = mondayOf(expression.studyDate); if (!wordWeeks.has(key)) wordWeeks.set(key, []); wordWeeks.get(key).push(expression); }
   decks.unshift(...[...wordWeeks.keys()].sort().reverse().map(key => ({ id: 'week-' + key, title: '매일 단어 · ' + Number(key.slice(5, 7)) + '월 ' + Number(key.slice(8)) + '일 주', chapterId: null, weekStart: key, cards: wordWeeks.get(key).sort((a, b) => String(b.studyDate).localeCompare(String(a.studyDate))).map(cardView) })));
+  // 단어 카드의 기본 묶음: 가장 최근에 올라온 하루치 단어만(보통 열 개). 하루에 외울 양을 이만큼으로 줄인다.
+  if (latestStudyDate) { const dayCards = expressions.filter(expression => expression.readingId && expression.studyDate === latestStudyDate); decks.unshift({ id: 'day-' + latestStudyDate, title: (latestStudyDate === localDate(now) ? '오늘의 단어' : '최근 단어') + ' · ' + Number(latestStudyDate.slice(5, 7)) + '월 ' + Number(latestStudyDate.slice(8)) + '일', chapterId: null, studyDate: latestStudyDate, cards: dayCards.map(cardView) }); }
   for (const deck of decks) { const kinds = [...new Set(deck.cards.map(card => card.kind))]; deck.kind = kinds.length === 1 ? kinds[0] : 'mixed'; deck.categories = { words: deck.cards.filter(card => card.kind === '단어').map(card => card.id), speaking: deck.cards.filter(card => card.kind === '표현').map(card => card.id) }; }
   const dailyWords = expressions.filter(expression => expression.kind === '단어').sort((a, b) => String(b.studyDate || '').localeCompare(String(a.studyDate || '')));
   const speakingExpressions = expressions.filter(expression => expression.kind === '표현');

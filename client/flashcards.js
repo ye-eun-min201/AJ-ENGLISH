@@ -59,6 +59,8 @@
     let records = saved.progress, deckId = String(initial.deckId || 'all'), starredOnly = initial.starredOnly === true, query = String(initial.query || ''), mode = ['cards','learn','write','match'].includes(initial.mode) ? initial.mode : 'cards';
     let studyDay = /^[1-7]$/.test(String(initial.studyDay)) ? String(initial.studyDay) : 'all', reviewState = ['learning','known'].includes(initial.reviewState) ? initial.reviewState : 'all';
     let order = [], currentId = initial.currentId ? String(initial.currentId) : null, flipped = false, game = null, cardRun = null, timer = null, destroyed = false, source = 'local';
+    // 단어는 '하루치(오늘의 단어)' 묶음에서 시작한다. 다른 묶음은 고르기 칸에서 바꿔 볼 수 있다.
+    if (collection === 'words' && options.deckId && (options.decks || []).some(deck => String(deck.id) === String(options.deckId))) { deckId = String(options.deckId); studyDay = 'all'; reviewState = 'all'; query = ''; starredOnly = false; currentId = null; }
     let pending = Promise.resolve(), localOK = saved.storageOK, lastAward = '', popupTimer = null, retrying = false;
     const locallyChanged = new Set(Object.keys(unsynced));
     const root = document.createElement('section');
