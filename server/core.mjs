@@ -1147,7 +1147,16 @@ async function getTeachingContent(env, baseCourses = {}, now = Date.now()) {
   const latestStudyDate = readings.find(reading => reading.words > 0)?.date || null;
   const activeChapter = chapters.at(-1) || null;
   const pool = expressions.filter(expression => !expression.readingId && (!expression.chapterId || expression.chapterId === activeChapter?.id));
-  const days = makeDays(pool, activeChapter, baseCourses.business || []);
+  // 이번 주 20분 공부에 그날 리딩 단어의 예문도 섞는다: 하루에 수업 문장 둘 + 리딩 예문 하나(월요일 리딩은 DAY 1, 화요일은 DAY 2 …).
+  // 수업 문장이 하나도 없는 주에는 섞지 않는다(그때는 기본 과정이 그대로 나온다).
+  const thisMonday = mondayOf(localDate(now)), studyPool = [...pool];
+  if (pool.some(expression => expression.kind === '표현')) for (let day = 1; day <= 7; day++) {
+    const word = expressions.find(expression => expression.readingId && expression.studyDate && mondayOf(expression.studyDate) === thisMonday && weekdayOf(expression.studyDate) === day && expression.example && expression.exampleKo);
+    if (!word) continue;
+    let kept = 0; for (let index = 0; index < studyPool.length; index++) { const item = studyPool[index]; if (item.kind === '표현' && item.studyDay === day && ++kept > 2) studyPool[index] = { ...item, studyDay: 0 }; }
+    studyPool.push({ id: word.id + '-ex', chapterId: activeChapter?.id || null, en: word.example.split('\n')[0], ko: word.exampleKo.split('\n')[0], note: '오늘의 단어 · ' + word.en + ' = ' + word.ko, kind: '표현', example: '', studyDay: day, readingId: null });
+  }
+  const days = makeDays(studyPool, activeChapter, baseCourses.business || []);
   // 지난 주차 다시 풀기: 처음부터 들어 있던 기본 과정과, 문장이 올라온 주차마다 일주일 치 20분 공부를 만들어 둔다. 맨 끝이 이번 주.
   const baseDays = baseCourses.business || [], ownSentences = pool.some(expression => expression.kind === '표현'), weeks = [];
   if (baseDays.length) weeks.push(ownSentences ? { key: 'base', number: null, title: '기본 비즈니스 표현', days: baseDays } : { key: 'base', number: activeChapter?.number ?? null, title: activeChapter?.title || '기본 비즈니스 표현', days, current: true });

@@ -225,3 +225,6 @@ body.dashboard-shell .dialog .phrase-card p{color:var(--chalk) !important;opacit
 .rd-para-tools button:hover{border-color:var(--lamp);color:var(--lamp-text)}
 .rd-para-ko{margin:10px 0 0 !important;padding:10px 14px;border-radius:12px;background:var(--booth-2);font-family:inherit !important;font-size:15.5px !important;line-height:1.7 !important;color:var(--chalk) !important}
 .rd-body{gap:6px}
+
+/* 관리자 왼쪽 메뉴에서 '단어·문장'은 뺀다 — 수업 줄의 '단어·문장 넣기'로 들어간다 */
+.teacher-sidebar nav [data-tab="daily"]{display:none !important}
