@@ -38,14 +38,21 @@
     document.body.append(box);
   }
   // 처음 로그인하면 이름이 '학생 1234'로 잡힌다. 선생님이 누구인지 알 수 있게 닉네임을 만들어 달라고 묻는다.
-  async function askNickname() {
-    try { if (sessionStorage.getItem('aj-nick-later')) return; } catch (_) { /* 물어보기는 계속 */ }
+  function nameBar() {
+    if (document.getElementById('aj-name-bar')) return; const app = document.getElementById('app'); if (!app) return;
+    const bar = document.createElement('div'); bar.id = 'aj-name-bar'; bar.setAttribute('role', 'status');
+    bar.innerHTML = '<span><strong>이름을 등록해 주세요</strong> 지금은 임시 이름이라 선생님이 누구인지 알 수 없어요.</span><button type="button">이름 만들기</button>';
+    bar.querySelector('button').addEventListener('click', () => askNickname(true)); app.before(bar);
+  }
+  async function askNickname(force) {
+    let later = false; try { later = !!sessionStorage.getItem('aj-nick-later'); } catch (_) { /* 물어보기는 계속 */ }
     let state; try { state = await fetch('/api/state', { credentials: 'same-origin', cache: 'no-store' }).then(r => r.json()); } catch (_) { return; }
     const user = state && state.user; if (!user || !/^학생 \d{3,5}$/.test(String(user.nickname || '')) || document.getElementById('aj-nick')) return;
+    if (later && !force) { nameBar(); return; }
     const box = document.createElement('div'); box.id = 'aj-nick'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', '닉네임 만들기');
     box.innerHTML = '<form class="aj-gate-card"><h1>닉네임을 만들어 주세요</h1><p>지금은 ‘' + user.nickname.replace(/[<>&]/g, '') + '’로 보여요. 선생님과 친구들이 알아볼 이름으로 바꿔 주세요.</p><input name="nickname" maxlength="12" autocomplete="nickname" placeholder="예: 예은, JJ" aria-label="닉네임"><p class="aj-nick-status" role="status" aria-live="polite"></p><button type="submit" class="aj-gate-btn">이 이름으로 저장</button><button type="button" class="aj-nick-later">나중에 할게요</button></form>';
     const form = box.querySelector('form'), note = box.querySelector('.aj-nick-status');
-    box.querySelector('.aj-nick-later').addEventListener('click', () => { try { sessionStorage.setItem('aj-nick-later', '1'); } catch (_) { /* 이번 화면에서만 닫힘 */ } box.remove(); });
+    box.querySelector('.aj-nick-later').addEventListener('click', () => { try { sessionStorage.setItem('aj-nick-later', '1'); } catch (_) { /* 이번 화면에서만 닫힘 */ } box.remove(); nameBar(); });
     form.addEventListener('submit', async event => {
       event.preventDefault(); const nickname = form.elements.nickname.value.trim();
       if (nickname.length < 2) { note.textContent = '두 글자 이상으로 써 주세요.'; form.elements.nickname.focus(); return; }

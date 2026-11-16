@@ -228,3 +228,28 @@ body.dashboard-shell .dialog .phrase-card p{color:var(--chalk) !important;opacit
 
 /* 관리자 왼쪽 메뉴에서 '단어·문장'은 뺀다 — 수업 줄의 '단어·문장 넣기'로 들어간다 */
 .teacher-sidebar nav [data-tab="daily"]{display:none !important}
+
+/* ───── 이번 주 달리기 현황 ───── */
+.mvpr{margin:10px 0 4px;padding:16px 18px;border-radius:22px;background:var(--booth);border:1px solid var(--hair)}
+.mvpr-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.mvpr-head strong{font-size:16px;font-weight:800;color:var(--chalk)}
+.mvpr-head small{font-size:13px;color:var(--mist)}
+.mvpr-lanes{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.mvpr-lanes li{display:grid;grid-template-columns:minmax(96px,150px) minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 10px;border-radius:14px}
+.mvpr-lanes li.is-me{background:var(--lamp-soft)}
+.mvpr-name{display:flex;align-items:center;gap:6px;min-width:0;font-size:14px;font-weight:700;color:var(--chalk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mvpr-name b{flex:0 0 22px;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--booth-3);font-size:12px}
+.mvpr-name i{font-style:normal;padding:1px 7px;border-radius:999px;background:var(--lamp);color:var(--lamp-ink);font-size:11px}
+.mvpr-name u{text-decoration:none;padding:1px 7px;border-radius:999px;background:var(--booth-3);color:var(--mist);font-size:11px}
+.mvpr-track{position:relative;height:34px;margin-right:34px;border-bottom:3px dashed var(--hair-2)}
+.mvpr-track:after{content:"";position:absolute;right:-34px;top:2px;bottom:-3px;width:6px;border-radius:3px;background:repeating-linear-gradient(180deg,var(--chalk) 0 5px,var(--booth) 5px 10px)}
+.mvpr-runner{position:absolute;bottom:-2px;width:34px;height:34px;transition:left .6s ease}
+.mvpr-runner svg,.mvpr-runner .mvpw-avatar{width:34px;height:34px}
+.mvpr-lanes em{font-style:normal;font-size:13px;font-weight:800;color:var(--lamp-text);white-space:nowrap}
+.mvpr-empty{margin:0;font-size:14px;color:var(--mist)}
+@media (max-width:520px){.mvpr-lanes li{grid-template-columns:minmax(0,1fr) auto}.mvpr-track{grid-column:1 / -1;grid-row:2}}
+@media (prefers-reduced-motion:reduce){.mvpr-runner{transition:none}}
+/* 이름 등록 안내 띠 */
+#aj-name-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:12px 16px;border-radius:18px;background:color-mix(in srgb,var(--gold,#f5c518) 20%,var(--booth));border:1px solid color-mix(in srgb,var(--gold,#f5c518) 50%,var(--hair));font-size:14.5px;color:var(--chalk)}
+#aj-name-bar button{min-height:40px;padding:0 16px;border:0;border-radius:999px;background:var(--lamp);color:var(--lamp-ink);font:inherit;font-size:14px;font-weight:800;cursor:pointer}
+#mvp-week-top .mvpw{margin:0 0 12px}

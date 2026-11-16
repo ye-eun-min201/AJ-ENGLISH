@@ -16,7 +16,7 @@
   function mount(container, initial = {}) {
     if (!container?.replaceChildren) throw new Error('HomeEntry requires a container.');
     let state = initial.state || {}, content = initial.content || {}, nextDay = initial.nextDay || { id: 1 };
-    let destroyed = false, busy = '', error = '', actionVersion = 0;
+    let destroyed = false, busy = '', error = '', actionVersion = 0, today = null;
     const root = document.createElement('section'); root.className = 'home-entry'; root.setAttribute('aria-label', '오늘의 복습과 다음 수업');
     container.replaceChildren(root);
     const $ = selector => root.querySelector(selector);
@@ -63,17 +63,17 @@
       const timeText = progress.unknown ? '수업 시간 집계 확인' : progress.minutes + '분 / 20분';
       const name = state.user?.nickname ? String(state.user.nickname) : '';
       const quests = [
-        { key: 'rail', title: '레일 퀘스트', note: '게임 칸에서 몇 번이든 풀 수 있어요', done: railDone(), go: '출발' },
-        { key: 'words', title: '단어 카드', note: '오늘의 단어·문장 뒤집어 보기', done: false, go: '뒤집기', disabled: typeof initial.onWords !== 'function' },
-        { key: 'start', title: '20분 복습', note: (content.activeChapter?.number && !content.usingFallback ? content.activeChapter.number + '주차 · ' : '') + 'DAY ' + current.id + ' · ' + current.title, done: progress.completed, go: current.active ? '이어하기' : progress.completed ? '한 번 더' : '시작', disabled: typeof initial.onStart !== 'function', meter: progress.percent, meterText: timeText }
+        { key: 'rail', title: '레일 퀘스트', note: '게임 칸에서 몇 번이든 풀 수 있어요', done: today ? !!today.rail : railDone(), go: '출발' },
+        { key: 'words', title: '단어 카드', note: '오늘의 단어·문장 뒤집어 보기', done: !!today?.words, go: '뒤집기', disabled: typeof initial.onWords !== 'function' },
+        { key: 'start', title: '20분 복습', note: (content.activeChapter?.number && !content.usingFallback ? content.activeChapter.number + '주차 · ' : '') + 'DAY ' + current.id + ' · ' + current.title, done: progress.completed || !!today?.study, go: current.active ? '이어하기' : progress.completed ? '한 번 더' : '시작', disabled: typeof initial.onStart !== 'function', meter: progress.percent, meterText: timeText }
       ];
       // 선생님이 올린 리딩이 있으면 맨 앞 퀘스트로 — 가장 최근 날짜의 글
       const latest = Array.isArray(content.readings) ? content.readings[0] : null;
-      if (latest) quests.unshift({ key: 'reading', title: '오늘의 리딩', note: (window.AJDaily ? window.AJDaily.dateLabel(latest.date, false) + ' · ' : '') + (latest.title || '읽을 글') + (latest.words ? ' · 단어 ' + latest.words + '개' : ''), done: !!window.DailyReading?.isDone(latest.date), go: '읽기', disabled: typeof initial.onReading !== 'function' });
+      if (latest) quests.unshift({ key: 'reading', title: '오늘의 리딩', note: (window.AJDaily ? window.AJDaily.dateLabel(latest.date, false) + ' · ' : '') + (latest.title || '읽을 글') + (latest.words ? ' · 단어 ' + latest.words + '개' : ''), done: !!window.DailyReading?.isDone(latest.date) || !!today?.reading, go: '읽기', disabled: typeof initial.onReading !== 'function' });
       const next = quests.find(q => !q.done && !q.disabled) || quests[0], doneCount = quests.filter(q => q.done).length;
       const avatar = window.CuteCharacters ? window.CuteCharacters.render(state.user?.avatar || { species: 0, outfit: 3, color: 3 }, 'qb-avatar') : '';
       const points = finite(state.progress?.points) ? state.progress.points : 0, streak = finite(state.progress?.streak) ? state.progress.streak : 0;
-      root.innerHTML = '<div class="qb"><div class="qb-hero"><div class="qb-char" aria-hidden="true">' + avatar + '</div><div class="qb-say"><p class="qb-hello">' + (name ? esc(name) + ', ' : '') + '오늘의 퀘스트가 도착했어요</p><h1>눌러서 바로 <em>시작</em></h1><div class="qb-chips"><span class="qb-chip"><i class="qb-star" aria-hidden="true"></i>퀘스트 ' + doneCount + ' / ' + quests.length + '</span><span class="qb-chip qb-class"><span data-he-class-label>다음 수업</span><time data-he-class-date></time><strong class="he-dday" data-he-dday></strong></span></div></div></div>' +
+      root.innerHTML = '<div class="qb"><div class="qb-hero"><div class="qb-char" aria-hidden="true">' + avatar + '</div><div class="qb-say"><p class="qb-hello">' + (name ? esc(name) + ', ' : '') + (doneCount === quests.length ? '오늘 퀘스트를 모두 깼어요!' : doneCount ? '퀘스트 ' + (quests.length - doneCount) + '개 남았어요' : '오늘의 퀘스트가 도착했어요') + '</p><h1>' + (doneCount === quests.length ? '오늘 <em>올 클리어</em>' : '눌러서 바로 <em>시작</em>') + '</h1><div class="qb-chips"><span class="qb-chip"><i class="qb-star" aria-hidden="true"></i>퀘스트 ' + doneCount + ' / ' + quests.length + '</span><span class="qb-chip qb-class"><span data-he-class-label>다음 수업</span><time data-he-class-date></time><strong class="he-dday" data-he-dday></strong></span></div></div></div>' +
         '<ol class="qb-quests">' + quests.map((q, n) => '<li class="' + (q.done ? 'is-done' : q === next ? 'is-next' : '') + '"><button type="button" class="qb-quest" data-he-action="' + q.key + '" ' + (busy || q.disabled ? 'disabled' : '') + '><span class="qb-no">QUEST ' + (n + 1) + '</span><span class="qb-ico" aria-hidden="true"><svg viewBox="0 0 24 24">' + (q.done ? '<path d="m5 12.5 4.5 4.5L19 7.5"/>' : ICON[q.key]) + '</svg></span><strong>' + q.title + '</strong><small>' + esc(q.note) + '</small>' + (q.meter !== undefined ? '<span class="qb-meter" role="progressbar" aria-label="오늘의 20분 복습" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + q.meter + '" aria-valuetext="' + esc(q.meterText) + '"><i style="width:' + q.meter + '%"></i></span><span class="qb-meter-text" data-he-time>' + esc(q.meterText) + '</span>' : '') + '<span class="qb-go">' + (q.done ? '완료 · 한 번 더' : (busy === q.key ? '여는 중' : q.go)) + ' <b aria-hidden="true">▶</b></span></button></li>').join('') + '</ol>' +
         '</div>' +
         '<p class="he-status" role="status" aria-live="polite">' + esc(error) + '</p>';
@@ -104,6 +104,7 @@
     root.addEventListener('click', onClick); document.addEventListener('visibilitychange', onVisible);
     const timer = setInterval(updateSchedule, 30000); render();
     return {
+      setToday(next) { if (destroyed || !next) return; today = next; render(); },
       update(nextState, nextContent, nextLesson) { if (destroyed) return; state = nextState || {}; content = nextContent || {}; nextDay = nextLesson || nextDay; render(); },
       destroy() { if (destroyed) return; destroyed = true; actionVersion++; clearInterval(timer); root.removeEventListener('click', onClick); document.removeEventListener('visibilitychange', onVisible); }
     };
