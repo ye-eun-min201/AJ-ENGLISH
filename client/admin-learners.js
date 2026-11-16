@@ -45,7 +45,7 @@
     // 반 관리: 반을 만들고, 아래 표에서 학생마다 소속 반을 고른다.
     function roomsHTML(rooms) {
       const list = Array.isArray(rooms) ? rooms : [];
-      return '<section class="al-rooms" aria-label="반 관리"><h2>반</h2><p>반을 만든 뒤, 아래 표에서 학생 이름 밑의 칸으로 소속 반을 골라 주세요. 고르면 바로 저장돼요.</p><form class="al-room-form" data-al-room-form><input name="name" maxlength="40" placeholder="새 반 이름 (예: 주일 오후반)" aria-label="새 반 이름"><button type="submit" class="button primary">반 만들기</button></form><ul class="al-room-list">' + (list.length ? list.map(room => '<li><strong>' + esc(room.name || '이름 없는 반') + '</strong><span>' + number(room.memberCount) + '명 · 입장 코드 ' + esc(room.code || '') + '</span><button type="button" class="al-room-remove" data-al-room-remove="' + esc(room.id) + '">지우기</button></li>').join('') : '<li class="al-room-empty">아직 만든 반이 없어요.</li>') + '</ul><p class="al-room-status" data-al-room-status role="status" aria-live="polite"></p></section>';
+      return '<section class="al-rooms" aria-label="반 관리"><h2>반</h2><p>반을 만든 뒤, 아래 표에서 학생 이름 밑의 칸으로 소속 반을 골라 주세요. 고르면 바로 저장돼요.</p><form class="al-room-form" data-al-room-form><input name="name" maxlength="40" placeholder="새 반 이름 (예: 주일 오후반)" aria-label="새 반 이름"><button type="submit" class="button primary">반 만들기</button></form><ul class="al-room-list">' + (list.length ? list.map(room => '<li><strong>' + esc(room.name || '이름 없는 반') + '</strong><span>' + number(room.memberCount) + '명 · 입장 코드 ' + esc(room.code || '') + '</span><button type="button" class="al-room-fill" data-al-room-fill="' + esc(room.id) + '" data-name="' + esc(room.name || '') + '">반 없는 학생 모두 넣기</button><button type="button" class="al-room-remove" data-al-room-remove="' + esc(room.id) + '">지우기</button></li>').join('') : '<li class="al-room-empty">아직 만든 반이 없어요.</li>') + '</ul><p class="al-room-status" data-al-room-status role="status" aria-live="polite"></p></section>';
     }
     function learnerHTML(learner) {
       const mine = Array.isArray(learner.rooms) ? learner.rooms : [], currentRoom = (mine.find(room => room.isCurrent) || mine[0] || {}).id || '';
@@ -113,6 +113,8 @@
       catch (error) { select.disabled = false; roomNote(error.message, true); }
     });
     host.addEventListener('click', async event => {
+      const fill = event.target.closest('[data-al-room-fill]');
+      if (fill && !destroyed) { fill.disabled = true; try { const result = await config.request('admin/room/fill', { roomId: fill.dataset.alRoomFill }); const name = fill.dataset.name; await load(); roomNote(result.added ? '반 없던 학생 ' + result.added + '명을 ‘' + name + '’에 넣었어요.' : '반 없는 학생이 없어요.'); } catch (error) { fill.disabled = false; roomNote(error.message, true); } return; }
       const button = event.target.closest('[data-al-room-remove]'); if (!button || destroyed) return;
       if (removeArmed !== button.dataset.alRoomRemove) { removeArmed = button.dataset.alRoomRemove; button.textContent = '한 번 더 누르면 지워요'; setTimeout(() => { if (removeArmed === button.dataset.alRoomRemove) { removeArmed = null; if (button.isConnected) button.textContent = '지우기'; } }, 4000); return; }
       removeArmed = null;

@@ -1233,6 +1233,14 @@ async function handleTeaching(request, env, now = Date.now(), baseCourses = {}) 
         await env.DB.batch([env.DB.prepare('DELETE FROM room_members WHERE user_id = ?').bind(learner.user_id), ...(roomId ? [env.DB.prepare('INSERT OR IGNORE INTO room_members (room_id, user_id, joined_at) VALUES (?, ?, ?)').bind(roomId, learner.user_id, now)] : []), env.DB.prepare('UPDATE profiles SET current_room_id = ? WHERE user_id = ?').bind(roomId, learner.user_id)]);
         return json({ assigned: true, roomId });
       }
+      // 반이 없는 학생을 한 번에 이 반에 넣는다.
+      if (path === '/api/admin/room/fill' && request.method === 'POST') {
+        const body = await jsonBody(request), roomId = identifier(body.roomId, '반');
+        if (!await first(env.DB, 'SELECT id FROM rooms WHERE id = ?', roomId)) fail(404, 'room_not_found', '반을 찾을 수 없어요.');
+        const loose = await all(env.DB, 'SELECT p.user_id FROM profiles p WHERE NOT EXISTS (SELECT 1 FROM room_members m WHERE m.user_id = p.user_id)');
+        if (loose.length) await env.DB.batch(loose.flatMap(row => [env.DB.prepare('INSERT OR IGNORE INTO room_members (room_id, user_id, joined_at) VALUES (?, ?, ?)').bind(roomId, row.user_id, now), env.DB.prepare('UPDATE profiles SET current_room_id = ? WHERE user_id = ?').bind(roomId, row.user_id)]));
+        return json({ added: loose.length, roomId });
+      }
       if (path === '/api/admin/room/remove' && request.method === 'POST') {
         const body = await jsonBody(request), roomId = identifier(body.roomId, '반');
         await env.DB.batch([env.DB.prepare('UPDATE profiles SET current_room_id = NULL WHERE current_room_id = ?').bind(roomId), env.DB.prepare('DELETE FROM room_members WHERE room_id = ?').bind(roomId), env.DB.prepare('DELETE FROM rooms WHERE id = ?').bind(roomId)]);
