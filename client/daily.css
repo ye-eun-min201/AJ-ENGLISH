@@ -258,3 +258,9 @@ body.dashboard-shell .dialog .phrase-card p{color:var(--chalk) !important;opacit
 body.dashboard-shell .dialog .orange-word.missing{background:#fff !important;border:2px solid #d64545 !important;color:#b3261e !important;font-weight:700}
 html[data-theme="dark"] body.dashboard-shell .dialog .orange-word.missing{background:#2a1416 !important;border-color:#ff8a8a !important;color:#ffb4b4 !important}
 .orange-word.near{text-decoration:underline dotted;text-underline-offset:3px}
+
+/* 말하기: 열 번 시도하면 나오는 넘어가기 */
+.orange-skip-row{display:grid;gap:10px;justify-items:center;margin:14px 0 4px}
+.orange-skip-row:has(> [hidden]:first-child):has(> [hidden]:last-child){display:none}
+.orange-tries{margin:0;font-size:13px;line-height:1.6;color:var(--mist,#4e5968);text-align:center}
+.orange-skip{width:100%;min-height:48px;font-size:15px}

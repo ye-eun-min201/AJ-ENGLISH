@@ -58,11 +58,13 @@ async function award(db,{id,user,room,category,mode,points,coins=0,seconds=0,now
  const awardIndex=queries.length;
  let requested='?',requestedArgs=[points],conditions='1=1',conditionArgs=[];
  if(completeRun){
-  requested="MAX(0,(CASE WHEN EXISTS(SELECT 1 FROM activity_answers WHERE run_id=?) THEN 4+2*COALESCE((SELECT SUM(correct) FROM activity_answers WHERE run_id=?),0) ELSE ? END)-COALESCE((SELECT SUM(points) FROM activity_awards WHERE id LIKE ?),0))";
-  requestedArgs=[completeRun,completeRun,points,'answer:'+completeRun+':%'];
+  // 한 판 점수 = 4 + 맞힌 문장마다 2. 말하기에서 넘어간 문장은 끝낸 것으로 치되, 한 문장 몫(전체의 1/문장 수)의 절반을 덜어 낸다. 넘어간 문장이 없으면 예전 계산과 같다.
+  const skips="(SELECT COUNT(*) FROM activity_answers WHERE run_id=? AND answer='__skip__')";
+  requested="MAX(0,(CASE WHEN EXISTS(SELECT 1 FROM activity_answers WHERE run_id=?) THEN CAST(ROUND((4+2*COALESCE((SELECT SUM(correct) FROM activity_answers WHERE run_id=?),0)+2*"+skips+")*(1-0.5*"+skips+"/MAX(1,(SELECT COUNT(*) FROM activity_answers WHERE run_id=?)))) AS INTEGER) ELSE ? END)-COALESCE((SELECT SUM(points) FROM activity_awards WHERE id LIKE ?),0))";
+  requestedArgs=[completeRun,completeRun,completeRun,completeRun,completeRun,points,'answer:'+completeRun+':%'];
   conditions='EXISTS(SELECT 1 FROM activity_runs WHERE id=? AND user_id=? AND finished_at IS NULL)';conditionArgs=[completeRun,user];
  }else if(answer){
-  conditions='EXISTS(SELECT 1 FROM activity_runs WHERE id=? AND user_id=? AND finished_at IS NULL) AND EXISTS(SELECT 1 FROM activity_answers WHERE run_id=? AND question_index=? AND correct=1)';conditionArgs=[answer.runId,user,answer.runId,answer.index];
+  conditions='EXISTS(SELECT 1 FROM activity_runs WHERE id=? AND user_id=? AND finished_at IS NULL) AND EXISTS(SELECT 1 FROM activity_answers WHERE run_id=? AND question_index=? AND (correct=1 OR answer=\'__skip__\'))';conditionArgs=[answer.runId,user,answer.runId,answer.index];
  }
  if(noReward){conditions='0=1';conditionArgs=[];}
  queries.push(db.prepare(`INSERT OR IGNORE INTO activity_awards (id,user_id,room_id,category,mode,points,coins,seconds,local_date,month,created_at) SELECT ?,?,?,?,?,MIN(${requested},MAX(0,?-COALESCE((SELECT SUM(points) FROM activity_awards WHERE user_id=? AND local_date=? AND category=?),0))),0,?,?,?,? WHERE ${conditions}`).bind(id,user,room,category,mode,...requestedArgs,cap,user,date,category,seconds,date,month,now,...conditionArgs));
@@ -154,15 +156,16 @@ export async function handleActivity(request,env,content,fallback=[],now=Date.no
    const total=ch.cards?.length||0;
    if(!Number.isInteger(body.index)||body.index<0||body.index>=total)ae(400,'문제 번호 확인');
    if(typeof body.answer!=='string'||body.answer.length>2000)ae(400,'답안 형식 확인');
+   const skip=body.skip===true;if(skip){if(run.mode!=='speaking'||ch.daily===true)ae(400,'넘어가기는 말하기에서만 쓸 수 있어요.');if(!Number.isInteger(body.attempts)||body.attempts<10)ae(400,'열 번 시도한 뒤에 넘어갈 수 있어요.');}
    const previous=await af(db,'SELECT * FROM activity_answers WHERE run_id=? AND question_index=?',run.id,body.index);
    const minimum=2000*(body.index+1);if(!previous&&elapsed<minimum)ae(409,'풀이 시간 확인',{retryAfterMs:minimum-elapsed});
-   const grade=agrade(run,ch,body.index,body.answer),expected=grade.expected,correct=grade.correct;
-   const result=await award(db,{id:'answer:'+run.id+':'+body.index,user,room:room?.id||null,category:'game',mode:run.mode,points:2,now,cap:40,answer:{runId:run.id,index:body.index,value:body.answer,correct},pass:ch.daily===true&&correct?{runId:run.id,index:body.index}:null,noReward:ch.practice===true});
+   const grade=skip?{expected:ch.cards[body.index].en,correct:false}:agrade(run,ch,body.index,body.answer),expected=grade.expected,correct=grade.correct;
+   const result=await award(db,{id:'answer:'+run.id+':'+body.index,user,room:room?.id||null,category:'game',mode:run.mode,points:skip?1:2,now,cap:40,answer:{runId:run.id,index:body.index,value:skip?'__skip__':(body.answer==='__skip__'?'':body.answer),correct},pass:ch.daily===true&&correct?{runId:run.id,index:body.index}:null,noReward:ch.practice===true});
    const saved=await af(db,'SELECT answer,correct FROM activity_answers WHERE run_id=? AND question_index=?',run.id,body.index);
    if(!saved)ae(409,'완료된 게임');
    const progress=await af(db,'SELECT COUNT(*) AS answered,COALESCE(SUM(correct),0) AS correct FROM activity_answers WHERE run_id=?',run.id);
    if(ch.daily===true){const state=await adailyState(db,run,now,true),record=state.answers.find(a=>a.index===body.index);return aj({index:body.index,answer:saved.answer,correct:!!saved.correct,firstCorrect:!!saved.correct,passed:!!record?.passed,correctAnswer:expected,points:result.points,coins:result.coins,pointsAwarded:record?.pointsAwarded||0,alreadyAnswered:!result.answerInserted,progress:state.progress,earnedPoints:state.earnedPoints,earnedCoins:state.earnedCoins,dailyCap:40});}
-   return aj({index:body.index,answer:saved.answer,correct:!!saved.correct,correctAnswer:expected,points:result.points,coins:result.coins,alreadyAnswered:!result.answerInserted,progress:{...progress,total},dailyCap:40});
+   return aj({index:body.index,answer:saved.answer,correct:!!saved.correct,skipped:saved.answer==='__skip__',correctAnswer:expected,points:result.points,coins:result.coins,alreadyAnswered:!result.answerInserted,progress:{...progress,total},dailyCap:40});
   }
   if(p==='/api/activity/complete'){
    if(typeof body.runId!=='string'||body.runId.length>100)ae(400,'게임 기록 확인');
@@ -176,8 +179,10 @@ export async function handleActivity(request,env,content,fallback=[],now=Date.no
    }else{
     if(!Array.isArray(body.answers)||body.answers.length!==total)ae(400,ch.daily===true?'10문제 답안 확인':'세 문제를 모두 완료해 주세요.');
    if(ch.daily===true){const state=await adailyState(db,run,now,true);if(state.progress.answered!==total||state.progress.passed!==total)ae(409,'10문제 정답 확인 필요',{progress:state.progress});}
-    for(let i=0;i<total;i++){const answer=typeof body.answers[i]==='string'?body.answers[i]:body.answers[i]?.answer;if(agrade(run,ch,i,answer).correct)score++;}
-    if(run.mode!=='listening'&&score!==total)ae(400,'모든 표현을 정확히 완료해야 해요.');
+    // 말하기에서 넘어간 문장은 끝낸 것으로 치되 점수는 절반으로 센다.
+    const skipped=run.mode==='speaking'?new Set((await aa(db,"SELECT question_index AS i FROM activity_answers WHERE run_id=? AND answer='__skip__'",run.id)).map(row=>row.i)):new Set();let done=0;
+    for(let i=0;i<total;i++){if(skipped.has(i)){score+=0.5;done++;continue;}const answer=typeof body.answers[i]==='string'?body.answers[i]:body.answers[i]?.answer;if(agrade(run,ch,i,answer).correct){score++;done++;}}
+    if(run.mode!=='listening'&&done!==total)ae(400,'모든 표현을 정확히 완료해야 해요.');
    }
    const reward=await award(db,{id:run.id,user,room:room?.id||null,category:'game',mode:run.mode,points:Math.round(2+8*score/total),coins:2,seconds:Math.min(seconds,300),now,cap:40,completeRun:run.id,noReward:ch.practice===true});
    const firstAttempts=await af(db,'SELECT COUNT(*) AS answered,COALESCE(SUM(correct),0) AS correct FROM activity_answers WHERE run_id=?',run.id);

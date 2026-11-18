@@ -337,7 +337,7 @@ function normalizeSpeech(value) { return value.normalize('NFKC').toLowerCase().r
 function speechSame(a, b) { if (a === b) return true; const short = a.length <= b.length ? a : b, long = short === a ? b : a; if (short.length < 3 || long.length - short.length > 4) return false; const tails = (base, list) => long.startsWith(base) && list.includes(long.slice(base.length)); if (tails(short, ['s','es','ed','ing'])) return true; if (short.endsWith('e') && (tails(short, ['d']) || tails(short.slice(0,-1), ['ing']))) return true; if (short.endsWith('y') && tails(short.slice(0,-1) + 'i', ['es','ed'])) return true; if (/[^aeiou][aeiou][^aeiouwxy]$/.test(short) && tails(short + short.slice(-1), ['ed','ing'])) return true; return false; }
 function compareSpeech(expected, actual) { const a = normalizeSpeech(expected).split(' ').filter(Boolean), b = normalizeSpeech(actual).split(' ').filter(Boolean); const passed = a.length > 0 && a.length === b.length && a.every((word,i) => speechSame(word, b[i])); const dp = Array(b.length + 1).fill(0); for (const word of a) { let previous = 0; for (let j = 1; j <= b.length; j++) { const old = dp[j]; dp[j] = speechSame(word, b[j-1]) ? previous + 1 : Math.max(dp[j], dp[j-1]); previous = old; } } return { passed, match: passed ? 100 : Math.min(99, Math.round(100 * dp[b.length] / Math.max(a.length, b.length, 1))) }; }
 function lessonForSession(session,courses){try{const stored=JSON.parse(session.lesson_json||'{}');if(Array.isArray(stored.phrases)&&Array.isArray(stored.quiz)&&stored.phrases.length&&stored.quiz.length)return stored;}catch{}return getLesson(courses,session.course,session.day);}
-async function sessionView(db, session, courses, now) { if (!session) return null; const lesson = lessonForSession(session,courses); const answers = await all(db, 'SELECT question_index AS questionIndex, answer_index AS answerIndex, correct FROM quiz_answers WHERE session_id = ? ORDER BY question_index', session.id); return { id: session.id, day: session.day, course: session.course, startedAt: session.started_at, finishedAt: session.finished_at, elapsedSeconds: session.finished_at ? session.elapsed_seconds : Math.min(1800, Math.max(0, Math.floor((now - session.started_at) / 1000))), questions: lesson.quiz.map(q => ({ q: q.q, options: q.options })), answers, speechPassed: speechPasses(session.speech_json),lesson,chapterId:session.chapter_id||null }; }
+async function sessionView(db, session, courses, now) { if (!session) return null; const lesson = lessonForSession(session,courses); const answers = await all(db, 'SELECT question_index AS questionIndex, answer_index AS answerIndex, correct FROM quiz_answers WHERE session_id = ? ORDER BY question_index', session.id); return { id: session.id, day: session.day, course: session.course, startedAt: session.started_at, finishedAt: session.finished_at, elapsedSeconds: session.finished_at ? session.elapsed_seconds : Math.min(1800, Math.max(0, Math.floor((now - session.started_at) / 1000))), questions: lesson.quiz.map(q => ({ q: q.q, options: q.options })), answers, speechPassed: speechPasses(session.speech_json),speechSkipped: speechPasses(session.speech_skip_json),lesson,chapterId:session.chapter_id||null }; }
 
 /** x-aj-user-id 헤더는 server/adapter.mjs가 로그인 쿠키를 확인한 뒤에만 넣는다. 브라우저가 보낸 값은 어댑터에서 지운다. */
 async function handleApi(request, env, courses, now = Date.now()) {
@@ -544,6 +544,14 @@ async function handleApi(request, env, courses, now = Date.now()) {
       if (session.finished_at) fail(409, 'session_finished', '이미 마친 미션입니다.');
       const lesson = lessonForSession(session,courses);
       if (!Number.isInteger(body.index) || body.index < 0 || body.index >= (lesson.phrases?.length || 0)) fail(400, 'invalid_phrase', '말하기 문장을 다시 선택해 주세요.');
+      // 넘어가기: 열 번 넘게 시도해도 안 된 문장은 통과로 치되, 넘어간 문장으로 따로 적어 두고 점수를 절반만 준다.
+      if (body.skip === true) {
+        if (!Number.isInteger(body.attempts) || body.attempts < 10) fail(400, 'skip_too_early', '열 번 시도한 뒤에 넘어갈 수 있어요.');
+        const done = speechPasses(session.speech_json).includes(body.index);
+        if (!done) await db.prepare("UPDATE learning_sessions SET speech_json = json_insert(speech_json, '$[#]', ?), speech_skip_json = json_insert(speech_skip_json, '$[#]', ?) WHERE id = ? AND user_id = ? AND finished_at IS NULL AND NOT EXISTS (SELECT value FROM json_each(speech_json) WHERE value = ?)").bind(body.index, body.index, session.id, userId, body.index).run();
+        const after = await readSession(db, userId, session.id);
+        return json({ passed: true, skipped: !done, match: 0, expected: lesson.phrases[body.index].en, transcript: '', speechPassed: speechPasses(after.speech_json), speechSkipped: speechPasses(after.speech_skip_json) });
+      }
       if (typeof body.transcript !== 'string' || !body.transcript.trim() || body.transcript.length > 1000) fail(400, 'invalid_transcript', '인식된 영어 문장을 확인한 뒤 다시 말해 주세요.');
       const expected = lesson.phrases[body.index].en;
       const transcript = body.transcript.trim();
@@ -564,7 +572,10 @@ async function handleApi(request, env, courses, now = Date.now()) {
       const seconds = session.finished_at ? session.elapsed_seconds : Math.min(1800, Math.max(0, Math.floor((now - session.started_at) / 1000)));
       const ratio = Math.min(1, seconds / 1200);
       const rewardRoom = await activeRoom(db, userId, profile);
-      const points = Math.floor((80 + 20 * answerStats.correct / lesson.quiz.length) * ratio);
+      // 말하기 문장 하나는 전체 점수의 (1 / 문장 수) 몫. 넘어간 문장은 그 몫의 절반만 받는다.
+      const skippedSpeech = speechPasses(session.speech_skip_json).filter(index => passedSpeech.includes(index)).length;
+      const speechShare = 1 - 0.5 * Math.min(1, skippedSpeech / lesson.phrases.length);
+      const points = Math.floor((80 + 20 * answerStats.correct / lesson.quiz.length) * ratio * speechShare);
       // Reward date is the completion date; one reward per account per Korean calendar day.
       // These statements run atomically. The applied flag also makes replay/concurrent calls idempotent.
       await db.batch([
@@ -575,7 +586,7 @@ async function handleApi(request, env, courses, now = Date.now()) {
       ]);
       const reward = await first(db, 'SELECT id, points, seconds, local_date AS date FROM learning_rewards WHERE user_id = ? AND local_date = ?', userId, today);
       profile = await first(db, 'SELECT * FROM profiles WHERE user_id = ?', userId);
-      return json({ sessionId: session.id, points: reward?.id === session.id ? reward.points : 0, coins: reward?.id === session.id ? Math.floor(reward.points / 5) : 0, dailyPoints: reward?.points || 0, seconds, alreadyFinished: !!session.finished_at, dailyLimitReached: !!reward && reward.id !== session.id, user: userView(profile), rules: '하루 한 번 보상됩니다. 20분 학습과 퀴즈 정답 비율로 최대 100포인트·20코인을 받습니다. 학습 시간은 서버에서 시작부터 완료까지 측정하며 말하기 내용 자체를 평가하지 않습니다.' });
+      return json({ sessionId: session.id, points: reward?.id === session.id ? reward.points : 0, coins: reward?.id === session.id ? Math.floor(reward.points / 5) : 0, dailyPoints: reward?.points || 0, seconds, speechSkipped: skippedSpeech, alreadyFinished: !!session.finished_at, dailyLimitReached: !!reward && reward.id !== session.id, user: userView(profile), rules: '하루 한 번 보상됩니다. 20분 학습과 퀴즈 정답 비율로 최대 100포인트·20코인을 받습니다. 말하기에서 넘어간 문장은 그 문장 몫의 절반만 받습니다. 학습 시간은 서버에서 시작부터 완료까지 측정합니다.' });
     }
     fail(404, 'not_found', '요청한 기능을 찾을 수 없습니다.');
   } catch (error) {
@@ -1500,11 +1511,13 @@ async function award(db,{id,user,room,category,mode,points,coins=0,seconds=0,now
  const awardIndex=queries.length;
  let requested='?',requestedArgs=[points],conditions='1=1',conditionArgs=[];
  if(completeRun){
-  requested="MAX(0,(CASE WHEN EXISTS(SELECT 1 FROM activity_answers WHERE run_id=?) THEN 4+2*COALESCE((SELECT SUM(correct) FROM activity_answers WHERE run_id=?),0) ELSE ? END)-COALESCE((SELECT SUM(points) FROM activity_awards WHERE id LIKE ?),0))";
-  requestedArgs=[completeRun,completeRun,points,'answer:'+completeRun+':%'];
+  // 한 판 점수 = 4 + 맞힌 문장마다 2. 말하기에서 넘어간 문장은 끝낸 것으로 치되, 한 문장 몫(전체의 1/문장 수)의 절반을 덜어 낸다. 넘어간 문장이 없으면 예전 계산과 같다.
+  const skips="(SELECT COUNT(*) FROM activity_answers WHERE run_id=? AND answer='__skip__')";
+  requested="MAX(0,(CASE WHEN EXISTS(SELECT 1 FROM activity_answers WHERE run_id=?) THEN CAST(ROUND((4+2*COALESCE((SELECT SUM(correct) FROM activity_answers WHERE run_id=?),0)+2*"+skips+")*(1-0.5*"+skips+"/MAX(1,(SELECT COUNT(*) FROM activity_answers WHERE run_id=?)))) AS INTEGER) ELSE ? END)-COALESCE((SELECT SUM(points) FROM activity_awards WHERE id LIKE ?),0))";
+  requestedArgs=[completeRun,completeRun,completeRun,completeRun,completeRun,points,'answer:'+completeRun+':%'];
   conditions='EXISTS(SELECT 1 FROM activity_runs WHERE id=? AND user_id=? AND finished_at IS NULL)';conditionArgs=[completeRun,user];
  }else if(answer){
-  conditions='EXISTS(SELECT 1 FROM activity_runs WHERE id=? AND user_id=? AND finished_at IS NULL) AND EXISTS(SELECT 1 FROM activity_answers WHERE run_id=? AND question_index=? AND correct=1)';conditionArgs=[answer.runId,user,answer.runId,answer.index];
+  conditions='EXISTS(SELECT 1 FROM activity_runs WHERE id=? AND user_id=? AND finished_at IS NULL) AND EXISTS(SELECT 1 FROM activity_answers WHERE run_id=? AND question_index=? AND (correct=1 OR answer=\'__skip__\'))';conditionArgs=[answer.runId,user,answer.runId,answer.index];
  }
  if(noReward){conditions='0=1';conditionArgs=[];}
  queries.push(db.prepare(`INSERT OR IGNORE INTO activity_awards (id,user_id,room_id,category,mode,points,coins,seconds,local_date,month,created_at) SELECT ?,?,?,?,?,MIN(${requested},MAX(0,?-COALESCE((SELECT SUM(points) FROM activity_awards WHERE user_id=? AND local_date=? AND category=?),0))),0,?,?,?,? WHERE ${conditions}`).bind(id,user,room,category,mode,...requestedArgs,cap,user,date,category,seconds,date,month,now,...conditionArgs));
@@ -1596,15 +1609,16 @@ async function handleActivity(request,env,content,fallback=[],now=Date.now()){
    const total=ch.cards?.length||0;
    if(!Number.isInteger(body.index)||body.index<0||body.index>=total)ae(400,'문제 번호 확인');
    if(typeof body.answer!=='string'||body.answer.length>2000)ae(400,'답안 형식 확인');
+   const skip=body.skip===true;if(skip){if(run.mode!=='speaking'||ch.daily===true)ae(400,'넘어가기는 말하기에서만 쓸 수 있어요.');if(!Number.isInteger(body.attempts)||body.attempts<10)ae(400,'열 번 시도한 뒤에 넘어갈 수 있어요.');}
    const previous=await af(db,'SELECT * FROM activity_answers WHERE run_id=? AND question_index=?',run.id,body.index);
    const minimum=2000*(body.index+1);if(!previous&&elapsed<minimum)ae(409,'풀이 시간 확인',{retryAfterMs:minimum-elapsed});
-   const grade=agrade(run,ch,body.index,body.answer),expected=grade.expected,correct=grade.correct;
-   const result=await award(db,{id:'answer:'+run.id+':'+body.index,user,room:room?.id||null,category:'game',mode:run.mode,points:2,now,cap:40,answer:{runId:run.id,index:body.index,value:body.answer,correct},pass:ch.daily===true&&correct?{runId:run.id,index:body.index}:null,noReward:ch.practice===true});
+   const grade=skip?{expected:ch.cards[body.index].en,correct:false}:agrade(run,ch,body.index,body.answer),expected=grade.expected,correct=grade.correct;
+   const result=await award(db,{id:'answer:'+run.id+':'+body.index,user,room:room?.id||null,category:'game',mode:run.mode,points:skip?1:2,now,cap:40,answer:{runId:run.id,index:body.index,value:skip?'__skip__':(body.answer==='__skip__'?'':body.answer),correct},pass:ch.daily===true&&correct?{runId:run.id,index:body.index}:null,noReward:ch.practice===true});
    const saved=await af(db,'SELECT answer,correct FROM activity_answers WHERE run_id=? AND question_index=?',run.id,body.index);
    if(!saved)ae(409,'완료된 게임');
    const progress=await af(db,'SELECT COUNT(*) AS answered,COALESCE(SUM(correct),0) AS correct FROM activity_answers WHERE run_id=?',run.id);
    if(ch.daily===true){const state=await adailyState(db,run,now,true),record=state.answers.find(a=>a.index===body.index);return aj({index:body.index,answer:saved.answer,correct:!!saved.correct,firstCorrect:!!saved.correct,passed:!!record?.passed,correctAnswer:expected,points:result.points,coins:result.coins,pointsAwarded:record?.pointsAwarded||0,alreadyAnswered:!result.answerInserted,progress:state.progress,earnedPoints:state.earnedPoints,earnedCoins:state.earnedCoins,dailyCap:40});}
-   return aj({index:body.index,answer:saved.answer,correct:!!saved.correct,correctAnswer:expected,points:result.points,coins:result.coins,alreadyAnswered:!result.answerInserted,progress:{...progress,total},dailyCap:40});
+   return aj({index:body.index,answer:saved.answer,correct:!!saved.correct,skipped:saved.answer==='__skip__',correctAnswer:expected,points:result.points,coins:result.coins,alreadyAnswered:!result.answerInserted,progress:{...progress,total},dailyCap:40});
   }
   if(p==='/api/activity/complete'){
    if(typeof body.runId!=='string'||body.runId.length>100)ae(400,'게임 기록 확인');
@@ -1618,8 +1632,10 @@ async function handleActivity(request,env,content,fallback=[],now=Date.now()){
    }else{
     if(!Array.isArray(body.answers)||body.answers.length!==total)ae(400,ch.daily===true?'10문제 답안 확인':'세 문제를 모두 완료해 주세요.');
    if(ch.daily===true){const state=await adailyState(db,run,now,true);if(state.progress.answered!==total||state.progress.passed!==total)ae(409,'10문제 정답 확인 필요',{progress:state.progress});}
-    for(let i=0;i<total;i++){const answer=typeof body.answers[i]==='string'?body.answers[i]:body.answers[i]?.answer;if(agrade(run,ch,i,answer).correct)score++;}
-    if(run.mode!=='listening'&&score!==total)ae(400,'모든 표현을 정확히 완료해야 해요.');
+    // 말하기에서 넘어간 문장은 끝낸 것으로 치되 점수는 절반으로 센다.
+    const skipped=run.mode==='speaking'?new Set((await aa(db,"SELECT question_index AS i FROM activity_answers WHERE run_id=? AND answer='__skip__'",run.id)).map(row=>row.i)):new Set();let done=0;
+    for(let i=0;i<total;i++){if(skipped.has(i)){score+=0.5;done++;continue;}const answer=typeof body.answers[i]==='string'?body.answers[i]:body.answers[i]?.answer;if(agrade(run,ch,i,answer).correct){score++;done++;}}
+    if(run.mode!=='listening'&&done!==total)ae(400,'모든 표현을 정확히 완료해야 해요.');
    }
    const reward=await award(db,{id:run.id,user,room:room?.id||null,category:'game',mode:run.mode,points:Math.round(2+8*score/total),coins:2,seconds:Math.min(seconds,300),now,cap:40,completeRun:run.id,noReward:ch.practice===true});
    const firstAttempts=await af(db,'SELECT COUNT(*) AS answered,COALESCE(SUM(correct),0) AS correct FROM activity_answers WHERE run_id=?',run.id);

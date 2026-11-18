@@ -111,6 +111,7 @@
       '<div class="orange-target"><p class="orange-instruction">비즈니스 영어 문장 말하기</p><p class="orange-target-en"></p><p class="orange-target-ko"></p><div class="orange-word-list" aria-label="단어별 인식 결과"></div></div>' +
       '<div class="orange-actions"><button type="button" class="btn secondary orange-listen">◖ 먼저 듣기</button><button type="button" class="btn primary orange-mic">● 마이크로 말하기</button></div>' +
       '<div class="orange-recognition" role="status" aria-live="polite" aria-atomic="true"><div class="orange-match-head"><span>문장 인식 일치도</span><strong class="orange-percent">—</strong></div><div class="orange-match-track"><span></span></div><p class="orange-transcript">음성 인식 문장</p><p class="orange-message">문장 전체 인식 시 과일 1개 추가</p></div>' +
+      '<div class="orange-skip-row"><p class="orange-tries" role="status" aria-live="polite" hidden></p><button type="button" class="btn secondary orange-skip" hidden>넘어가기 · 점수 절반</button></div>' +
       '<p class="orange-disclaimer">문장 인식 결과 비교 · 정밀 발음 평가 미지원<br>음성 인식 시 브라우저 제공업체의 음성 처리 가능</p>';
     container.replaceChildren(root);
     const $ = sel => root.querySelector(sel);
@@ -120,6 +121,25 @@
     const percent = $('.orange-percent'), track = $('.orange-match-track > span');
     const transcriptText = $('.orange-transcript'), message = $('.orange-message');
     const crateSlots = $('.crate-slots'), crateCount = $('.crate-count');
+    // 여러 번 말해도 안 될 때: 정해진 횟수(기본 열 번)를 채우면 점수 절반으로 넘어갈 수 있다.
+    const triesText = $('.orange-tries'), skipButton = $('.orange-skip');
+    const canSkip = typeof options.onSkip === 'function';
+    const skipAfter = Number.isInteger(options.skipAfter) && options.skipAfter > 0 ? options.skipAfter : 10;
+    const tries = {};
+    Object.entries(options.initialTries || {}).forEach(([key, count]) => { const n = Number(key), c = Math.floor(Number(count)); if (Number.isInteger(n) && n >= 0 && n < targets.length && c > 0) tries[n] = Math.min(c, 999); });
+    function renderTries() {
+      const count = index >= 0 ? (tries[index] || 0) : 0, open = canSkip && !completed && index >= 0 && count >= skipAfter;
+      triesText.hidden = !canSkip || completed || index < 0 || count === 0;
+      triesText.textContent = open ? skipAfter + '번 시도했어요 · 넘어가면 이 문장 점수는 절반' : count + '번 시도 · ' + skipAfter + '번이 되면 넘어갈 수 있어요';
+      skipButton.hidden = !open;
+      skipButton.disabled = busy || listening || destroyed;
+    }
+    function addTry() {
+      if (!canSkip || index < 0) return;
+      tries[index] = Math.min(999, (tries[index] || 0) + 1);
+      if (typeof options.onTry === 'function') { try { options.onTry(index, tries[index]); } catch (_) { /* 기록 실패는 무시 */ } }
+      renderTries();
+    }
     function fruitKey(targetIndex = index) { return targets[targetIndex] && fruitArt[targets[targetIndex].fruit] ? targets[targetIndex].fruit : fruitOrder[Math.max(0, targetIndex) % fruitOrder.length]; }
     function renderCrate() {
       crateSlots.replaceChildren();
@@ -150,6 +170,7 @@
       micButton.disabled = blocked || !Recognition;
       micButton.textContent = listening ? '■ 말하기 중지' : '● 문장 말하기';
       micButton.classList.toggle('recording', listening);
+      renderTries();
     }
     function stopRecognition() {
       generation++;
@@ -211,21 +232,13 @@
       updateControls();
     }
 
-    async function acceptTranscript(value, currentGeneration) {
-      if (destroyed || busy || currentGeneration !== generation || index < 0) return;
-      const result = showTranscript(value);
-      if (!result.exact) {
-        setMessage('강조된 단어 확인 후 문장 전체 재시도', 'retry');
-        return;
-      }
+    // 통과(또는 넘어가기)를 서버에 확인받고, 과일을 상자에 넣은 뒤 다음 문장으로 간다.
+    async function settle(validate, successText, rewardLabel) {
       stopRecognition();
       busy = true; updateControls();
       const passingIndex = index;
-      setMessage('문장 전체 인식 · 통과 여부 확인 중', 'checking');
       try {
-        const validation = typeof options.onPass === 'function'
-          ? await options.onPass(passingIndex, value)
-          : { passed: false };
+        const validation = await validate(passingIndex);
         if (destroyed || passingIndex !== index) return;
         if (!validation || validation.passed !== true) {
           busy = false;
@@ -247,7 +260,7 @@
         else fruit.style['--crate-drop-x'] = dropX;
         scene.classList.add('shipping');
         requestAnimationFrame(() => { if (!destroyed) fruit.classList.add('is-passed'); });
-        setMessage(result.nearWords.length ? '통과 · 끝소리까지 또렷하게: ' + result.nearWords.join(', ') : '문장 인식 완료 · 과일 1개 추가', 'success');
+        setMessage(successText, 'success');
         advanceTimer = setTimeout(() => {
           if (destroyed) return;
           const before = Math.round(alreadyPassed.size / Math.max(1, targets.length) * 100);
@@ -256,8 +269,8 @@
           renderCrate();
           const after = Math.round(alreadyPassed.size / Math.max(1, targets.length) * 100);
           const points = Number.isInteger(validation.points) && validation.points > 0 ? validation.points : 0;
-          const banner = $('.harvest-success'); banner.textContent = '퀘스트 성공 · ' + alreadyPassed.size + ' / ' + targets.length + ' 수확'; banner.hidden = false;
-          if (window.AJRewards && typeof window.AJRewards.show === 'function') window.AJRewards.show({ anchor: root, points, progress: after, deltaProgress: after - before, label: '말하기 퀘스트 성공' });
+          const banner = $('.harvest-success'); banner.textContent = (validation.skipped ? '넘어가기 · ' : '퀘스트 성공 · ') + alreadyPassed.size + ' / ' + targets.length + ' 수확'; banner.hidden = false;
+          if (window.AJRewards && typeof window.AJRewards.show === 'function') window.AJRewards.show({ anchor: root, points, progress: after, deltaProgress: after - before, label: rewardLabel });
           clearTimeout(successTimer); successTimer = setTimeout(() => { if (!destroyed) banner.hidden = true; }, 2000);
           const nextIndex = targets.findIndex((_, n) => !alreadyPassed.has(n));
           if (nextIndex < 0) finish();
@@ -269,6 +282,27 @@
         setMessage(error && error.message ? error.message : '결과 저장 실패 · 연결 확인 후 재시도', 'error');
         updateControls();
       }
+    }
+
+    async function acceptTranscript(value, currentGeneration) {
+      if (destroyed || busy || currentGeneration !== generation || index < 0) return;
+      const result = showTranscript(value);
+      if (!result.exact) {
+        addTry();
+        setMessage('강조된 단어 확인 후 문장 전체 재시도', 'retry');
+        return;
+      }
+      setMessage('문장 전체 인식 · 통과 여부 확인 중', 'checking');
+      await settle(passingIndex => typeof options.onPass === 'function' ? options.onPass(passingIndex, value) : { passed: false },
+        result.nearWords.length ? '통과 · 끝소리까지 또렷하게: ' + result.nearWords.join(', ') : '문장 인식 완료 · 과일 1개 추가', '말하기 퀘스트 성공');
+    }
+
+    async function skipTarget() {
+      if (destroyed || busy || completed || index < 0 || !canSkip || (tries[index] || 0) < skipAfter) return;
+      const count = tries[index];
+      setMessage('넘어가는 중', 'checking');
+      await settle(async passingIndex => { const answer = await options.onSkip(passingIndex, count); return answer ? { ...answer, skipped: true } : answer; },
+        '넘어가기 · 이 문장 점수는 절반', '넘어가기 · 점수 절반');
     }
 
     const errorMessages = {
@@ -323,12 +357,13 @@
       instance.onerror = event => {
         if (destroyed || currentGeneration !== generation || busy) return;
         listening = false; updateControls();
+        if (event.error === 'no-speech') addTry();
         if (event.error !== 'aborted') setMessage(errorMessages[event.error] || '음성 인식 실패 · 마이크 선택 후 재시도', 'error');
       };
       instance.onend = () => {
         if (destroyed || currentGeneration !== generation) return;
         listening = false; recognition = null; clearTimeout(listenTimer); updateControls();
-        if (!finalReceived && root.dataset.state === 'listening') setMessage('인식 문장 없음 · 마이크 선택 후 재시도', 'retry');
+        if (!finalReceived && root.dataset.state === 'listening') { addTry(); setMessage('인식 문장 없음 · 마이크 선택 후 재시도', 'retry'); }
       };
       try {
         listening = true; updateControls();
@@ -353,6 +388,7 @@
 
     listenButton.addEventListener('click', playTarget);
     micButton.addEventListener('click', startListening);
+    skipButton.addEventListener('click', skipTarget);
     const destroy = () => {
       if (destroyed) return;
       destroyed = true;
@@ -360,6 +396,7 @@
       stopRecognition(); stopSpeech();
       listenButton.removeEventListener('click', playTarget);
       micButton.removeEventListener('click', startListening);
+      skipButton.removeEventListener('click', skipTarget);
       if (activeDestroy === destroy) activeDestroy = null;
     };
     activeDestroy = destroy;
