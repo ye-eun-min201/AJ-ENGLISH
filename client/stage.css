@@ -36,7 +36,7 @@
   --gold:#f5b301;           /* 코인·별 */
   --ok:#0aae6e;
   --scene:#dfe9ff;          /* 3D 놀이공원 하늘 */
-  --glass:var(--glass);
+  --glass:rgba(255,255,255,.9); /* 반투명 머리말·옆 메뉴 */
   --veil:rgba(25,31,40,.38);/* 창 뒤 가림막 */
   --drop:rgba(109,91,208,.22);/* 그림자 */
   --lift:0 3px 0 rgba(109,91,208,.14);              /* 알약·작은 단추 */
@@ -194,7 +194,7 @@ body.dashboard-shell input[type=range],body.aj-admin input[type=range]{accent-co
 /* ---------- 창(모달) ---------- */
 body.dashboard-shell :is(.modal-backdrop,.modal-overlay,.overlay){background:var(--veil) !important;backdrop-filter:blur(10px)}
 body.dashboard-shell .dialog{background:var(--deck) !important;border:1px solid var(--hair-2) !important;box-shadow:0 40px 120px -20px var(--drop),0 0 0 1px rgba(var(--lamp-glow),.06) !important}
-body.dashboard-shell .dialog :is(.dialog-head,.dialog-footer){background:var(--glass) !important;border-color:var(--hair) !important}
+body.dashboard-shell .dialog :is(.dialog-head,.dialog-footer){background:var(--booth) !important;border-color:var(--hair) !important}
 body.dashboard-shell .dialog-close{background:transparent !important;border:1px solid var(--hair-2) !important;color:var(--mist) !important;border-radius:999px !important}
 body.dashboard-shell .dialog-close:hover{color:var(--chalk) !important;border-color:var(--chalk) !important}
 body.dashboard-shell .toast{background:var(--chalk) !important;color:var(--on-chalk) !important;border:0 !important;font-weight:700;box-shadow:0 16px 50px -10px var(--drop)}

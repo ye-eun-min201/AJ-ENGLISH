@@ -18,7 +18,7 @@ function acollection(content,cards,collection){
  const seen=new Set(),source=[];for(const card of candidates){const key=anorm(card?.en);if(!key||!card?.ko||seen.has(key))continue;seen.add(key);source.push(card);}return source;
 }
 function acard(card,index,collection){return{id:card.id||'round-'+index,en:card.en,ko:card.ko,note:card.note||'',kind:card.kind||(collection==='words'?'단어':'표현'),studyDay:Number.isInteger(card.studyDay)&&card.studyDay>=1&&card.studyDay<=7?card.studyDay:null};}
-function agrade(run,challenge,index,value){const card=challenge.cards[index],english=run.mode!=='listening'||card.answerType==='english',expected=english?card.en:card.ko;return{expected,correct:english?anorm(value)===anorm(expected):String(value||'').trim()===String(expected).trim()};}
+function agrade(run,challenge,index,value){const card=challenge.cards[index],english=run.mode!=='listening'||card.answerType==='english',expected=english?card.en:card.ko;return{expected,correct:english?(run.mode==='speaking'?compareSpeech(String(expected||''),String(value||'')).passed:anorm(value)===anorm(expected)):String(value||'').trim()===String(expected).trim()};}
 function adailyDate(run,challenge,today){if(challenge.daily===true&&run.local_date!==today)ae(409,'새 날짜의 문제 확인',{restartDaily:true,today});}
 async function amastery(db,user){
  const history=await aa(db,`SELECT r.challenge_json,a.question_index FROM activity_answers a JOIN activity_runs r ON r.id=a.run_id WHERE r.user_id=? AND a.correct=1 UNION SELECT r.challenge_json,p.question_index FROM daily_rail_passes p JOIN activity_runs r ON r.id=p.run_id WHERE r.user_id=?`,user,user);

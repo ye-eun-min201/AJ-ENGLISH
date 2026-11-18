@@ -253,3 +253,8 @@ body.dashboard-shell .dialog .phrase-card p{color:var(--chalk) !important;opacit
 #aj-name-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:12px 16px;border-radius:18px;background:color-mix(in srgb,var(--gold,#f5c518) 20%,var(--booth));border:1px solid color-mix(in srgb,var(--gold,#f5c518) 50%,var(--hair));font-size:14.5px;color:var(--chalk)}
 #aj-name-bar button{min-height:40px;padding:0 16px;border:0;border-radius:999px;background:var(--lamp);color:var(--lamp-ink);font:inherit;font-size:14px;font-weight:800;cursor:pointer}
 #mvp-week-top .mvpw{margin:0 0 12px}
+
+/* 말하기: 다시 말할 단어는 또렷하게, 끝소리만 다르게 들린 단어는 점선 밑줄 */
+body.dashboard-shell .dialog .orange-word.missing{background:#fff !important;border:2px solid #d64545 !important;color:#b3261e !important;font-weight:700}
+html[data-theme="dark"] body.dashboard-shell .dialog .orange-word.missing{background:#2a1416 !important;border-color:#ff8a8a !important;color:#ffb4b4 !important}
+.orange-word.near{text-decoration:underline dotted;text-underline-offset:3px}

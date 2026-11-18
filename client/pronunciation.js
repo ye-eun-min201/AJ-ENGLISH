@@ -23,30 +23,44 @@
       .replace(/\s+/g, ' ').trim();
   }
 
+  // 음성 인식기는 단어 끝소리(-s, -ed, -ing)를 자주 빼먹고 받아 적는다.
+  // 같은 낱말의 꼴만 다른 경우(champion / championing)는 같은 단어로 본다.
+  function sameWord(a, b) {
+    if (a === b) return true;
+    const short = a.length <= b.length ? a : b, long = short === a ? b : a;
+    if (short.length < 3 || long.length - short.length > 4) return false;
+    const tails = (base, list) => long.startsWith(base) && list.includes(long.slice(base.length));
+    if (tails(short, ['s', 'es', 'ed', 'ing'])) return true;
+    if (short.endsWith('e') && (tails(short, ['d']) || tails(short.slice(0, -1), ['ing']))) return true;
+    if (short.endsWith('y') && tails(short.slice(0, -1) + 'i', ['es', 'ed'])) return true;
+    if (/[^aeiou][aeiou][^aeiouwxy]$/.test(short) && tails(short + short.slice(-1), ['ed', 'ing'])) return true;
+    return false;
+  }
+
   function score(expected, transcript) {
     const wanted = normalize(expected).split(' ').filter(Boolean);
     const heard = normalize(transcript).split(' ').filter(Boolean);
     const table = Array.from({ length: wanted.length + 1 }, () => Array(heard.length + 1).fill(0));
     for (let i = 1; i <= wanted.length; i++) {
       for (let j = 1; j <= heard.length; j++) {
-        table[i][j] = wanted[i - 1] === heard[j - 1]
+        table[i][j] = sameWord(wanted[i - 1], heard[j - 1])
           ? table[i - 1][j - 1] + 1
           : Math.max(table[i - 1][j], table[i][j - 1]);
       }
     }
-    const matched = Array(wanted.length).fill(false);
+    const matched = Array(wanted.length).fill(false), near = Array(wanted.length).fill(false);
     let i = wanted.length, j = heard.length;
     while (i && j) {
-      if (wanted[i - 1] === heard[j - 1]) { matched[i - 1] = true; i--; j--; }
+      if (sameWord(wanted[i - 1], heard[j - 1])) { matched[i - 1] = true; near[i - 1] = wanted[i - 1] !== heard[j - 1]; i--; j--; }
       else if (table[i - 1][j] >= table[i][j - 1]) i--;
       else j--;
     }
-    const exact = wanted.length > 0 && wanted.length === heard.length && wanted.every((word, k) => word === heard[k]);
+    const exact = wanted.length > 0 && wanted.length === heard.length && wanted.every((word, k) => sameWord(word, heard[k]));
     const percentage = exact ? 100 : Math.min(99, Math.round(100 * table[wanted.length][heard.length] / Math.max(1, wanted.length, heard.length)));
-    return { exact, score: percentage, percentage, words: wanted, matched, heard, normalized: heard.join(' ') };
+    return { exact, score: percentage, percentage, words: wanted, matched, near, nearWords: wanted.filter((_, k) => near[k]), heard, normalized: heard.join(' ') };
   }
 
-  window.SpeechMatch = { normalize, score };
+  window.SpeechMatch = { normalize, score, sameWord };
 
   let activeDestroy = null;
   let artSequence = 0;
@@ -153,9 +167,10 @@
       const tokens = result ? result.words : normalize(targets[index].en).split(' ');
       tokens.forEach((word, n) => {
         const chip = document.createElement('span');
-        chip.className = 'orange-word' + (result ? (result.matched[n] ? ' matched' : ' missing') : '');
+        const isNear = !!(result && result.matched[n] && result.near[n]);
+        chip.className = 'orange-word' + (result ? (result.matched[n] ? ' matched' + (isNear ? ' near' : '') : ' missing') : '');
         chip.textContent = word;
-        chip.setAttribute('aria-label', word + (result ? (result.matched[n] ? ': 인식됨' : ': 재인식 필요') : ''));
+        chip.setAttribute('aria-label', word + (result ? (result.matched[n] ? (isNear ? ': 인식됨 · 끝소리 확인' : ': 인식됨') : ': 재인식 필요') : ''));
         words.appendChild(chip);
       });
     }
@@ -232,7 +247,7 @@
         else fruit.style['--crate-drop-x'] = dropX;
         scene.classList.add('shipping');
         requestAnimationFrame(() => { if (!destroyed) fruit.classList.add('is-passed'); });
-        setMessage('문장 인식 완료 · 과일 1개 추가', 'success');
+        setMessage(result.nearWords.length ? '통과 · 끝소리까지 또렷하게: ' + result.nearWords.join(', ') : '문장 인식 완료 · 과일 1개 추가', 'success');
         advanceTimer = setTimeout(() => {
           if (destroyed) return;
           const before = Math.round(alreadyPassed.size / Math.max(1, targets.length) * 100);
@@ -278,6 +293,7 @@
       instance.interimResults = true;
       instance.maxAlternatives = 3;
       finalReceived = false;
+      const heardSoFar = new Set();
       instance.onstart = () => {
         if (destroyed || currentGeneration !== generation) return;
         listening = true; updateControls();
@@ -291,10 +307,13 @@
           for (let a = 0; a < entry.length; a++) {
             const text = String(entry[a].transcript || '').trim();
             candidates.push(text);
+            if (text) heardSoFar.add(text);
             if (entry.isFinal) finalCandidates.push(text);
           }
         }
-        const best = (finalCandidates.length ? finalCandidates : candidates).sort((a, b) => score(targets[index].en, b).percentage - score(targets[index].en, a).percentage)[0] || '';
+        // 인식기가 중간에 맞게 받아 적었다가 마지막에 고쳐 쓰는 일이 있어, 이번에 들은 후보 전체에서 고른다.
+        const pool = finalCandidates.length ? finalCandidates.concat([...heardSoFar]) : candidates;
+        const best = pool.map((text, order) => ({ text, order, value: score(targets[index].en, text).percentage })).sort((a, b) => b.value - a.value || a.order - b.order)[0]?.text || '';
         showTranscript(best);
         if (finalCandidates.length && !finalReceived) {
           finalReceived = true;
