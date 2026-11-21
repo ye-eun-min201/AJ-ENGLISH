@@ -337,7 +337,26 @@ function normalizeSpeech(value) { return value.normalize('NFKC').toLowerCase().r
 function speechSame(a, b) { if (a === b) return true; const short = a.length <= b.length ? a : b, long = short === a ? b : a; if (short.length < 3 || long.length - short.length > 4) return false; const tails = (base, list) => long.startsWith(base) && list.includes(long.slice(base.length)); if (tails(short, ['s','es','ed','ing'])) return true; if (short.endsWith('e') && (tails(short, ['d']) || tails(short.slice(0,-1), ['ing']))) return true; if (short.endsWith('y') && tails(short.slice(0,-1) + 'i', ['es','ed'])) return true; if (/[^aeiou][aeiou][^aeiouwxy]$/.test(short) && tails(short + short.slice(-1), ['ed','ing'])) return true; return false; }
 function compareSpeech(expected, actual) { const a = normalizeSpeech(expected).split(' ').filter(Boolean), b = normalizeSpeech(actual).split(' ').filter(Boolean); const passed = a.length > 0 && a.length === b.length && a.every((word,i) => speechSame(word, b[i])); const dp = Array(b.length + 1).fill(0); for (const word of a) { let previous = 0; for (let j = 1; j <= b.length; j++) { const old = dp[j]; dp[j] = speechSame(word, b[j-1]) ? previous + 1 : Math.max(dp[j], dp[j-1]); previous = old; } } return { passed, match: passed ? 100 : Math.min(99, Math.round(100 * dp[b.length] / Math.max(a.length, b.length, 1))) }; }
 function lessonForSession(session,courses){try{const stored=JSON.parse(session.lesson_json||'{}');if(Array.isArray(stored.phrases)&&Array.isArray(stored.quiz)&&stored.phrases.length&&stored.quiz.length)return stored;}catch{}return getLesson(courses,session.course,session.day);}
-async function sessionView(db, session, courses, now) { if (!session) return null; const lesson = lessonForSession(session,courses); const answers = await all(db, 'SELECT question_index AS questionIndex, answer_index AS answerIndex, correct FROM quiz_answers WHERE session_id = ? ORDER BY question_index', session.id); return { id: session.id, day: session.day, course: session.course, startedAt: session.started_at, finishedAt: session.finished_at, elapsedSeconds: session.finished_at ? session.elapsed_seconds : Math.min(1800, Math.max(0, Math.floor((now - session.started_at) / 1000))), questions: lesson.quiz.map(q => ({ q: q.q, options: q.options })), answers, speechPassed: speechPasses(session.speech_json),speechSkipped: speechPasses(session.speech_skip_json),lesson,chapterId:session.chapter_id||null }; }
+// 20분 공부 끝에 붙는 토익 노랭이 열 단어: 책 순서대로, 이 학생이 아직 외우지 않은 단어부터 고른다. 보기는 같은 날짜 단어의 뜻에서 뽑는다.
+async function toeicWordsFor(db, userId, count = 10) {
+  try {
+    const cardId = "'toeic-d' || printf('%02d', b.day) || '-' || printf('%03d', b.seq)";
+    let rows = await all(db, 'SELECT b.day, b.seq, b.en, b.ko FROM book_words b WHERE b.book = \'toeic\' AND NOT EXISTS (SELECT 1 FROM study_cards s WHERE s.user_id = ? AND s.known = 1 AND s.card_id = ' + cardId + ') ORDER BY b.day, b.seq LIMIT ?', userId, count);
+    if (rows.length < count) rows = rows.concat((await all(db, "SELECT day, seq, en, ko FROM book_words WHERE book = 'toeic' ORDER BY day, seq LIMIT ?", count)).filter(row => !rows.some(have => have.day === row.day && have.seq === row.seq))).slice(0, count);
+    if (!rows.length) return [];
+    const days = [...new Set(rows.map(row => row.day))];
+    const pool = await all(db, "SELECT day, seq, ko FROM book_words WHERE book = 'toeic' AND day IN (" + days.map(() => '?').join(',') + ')', ...days);
+    const pad = (value, size) => String(value).padStart(size, '0'), shuffle = list => { for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; } return list; };
+    return rows.map(row => {
+      const wrong = [];
+      for (const other of shuffle(pool.filter(item => item.ko && item.ko !== row.ko && !(item.day === row.day && item.seq === row.seq)))) { if (!wrong.includes(other.ko)) wrong.push(other.ko); if (wrong.length === 3) break; }
+      const options = shuffle([row.ko, ...wrong]);
+      return { id: 'toeic-d' + pad(row.day, 2) + '-' + pad(row.seq, 3), day: row.day, en: row.en, ko: row.ko, options, answer: options.indexOf(row.ko) };
+    }).filter(word => word.options.length >= 2);
+  } catch { return []; }   // 단어장이 없어도 20분 공부는 그대로 시작된다
+}
+function wordAnswers(value) { try { const list = JSON.parse(value || '[]'); return Array.isArray(list) ? list.filter(item => item && Number.isInteger(item.i) && Number.isInteger(item.a)).map(item => ({ index: item.i, answer: item.a, correct: !!item.c })) : []; } catch { return []; } }
+async function sessionView(db, session, courses, now) { if (!session) return null; const lesson = lessonForSession(session,courses); const answers = await all(db, 'SELECT question_index AS questionIndex, answer_index AS answerIndex, correct FROM quiz_answers WHERE session_id = ? ORDER BY question_index', session.id); return { id: session.id, day: session.day, course: session.course, startedAt: session.started_at, finishedAt: session.finished_at, elapsedSeconds: session.finished_at ? session.elapsed_seconds : Math.min(1800, Math.max(0, Math.floor((now - session.started_at) / 1000))), questions: lesson.quiz.map(q => ({ q: q.q, options: q.options })), answers, speechPassed: speechPasses(session.speech_json),speechSkipped: speechPasses(session.speech_skip_json),wordAnswers: wordAnswers(session.words_json),lesson,chapterId:session.chapter_id||null }; }
 
 /** x-aj-user-id 헤더는 server/adapter.mjs가 로그인 쿠키를 확인한 뒤에만 넣는다. 브라우저가 보낸 값은 어댑터에서 지운다. */
 async function handleApi(request, env, courses, now = Date.now()) {
@@ -521,7 +540,8 @@ async function handleApi(request, env, courses, now = Date.now()) {
       if (existing) return json({ session: await sessionView(db, existing, courses, now), resumed: true });
       const room = await activeRoom(db, userId, profile);
       const id = crypto.randomUUID();
-      await db.prepare('INSERT OR IGNORE INTO learning_sessions (id, user_id, room_id, course, day, local_date, started_at,lesson_json,chapter_id) VALUES (?, ?, ?, ?, ?, ?, ?,?,?)').bind(id, userId, room?.id || null, body.course, body.day, today, now,JSON.stringify(getLesson(courses,body.course,body.day,body.week)),getLesson(courses,body.course,body.day,body.week).chapterId||null).run();
+      const startLesson = getLesson(courses,body.course,body.day,body.week), toeic = await toeicWordsFor(db, userId);
+      await db.prepare('INSERT OR IGNORE INTO learning_sessions (id, user_id, room_id, course, day, local_date, started_at,lesson_json,chapter_id) VALUES (?, ?, ?, ?, ?, ?, ?,?,?)').bind(id, userId, room?.id || null, body.course, body.day, today, now,JSON.stringify(toeic.length ? { ...startLesson, toeic } : startLesson),startLesson.chapterId||null).run();
       const created = await first(db, 'SELECT * FROM learning_sessions WHERE user_id = ? AND local_date = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1', userId, today);
       return json({ session: await sessionView(db, created, courses, now), resumed: created?.id !== id });
     }
@@ -586,7 +606,7 @@ async function handleApi(request, env, courses, now = Date.now()) {
       ]);
       const reward = await first(db, 'SELECT id, points, seconds, local_date AS date FROM learning_rewards WHERE user_id = ? AND local_date = ?', userId, today);
       profile = await first(db, 'SELECT * FROM profiles WHERE user_id = ?', userId);
-      return json({ sessionId: session.id, points: reward?.id === session.id ? reward.points : 0, coins: reward?.id === session.id ? Math.floor(reward.points / 5) : 0, dailyPoints: reward?.points || 0, seconds, speechSkipped: skippedSpeech, alreadyFinished: !!session.finished_at, dailyLimitReached: !!reward && reward.id !== session.id, user: userView(profile), rules: '하루 한 번 보상됩니다. 20분 학습과 퀴즈 정답 비율로 최대 100포인트·20코인을 받습니다. 말하기에서 넘어간 문장은 그 문장 몫의 절반만 받습니다. 학습 시간은 서버에서 시작부터 완료까지 측정합니다.' });
+      return json({ sessionId: session.id, points: reward?.id === session.id ? reward.points : 0, coins: reward?.id === session.id ? Math.floor(reward.points / 5) : 0, dailyPoints: reward?.points || 0, seconds, speechSkipped: skippedSpeech, wordsCorrect: wordAnswers(session.words_json).filter(item => item.correct).length, wordsTotal: Array.isArray(lesson.toeic) ? lesson.toeic.length : 0, alreadyFinished: !!session.finished_at, dailyLimitReached: !!reward && reward.id !== session.id, user: userView(profile), rules: '하루 한 번 보상됩니다. 20분 학습과 퀴즈 정답 비율로 최대 100포인트·20코인을 받습니다. 말하기에서 넘어간 문장은 그 문장 몫의 절반만 받습니다. 학습 시간은 서버에서 시작부터 완료까지 측정합니다.' });
     }
     fail(404, 'not_found', '요청한 기능을 찾을 수 없습니다.');
   } catch (error) {
@@ -1134,9 +1154,13 @@ async function adminLearnerReport(env, url, now) {
     row.lastStudiedInMonthAt = Math.max(Number(row.lastStudiedInMonthAt || 0), Number(pass.lastStudiedInMonthAt || 0)) || null;
   }
   const readDays = new Map((await all(env.DB, 'SELECT p.public_id AS id, COUNT(*) AS days FROM reading_reads x JOIN profiles p ON p.user_id = x.user_id WHERE x.study_date LIKE ? GROUP BY p.public_id', month + '-%')).map(row => [row.id, row.days]));
+  // 말하기에서 '넘어가기'를 쓴 문장 수(선택한 달): 20분 공부에서 넘어간 문장 + 말하기 게임에서 넘어간 문장
+  const skipCount = new Map();
+  for (const row of await all(env.DB, "SELECT p.public_id AS id, SUM(json_array_length(s.speech_skip_json)) AS n FROM learning_sessions s JOIN profiles p ON p.user_id = s.user_id WHERE s.local_date LIKE ? AND s.speech_skip_json <> '[]' GROUP BY p.public_id", month + '-%')) skipCount.set(row.id, Number(row.n) || 0);
+  for (const row of await all(env.DB, "SELECT p.public_id AS id, COUNT(*) AS n FROM activity_answers a JOIN activity_runs r ON r.id = a.run_id JOIN profiles p ON p.user_id = r.user_id WHERE a.answer = '__skip__' AND r.local_date LIKE ? GROUP BY p.public_id", month + '-%')) skipCount.set(row.id, (skipCount.get(row.id) || 0) + (Number(row.n) || 0));
   const byLearner = new Map();
   for (const { learnerId, isCurrent, ...room } of memberships) { if (!byLearner.has(learnerId)) byLearner.set(learnerId, []); byLearner.get(learnerId).push({ ...room, isCurrent: !!isCurrent }); }
-  const learners = rows.map(row => { const avatar = { species: 0 }; try { const parsed = JSON.parse(row.avatar || '{}'); if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) for (const [key, limit] of Object.entries({ species: 12, skin: 5, hair: 5, eyes: 3, outfit: 5, accessory: 5, color: 7 })) if (Number.isInteger(parsed[key]) && parsed[key] >= 0 && parsed[key] <= limit) avatar[key] = parsed[key]; } catch { /* Old malformed avatars use the UI fallback. */ } return { ...row, avatar, rooms: byLearner.get(row.id) || [], readingDays: readDays.get(row.id) || 0 }; });
+  const learners = rows.map(row => { const avatar = { species: 0 }; try { const parsed = JSON.parse(row.avatar || '{}'); if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) for (const [key, limit] of Object.entries({ species: 12, skin: 5, hair: 5, eyes: 3, outfit: 5, accessory: 5, color: 7 })) if (Number.isInteger(parsed[key]) && parsed[key] >= 0 && parsed[key] <= limit) avatar[key] = parsed[key]; } catch { /* Old malformed avatars use the UI fallback. */ } return { ...row, avatar, rooms: byLearner.get(row.id) || [], readingDays: readDays.get(row.id) || 0, speechSkipped: skipCount.get(row.id) || 0 }; });
   const metrics = ['studySeconds','completedLessons','completedUniqueLessons','gameCount','quizAnswered','quizCorrect','gameQuestions','gameCorrect','studyPoints','gamePoints','points','activeDays','flashcardKnown','reviewedCards','reviewedCardCount'];
   const summary = { learnerCount: learners.length, activeLearners: learners.filter(learner => learner.activeDays > 0).length };
   for (const key of metrics) summary[key] = learners.reduce((sum, learner) => sum + Number(learner[key] || 0), 0);
@@ -1548,7 +1572,7 @@ async function handleActivity(request,env,content,fallback=[],now=Date.now()){
    const rank=rows=>rows.map(r=>({id:r.id,nickname:r.nickname,avatar:adecode(r.avatar),points:Number(r.points)||0,activeDays:Number(r.activeDays)||0,isMe:!!profile&&r.id===profile.public_id})).sort((a,b)=>b.points-a.points||b.activeDays-a.activeDays||String(a.nickname).localeCompare(String(b.nickname)));
    const done=rank(await score(start,end)).filter(r=>r.points>0),live=rank(await score(end,now+1)),mine=live.find(r=>r.isMe)||null;
    const day=ms=>new Date(ms+KST).toISOString().slice(0,10);
-   return aj({authenticated:!!user,scope:room?{id:room.id,name:room.name}:null,week:{start:day(start),end:day(end),announcedAt:new Date(end).toISOString()},winner:done[0]||null,top:done.slice(0,3),nextAnnounceAt:new Date(shown?announceThis+7*86400000:announceThis).toISOString(),myPoints:mine?mine.points:0,myRank:mine&&mine.points>0?live.filter(r=>r.points>mine.points).length+1:null,race:[...live.filter(r=>r.points>0).slice(0,5),...(mine&&!live.filter(r=>r.points>0).slice(0,5).some(r=>r.isMe)?[mine]:[])].map(r=>({...r,unnamed:/^학생 \d{3,5}$/.test(String(r.nickname||''))})),runners:live.filter(r=>r.points>0).length,today:{rail:!!(await af(db,"SELECT 1 AS x FROM activity_runs WHERE user_id=? AND local_date=? AND json_extract(challenge_json,'$.daily')=1 AND json_extract(challenge_json,'$.collection')='words' AND COALESCE(json_extract(challenge_json,'$.practice'),0)=0 AND finished_at IS NOT NULL LIMIT 1",user,today)),words:!!(await af(db,'SELECT 1 AS x FROM study_cards WHERE user_id=? AND updated_at>=? LIMIT 1',user,base)),study:!!(await af(db,'SELECT 1 AS x FROM learning_sessions WHERE user_id=? AND local_date=? AND finished_at IS NOT NULL LIMIT 1',user,today)),reading:!!(await af(db,"SELECT 1 AS x FROM reading_reads r WHERE r.user_id=? AND r.study_date=(SELECT MAX(study_date) FROM teacher_readings WHERE status='published' AND study_date<=?)",user,today))}});
+   return aj({authenticated:!!user,scope:room?{id:room.id,name:room.name}:null,week:{start:day(start),end:day(end),announcedAt:new Date(end).toISOString()},winner:done[0]||null,top:done.slice(0,3),nextAnnounceAt:new Date(shown?announceThis+7*86400000:announceThis).toISOString(),myPoints:mine?mine.points:0,myRank:mine&&mine.points>0?live.filter(r=>r.points>mine.points).length+1:null,race:[...live.filter(r=>r.points>0).slice(0,5),...(mine&&!live.filter(r=>r.points>0).slice(0,5).some(r=>r.isMe)?[mine]:[])].map(r=>({...r,unnamed:/^학생 \d{3,5}$/.test(String(r.nickname||''))})),runners:live.filter(r=>r.points>0).length,today:{rail:!!(await af(db,"SELECT 1 AS x FROM activity_runs WHERE user_id=? AND local_date=? AND json_extract(challenge_json,'$.daily')=1 AND json_extract(challenge_json,'$.collection')='words' AND COALESCE(json_extract(challenge_json,'$.practice'),0)=0 AND finished_at IS NOT NULL LIMIT 1",user,today)),words:!!(await af(db,"SELECT 1 AS x FROM study_cards c WHERE c.user_id=? AND c.updated_at>=? AND NOT EXISTS(SELECT 1 FROM activity_awards a WHERE a.id='card:'||c.user_id||':'||?||':'||c.card_id AND a.mode='session-words') LIMIT 1",user,base,today)),study:!!(await af(db,'SELECT 1 AS x FROM learning_sessions WHERE user_id=? AND local_date=? AND finished_at IS NOT NULL LIMIT 1',user,today)),reading:!!(await af(db,"SELECT 1 AS x FROM reading_reads r WHERE r.user_id=? AND r.study_date=(SELECT MAX(study_date) FROM teacher_readings WHERE status='published' AND study_date<=?)",user,today))}});
   }
   if(p==='/api/mvp'&&request.method==='GET'){
    const selected=url.searchParams.get('month')||month;if(!/^20\d{2}-(0[1-9]|1[0-2])$/.test(selected))ae(400,'올바른 월을 선택해 주세요.');
@@ -1566,6 +1590,27 @@ async function handleActivity(request,env,content,fallback=[],now=Date.now()){
   if(!request.headers.get('content-type')?.includes('application/json'))ae(415,'JSON 요청이 필요해요.');
   const raw=await request.text();if(raw.length>100000)ae(413,'입력 내용이 너무 길어요.');let body;try{body=JSON.parse(raw);}catch{ae(400,'입력 형식을 확인해 주세요.');}if(!body||typeof body!=='object'||Array.isArray(body))ae(400,'입력 형식을 확인해 주세요.');
   const cards=acards(content,fallback),byId=new Map(cards.map(c=>[c.id,c]));
+  // 20분 공부 안의 토익 단어: 뜻을 맞히면 그 단어를 외운 것으로 적고, 단어장과 같은 점수(단어 하나 2점, 하루 30점까지)를 준다. 처음 고른 답만 인정한다.
+  if(p==='/api/activity/session-word'){
+   if(typeof body.sessionId!=='string'||body.sessionId.length>100)ae(400,'학습 기록 확인');
+   const sess=await af(db,'SELECT id,lesson_json,words_json,finished_at FROM learning_sessions WHERE id=? AND user_id=?',body.sessionId,user);if(!sess)ae(404,'이 계정의 학습 기록을 찾을 수 없어요.');
+   let list=[];try{const lesson=JSON.parse(sess.lesson_json||'{}');if(Array.isArray(lesson.toeic))list=lesson.toeic;}catch{}
+   if(!Number.isInteger(body.index)||body.index<0||body.index>=list.length)ae(400,'단어 번호 확인');
+   const word=list[body.index];if(!Number.isInteger(body.answer)||body.answer<0||body.answer>=word.options.length)ae(400,'답을 다시 골라 주세요.');
+   const read=value=>{try{const rows=JSON.parse(value||'[]');return Array.isArray(rows)?rows.filter(r=>r&&Number.isInteger(r.i)).map(r=>({index:r.i,answer:r.a,correct:!!r.c})):[];}catch{return [];}};
+   const before=read(sess.words_json).find(r=>r.index===body.index);
+   if(before)return aj({index:body.index,answer:before.answer,correct:before.correct,correctAnswer:word.answer,points:0,coins:0,alreadyAnswered:true,wordAnswers:read(sess.words_json)});
+   if(sess.finished_at)ae(409,'이미 끝낸 학습이에요.');
+   const correct=body.answer===word.answer;
+   const saved=await db.prepare("UPDATE learning_sessions SET words_json=json_insert(words_json,'$[#]',json(?)) WHERE id=? AND user_id=? AND finished_at IS NULL AND NOT EXISTS(SELECT 1 FROM json_each(words_json) WHERE json_extract(value,'$.i')=?)").bind(JSON.stringify({i:body.index,a:body.answer,c:correct?1:0}),sess.id,user,body.index).run();
+   let result={points:0,coins:0};
+   if(correct&&Number(saved?.meta?.changes||0)>0&&/^toeic-d\d{2}-\d{3}$/.test(String(word.id))){
+    await db.prepare('INSERT INTO study_cards (user_id,card_id,known,starred,attempts,updated_at) VALUES (?,?,1,0,1,?) ON CONFLICT(user_id,card_id) DO UPDATE SET known=1,attempts=study_cards.attempts+1,updated_at=excluded.updated_at').bind(user,word.id,now).run();
+    const key='card:'+user+':'+today+':'+word.id;if(!await af(db,'SELECT id FROM activity_awards WHERE id=?',key))result=await award(db,{id:key,user,room:room?.id||null,category:'study',mode:'session-words',points:2,now,cap:30});
+   }
+   const after=await af(db,'SELECT words_json FROM learning_sessions WHERE id=?',sess.id);
+   return aj({index:body.index,answer:body.answer,correct,correctAnswer:word.answer,points:result.points,coins:result.coins,alreadyAnswered:false,wordAnswers:read(after?.words_json)});
+  }
   if(p==='/api/study/cards'){
    const c=byId.get(body.cardId)||(/^toeic-d\d{2}-\d{3}$/.test(String(body.cardId))?{id:String(body.cardId)}:null);if(!c)ae(400,'현재 단어장의 항목을 선택해 주세요.');
    if(typeof body.known!=='boolean'&&body.known!==0&&body.known!==1)ae(400,'학습 상태를 확인해 주세요.');

@@ -25,7 +25,26 @@ export function normalizeSpeech(value) { return value.normalize('NFKC').toLowerC
 export function speechSame(a, b) { if (a === b) return true; const short = a.length <= b.length ? a : b, long = short === a ? b : a; if (short.length < 3 || long.length - short.length > 4) return false; const tails = (base, list) => long.startsWith(base) && list.includes(long.slice(base.length)); if (tails(short, ['s','es','ed','ing'])) return true; if (short.endsWith('e') && (tails(short, ['d']) || tails(short.slice(0,-1), ['ing']))) return true; if (short.endsWith('y') && tails(short.slice(0,-1) + 'i', ['es','ed'])) return true; if (/[^aeiou][aeiou][^aeiouwxy]$/.test(short) && tails(short + short.slice(-1), ['ed','ing'])) return true; return false; }
 export function compareSpeech(expected, actual) { const a = normalizeSpeech(expected).split(' ').filter(Boolean), b = normalizeSpeech(actual).split(' ').filter(Boolean); const passed = a.length > 0 && a.length === b.length && a.every((word,i) => speechSame(word, b[i])); const dp = Array(b.length + 1).fill(0); for (const word of a) { let previous = 0; for (let j = 1; j <= b.length; j++) { const old = dp[j]; dp[j] = speechSame(word, b[j-1]) ? previous + 1 : Math.max(dp[j], dp[j-1]); previous = old; } } return { passed, match: passed ? 100 : Math.min(99, Math.round(100 * dp[b.length] / Math.max(a.length, b.length, 1))) }; }
 function lessonForSession(session,courses){try{const stored=JSON.parse(session.lesson_json||'{}');if(Array.isArray(stored.phrases)&&Array.isArray(stored.quiz)&&stored.phrases.length&&stored.quiz.length)return stored;}catch{}return getLesson(courses,session.course,session.day);}
-async function sessionView(db, session, courses, now) { if (!session) return null; const lesson = lessonForSession(session,courses); const answers = await all(db, 'SELECT question_index AS questionIndex, answer_index AS answerIndex, correct FROM quiz_answers WHERE session_id = ? ORDER BY question_index', session.id); return { id: session.id, day: session.day, course: session.course, startedAt: session.started_at, finishedAt: session.finished_at, elapsedSeconds: session.finished_at ? session.elapsed_seconds : Math.min(1800, Math.max(0, Math.floor((now - session.started_at) / 1000))), questions: lesson.quiz.map(q => ({ q: q.q, options: q.options })), answers, speechPassed: speechPasses(session.speech_json),speechSkipped: speechPasses(session.speech_skip_json),lesson,chapterId:session.chapter_id||null }; }
+// 20분 공부 끝에 붙는 토익 노랭이 열 단어: 책 순서대로, 이 학생이 아직 외우지 않은 단어부터 고른다. 보기는 같은 날짜 단어의 뜻에서 뽑는다.
+async function toeicWordsFor(db, userId, count = 10) {
+  try {
+    const cardId = "'toeic-d' || printf('%02d', b.day) || '-' || printf('%03d', b.seq)";
+    let rows = await all(db, 'SELECT b.day, b.seq, b.en, b.ko FROM book_words b WHERE b.book = \'toeic\' AND NOT EXISTS (SELECT 1 FROM study_cards s WHERE s.user_id = ? AND s.known = 1 AND s.card_id = ' + cardId + ') ORDER BY b.day, b.seq LIMIT ?', userId, count);
+    if (rows.length < count) rows = rows.concat((await all(db, "SELECT day, seq, en, ko FROM book_words WHERE book = 'toeic' ORDER BY day, seq LIMIT ?", count)).filter(row => !rows.some(have => have.day === row.day && have.seq === row.seq))).slice(0, count);
+    if (!rows.length) return [];
+    const days = [...new Set(rows.map(row => row.day))];
+    const pool = await all(db, "SELECT day, seq, ko FROM book_words WHERE book = 'toeic' AND day IN (" + days.map(() => '?').join(',') + ')', ...days);
+    const pad = (value, size) => String(value).padStart(size, '0'), shuffle = list => { for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; } return list; };
+    return rows.map(row => {
+      const wrong = [];
+      for (const other of shuffle(pool.filter(item => item.ko && item.ko !== row.ko && !(item.day === row.day && item.seq === row.seq)))) { if (!wrong.includes(other.ko)) wrong.push(other.ko); if (wrong.length === 3) break; }
+      const options = shuffle([row.ko, ...wrong]);
+      return { id: 'toeic-d' + pad(row.day, 2) + '-' + pad(row.seq, 3), day: row.day, en: row.en, ko: row.ko, options, answer: options.indexOf(row.ko) };
+    }).filter(word => word.options.length >= 2);
+  } catch { return []; }   // 단어장이 없어도 20분 공부는 그대로 시작된다
+}
+function wordAnswers(value) { try { const list = JSON.parse(value || '[]'); return Array.isArray(list) ? list.filter(item => item && Number.isInteger(item.i) && Number.isInteger(item.a)).map(item => ({ index: item.i, answer: item.a, correct: !!item.c })) : []; } catch { return []; } }
+async function sessionView(db, session, courses, now) { if (!session) return null; const lesson = lessonForSession(session,courses); const answers = await all(db, 'SELECT question_index AS questionIndex, answer_index AS answerIndex, correct FROM quiz_answers WHERE session_id = ? ORDER BY question_index', session.id); return { id: session.id, day: session.day, course: session.course, startedAt: session.started_at, finishedAt: session.finished_at, elapsedSeconds: session.finished_at ? session.elapsed_seconds : Math.min(1800, Math.max(0, Math.floor((now - session.started_at) / 1000))), questions: lesson.quiz.map(q => ({ q: q.q, options: q.options })), answers, speechPassed: speechPasses(session.speech_json),speechSkipped: speechPasses(session.speech_skip_json),wordAnswers: wordAnswers(session.words_json),lesson,chapterId:session.chapter_id||null }; }
 
 /** x-aj-user-id 헤더는 server/adapter.mjs가 로그인 쿠키를 확인한 뒤에만 넣는다. 브라우저가 보낸 값은 어댑터에서 지운다. */
 export async function handleApi(request, env, courses, now = Date.now()) {
@@ -209,7 +228,8 @@ export async function handleApi(request, env, courses, now = Date.now()) {
       if (existing) return json({ session: await sessionView(db, existing, courses, now), resumed: true });
       const room = await activeRoom(db, userId, profile);
       const id = crypto.randomUUID();
-      await db.prepare('INSERT OR IGNORE INTO learning_sessions (id, user_id, room_id, course, day, local_date, started_at,lesson_json,chapter_id) VALUES (?, ?, ?, ?, ?, ?, ?,?,?)').bind(id, userId, room?.id || null, body.course, body.day, today, now,JSON.stringify(getLesson(courses,body.course,body.day,body.week)),getLesson(courses,body.course,body.day,body.week).chapterId||null).run();
+      const startLesson = getLesson(courses,body.course,body.day,body.week), toeic = await toeicWordsFor(db, userId);
+      await db.prepare('INSERT OR IGNORE INTO learning_sessions (id, user_id, room_id, course, day, local_date, started_at,lesson_json,chapter_id) VALUES (?, ?, ?, ?, ?, ?, ?,?,?)').bind(id, userId, room?.id || null, body.course, body.day, today, now,JSON.stringify(toeic.length ? { ...startLesson, toeic } : startLesson),startLesson.chapterId||null).run();
       const created = await first(db, 'SELECT * FROM learning_sessions WHERE user_id = ? AND local_date = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1', userId, today);
       return json({ session: await sessionView(db, created, courses, now), resumed: created?.id !== id });
     }
@@ -274,7 +294,7 @@ export async function handleApi(request, env, courses, now = Date.now()) {
       ]);
       const reward = await first(db, 'SELECT id, points, seconds, local_date AS date FROM learning_rewards WHERE user_id = ? AND local_date = ?', userId, today);
       profile = await first(db, 'SELECT * FROM profiles WHERE user_id = ?', userId);
-      return json({ sessionId: session.id, points: reward?.id === session.id ? reward.points : 0, coins: reward?.id === session.id ? Math.floor(reward.points / 5) : 0, dailyPoints: reward?.points || 0, seconds, speechSkipped: skippedSpeech, alreadyFinished: !!session.finished_at, dailyLimitReached: !!reward && reward.id !== session.id, user: userView(profile), rules: '하루 한 번 보상됩니다. 20분 학습과 퀴즈 정답 비율로 최대 100포인트·20코인을 받습니다. 말하기에서 넘어간 문장은 그 문장 몫의 절반만 받습니다. 학습 시간은 서버에서 시작부터 완료까지 측정합니다.' });
+      return json({ sessionId: session.id, points: reward?.id === session.id ? reward.points : 0, coins: reward?.id === session.id ? Math.floor(reward.points / 5) : 0, dailyPoints: reward?.points || 0, seconds, speechSkipped: skippedSpeech, wordsCorrect: wordAnswers(session.words_json).filter(item => item.correct).length, wordsTotal: Array.isArray(lesson.toeic) ? lesson.toeic.length : 0, alreadyFinished: !!session.finished_at, dailyLimitReached: !!reward && reward.id !== session.id, user: userView(profile), rules: '하루 한 번 보상됩니다. 20분 학습과 퀴즈 정답 비율로 최대 100포인트·20코인을 받습니다. 말하기에서 넘어간 문장은 그 문장 몫의 절반만 받습니다. 학습 시간은 서버에서 시작부터 완료까지 측정합니다.' });
     }
     fail(404, 'not_found', '요청한 기능을 찾을 수 없습니다.');
   } catch (error) {

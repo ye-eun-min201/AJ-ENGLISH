@@ -95,7 +95,7 @@ export async function handleActivity(request,env,content,fallback=[],now=Date.no
    const rank=rows=>rows.map(r=>({id:r.id,nickname:r.nickname,avatar:adecode(r.avatar),points:Number(r.points)||0,activeDays:Number(r.activeDays)||0,isMe:!!profile&&r.id===profile.public_id})).sort((a,b)=>b.points-a.points||b.activeDays-a.activeDays||String(a.nickname).localeCompare(String(b.nickname)));
    const done=rank(await score(start,end)).filter(r=>r.points>0),live=rank(await score(end,now+1)),mine=live.find(r=>r.isMe)||null;
    const day=ms=>new Date(ms+KST).toISOString().slice(0,10);
-   return aj({authenticated:!!user,scope:room?{id:room.id,name:room.name}:null,week:{start:day(start),end:day(end),announcedAt:new Date(end).toISOString()},winner:done[0]||null,top:done.slice(0,3),nextAnnounceAt:new Date(shown?announceThis+7*86400000:announceThis).toISOString(),myPoints:mine?mine.points:0,myRank:mine&&mine.points>0?live.filter(r=>r.points>mine.points).length+1:null,race:[...live.filter(r=>r.points>0).slice(0,5),...(mine&&!live.filter(r=>r.points>0).slice(0,5).some(r=>r.isMe)?[mine]:[])].map(r=>({...r,unnamed:/^학생 \d{3,5}$/.test(String(r.nickname||''))})),runners:live.filter(r=>r.points>0).length,today:{rail:!!(await af(db,"SELECT 1 AS x FROM activity_runs WHERE user_id=? AND local_date=? AND json_extract(challenge_json,'$.daily')=1 AND json_extract(challenge_json,'$.collection')='words' AND COALESCE(json_extract(challenge_json,'$.practice'),0)=0 AND finished_at IS NOT NULL LIMIT 1",user,today)),words:!!(await af(db,'SELECT 1 AS x FROM study_cards WHERE user_id=? AND updated_at>=? LIMIT 1',user,base)),study:!!(await af(db,'SELECT 1 AS x FROM learning_sessions WHERE user_id=? AND local_date=? AND finished_at IS NOT NULL LIMIT 1',user,today)),reading:!!(await af(db,"SELECT 1 AS x FROM reading_reads r WHERE r.user_id=? AND r.study_date=(SELECT MAX(study_date) FROM teacher_readings WHERE status='published' AND study_date<=?)",user,today))}});
+   return aj({authenticated:!!user,scope:room?{id:room.id,name:room.name}:null,week:{start:day(start),end:day(end),announcedAt:new Date(end).toISOString()},winner:done[0]||null,top:done.slice(0,3),nextAnnounceAt:new Date(shown?announceThis+7*86400000:announceThis).toISOString(),myPoints:mine?mine.points:0,myRank:mine&&mine.points>0?live.filter(r=>r.points>mine.points).length+1:null,race:[...live.filter(r=>r.points>0).slice(0,5),...(mine&&!live.filter(r=>r.points>0).slice(0,5).some(r=>r.isMe)?[mine]:[])].map(r=>({...r,unnamed:/^학생 \d{3,5}$/.test(String(r.nickname||''))})),runners:live.filter(r=>r.points>0).length,today:{rail:!!(await af(db,"SELECT 1 AS x FROM activity_runs WHERE user_id=? AND local_date=? AND json_extract(challenge_json,'$.daily')=1 AND json_extract(challenge_json,'$.collection')='words' AND COALESCE(json_extract(challenge_json,'$.practice'),0)=0 AND finished_at IS NOT NULL LIMIT 1",user,today)),words:!!(await af(db,"SELECT 1 AS x FROM study_cards c WHERE c.user_id=? AND c.updated_at>=? AND NOT EXISTS(SELECT 1 FROM activity_awards a WHERE a.id='card:'||c.user_id||':'||?||':'||c.card_id AND a.mode='session-words') LIMIT 1",user,base,today)),study:!!(await af(db,'SELECT 1 AS x FROM learning_sessions WHERE user_id=? AND local_date=? AND finished_at IS NOT NULL LIMIT 1',user,today)),reading:!!(await af(db,"SELECT 1 AS x FROM reading_reads r WHERE r.user_id=? AND r.study_date=(SELECT MAX(study_date) FROM teacher_readings WHERE status='published' AND study_date<=?)",user,today))}});
   }
   if(p==='/api/mvp'&&request.method==='GET'){
    const selected=url.searchParams.get('month')||month;if(!/^20\d{2}-(0[1-9]|1[0-2])$/.test(selected))ae(400,'올바른 월을 선택해 주세요.');
@@ -113,6 +113,27 @@ export async function handleActivity(request,env,content,fallback=[],now=Date.no
   if(!request.headers.get('content-type')?.includes('application/json'))ae(415,'JSON 요청이 필요해요.');
   const raw=await request.text();if(raw.length>100000)ae(413,'입력 내용이 너무 길어요.');let body;try{body=JSON.parse(raw);}catch{ae(400,'입력 형식을 확인해 주세요.');}if(!body||typeof body!=='object'||Array.isArray(body))ae(400,'입력 형식을 확인해 주세요.');
   const cards=acards(content,fallback),byId=new Map(cards.map(c=>[c.id,c]));
+  // 20분 공부 안의 토익 단어: 뜻을 맞히면 그 단어를 외운 것으로 적고, 단어장과 같은 점수(단어 하나 2점, 하루 30점까지)를 준다. 처음 고른 답만 인정한다.
+  if(p==='/api/activity/session-word'){
+   if(typeof body.sessionId!=='string'||body.sessionId.length>100)ae(400,'학습 기록 확인');
+   const sess=await af(db,'SELECT id,lesson_json,words_json,finished_at FROM learning_sessions WHERE id=? AND user_id=?',body.sessionId,user);if(!sess)ae(404,'이 계정의 학습 기록을 찾을 수 없어요.');
+   let list=[];try{const lesson=JSON.parse(sess.lesson_json||'{}');if(Array.isArray(lesson.toeic))list=lesson.toeic;}catch{}
+   if(!Number.isInteger(body.index)||body.index<0||body.index>=list.length)ae(400,'단어 번호 확인');
+   const word=list[body.index];if(!Number.isInteger(body.answer)||body.answer<0||body.answer>=word.options.length)ae(400,'답을 다시 골라 주세요.');
+   const read=value=>{try{const rows=JSON.parse(value||'[]');return Array.isArray(rows)?rows.filter(r=>r&&Number.isInteger(r.i)).map(r=>({index:r.i,answer:r.a,correct:!!r.c})):[];}catch{return [];}};
+   const before=read(sess.words_json).find(r=>r.index===body.index);
+   if(before)return aj({index:body.index,answer:before.answer,correct:before.correct,correctAnswer:word.answer,points:0,coins:0,alreadyAnswered:true,wordAnswers:read(sess.words_json)});
+   if(sess.finished_at)ae(409,'이미 끝낸 학습이에요.');
+   const correct=body.answer===word.answer;
+   const saved=await db.prepare("UPDATE learning_sessions SET words_json=json_insert(words_json,'$[#]',json(?)) WHERE id=? AND user_id=? AND finished_at IS NULL AND NOT EXISTS(SELECT 1 FROM json_each(words_json) WHERE json_extract(value,'$.i')=?)").bind(JSON.stringify({i:body.index,a:body.answer,c:correct?1:0}),sess.id,user,body.index).run();
+   let result={points:0,coins:0};
+   if(correct&&Number(saved?.meta?.changes||0)>0&&/^toeic-d\d{2}-\d{3}$/.test(String(word.id))){
+    await db.prepare('INSERT INTO study_cards (user_id,card_id,known,starred,attempts,updated_at) VALUES (?,?,1,0,1,?) ON CONFLICT(user_id,card_id) DO UPDATE SET known=1,attempts=study_cards.attempts+1,updated_at=excluded.updated_at').bind(user,word.id,now).run();
+    const key='card:'+user+':'+today+':'+word.id;if(!await af(db,'SELECT id FROM activity_awards WHERE id=?',key))result=await award(db,{id:key,user,room:room?.id||null,category:'study',mode:'session-words',points:2,now,cap:30});
+   }
+   const after=await af(db,'SELECT words_json FROM learning_sessions WHERE id=?',sess.id);
+   return aj({index:body.index,answer:body.answer,correct,correctAnswer:word.answer,points:result.points,coins:result.coins,alreadyAnswered:false,wordAnswers:read(after?.words_json)});
+  }
   if(p==='/api/study/cards'){
    const c=byId.get(body.cardId)||(/^toeic-d\d{2}-\d{3}$/.test(String(body.cardId))?{id:String(body.cardId)}:null);if(!c)ae(400,'현재 단어장의 항목을 선택해 주세요.');
    if(typeof body.known!=='boolean'&&body.known!==0&&body.known!==1)ae(400,'학습 상태를 확인해 주세요.');

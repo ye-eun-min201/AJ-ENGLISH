@@ -212,5 +212,11 @@ export const MIGRATIONS = [
     "statements": [
       "ALTER TABLE learning_sessions ADD COLUMN speech_skip_json TEXT NOT NULL DEFAULT '[]';"
     ]
+  },
+  {
+    "name": "0014_session_words",
+    "statements": [
+      "ALTER TABLE learning_sessions ADD COLUMN words_json TEXT NOT NULL DEFAULT '[]';"
+    ]
   }
 ];
