@@ -218,6 +218,15 @@ export async function handleApi(request, env, courses, now = Date.now()) {
         ]);
         existing = await first(db, 'SELECT * FROM learning_sessions WHERE user_id = ? AND local_date = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1', userId, today);
       }
+      // 아직 아무것도 하지 않은 수업인데 문장이 지금 수업과 다르면(선생님이 새 문장을 올렸거나 복습 기준 수업이 바뀐 경우) 지금 내용으로 새로 시작한다.
+      if (existing && existing.course === body.course) {
+        const wanted = getLesson(courses, body.course, body.day, body.week), sentences = lesson => ((lesson && lesson.phrases) || []).map(phrase => phrase.en).join('|');
+        let stored = null; try { stored = JSON.parse(existing.lesson_json || 'null'); } catch { stored = null; }
+        if (sentences(stored) !== sentences(wanted) && speechPasses(existing.speech_json).length === 0 && wordAnswers(existing.words_json).length === 0 && !(await first(db, 'SELECT COUNT(*) AS n FROM quiz_answers WHERE session_id = ?', existing.id))?.n) {
+          await db.prepare('DELETE FROM learning_sessions WHERE id = ? AND user_id = ? AND finished_at IS NULL AND NOT EXISTS (SELECT 1 FROM learning_rewards r WHERE r.id = learning_sessions.id)').bind(existing.id, userId).run();
+          existing = await first(db, 'SELECT * FROM learning_sessions WHERE user_id = ? AND local_date = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1', userId, today);
+        }
+      }
       // 한 시간 넘게 열어 둔 채 잊은 수업은 시간을 처음부터 다시 잰다 (몇 시간 전에 눌러 둔 것이 '288분'처럼 보이지 않게).
       if (existing && now - existing.started_at > 3600000) {
         // 문제를 하나도 풀지 않은 채 잊은 수업은 지우고 지금 내용(이번 주 수업)으로 새로 시작한다. 풀던 것이 있으면 시간만 다시 잰다.

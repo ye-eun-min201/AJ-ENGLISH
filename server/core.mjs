@@ -530,6 +530,15 @@ async function handleApi(request, env, courses, now = Date.now()) {
         ]);
         existing = await first(db, 'SELECT * FROM learning_sessions WHERE user_id = ? AND local_date = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1', userId, today);
       }
+      // 아직 아무것도 하지 않은 수업인데 문장이 지금 수업과 다르면(선생님이 새 문장을 올렸거나 복습 기준 수업이 바뀐 경우) 지금 내용으로 새로 시작한다.
+      if (existing && existing.course === body.course) {
+        const wanted = getLesson(courses, body.course, body.day, body.week), sentences = lesson => ((lesson && lesson.phrases) || []).map(phrase => phrase.en).join('|');
+        let stored = null; try { stored = JSON.parse(existing.lesson_json || 'null'); } catch { stored = null; }
+        if (sentences(stored) !== sentences(wanted) && speechPasses(existing.speech_json).length === 0 && wordAnswers(existing.words_json).length === 0 && !(await first(db, 'SELECT COUNT(*) AS n FROM quiz_answers WHERE session_id = ?', existing.id))?.n) {
+          await db.prepare('DELETE FROM learning_sessions WHERE id = ? AND user_id = ? AND finished_at IS NULL AND NOT EXISTS (SELECT 1 FROM learning_rewards r WHERE r.id = learning_sessions.id)').bind(existing.id, userId).run();
+          existing = await first(db, 'SELECT * FROM learning_sessions WHERE user_id = ? AND local_date = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1', userId, today);
+        }
+      }
       // 한 시간 넘게 열어 둔 채 잊은 수업은 시간을 처음부터 다시 잰다 (몇 시간 전에 눌러 둔 것이 '288분'처럼 보이지 않게).
       if (existing && now - existing.started_at > 3600000) {
         // 문제를 하나도 풀지 않은 채 잊은 수업은 지우고 지금 내용(이번 주 수업)으로 새로 시작한다. 풀던 것이 있으면 시간만 다시 잰다.
@@ -1188,7 +1197,11 @@ async function getTeachingContent(env, baseCourses = {}, now = Date.now()) {
   const expressions = expressionRows.filter(row => row.reading_id ? readingIds.has(row.reading_id) : row.status === 'published' && (row.publish_at === null || row.publish_at <= now) && (!row.chapter_id || visibleIds.has(row.chapter_id))).map(expressionView);
   const readings = readingRows.map(row => ({ id: row.id, date: row.study_date, title: row.title, hasBody: row.size > 0, words: expressions.filter(expression => expression.readingId === row.id).length }));
   const latestStudyDate = readings.find(reading => reading.words > 0)?.date || null;
-  const activeChapter = chapters.at(-1) || null;
+  // 가장 최근에 올린 수업(교재 탭이 먼저 여는 수업)과, 20분 복습의 기준이 되는 수업은 다를 수 있다.
+  // 복습 기준 = 문장이 올라와 있는 수업 가운데 가장 최근 것. 새 수업을 올렸는데 문장이 아직 없으면 바로 앞 수업으로 복습한다
+  // (예전에는 이럴 때 맨 처음의 기본 과정으로 돌아가 버렸다).
+  const latestChapter = chapters.at(-1) || null;
+  const activeChapter = [...chapters].reverse().find(chapter => expressions.some(expression => !expression.readingId && expression.chapterId === chapter.id && expression.kind === '표현')) || latestChapter;
   const pool = expressions.filter(expression => !expression.readingId && (!expression.chapterId || expression.chapterId === activeChapter?.id));
   // 이번 주 20분 공부에 그날 리딩 단어의 예문도 섞는다: 하루에 수업 문장 둘 + 리딩 예문 하나(월요일 리딩은 DAY 1, 화요일은 DAY 2 …).
   // 수업 문장이 하나도 없는 주에는 섞지 않는다(그때는 기본 과정이 그대로 나온다).
@@ -1219,7 +1232,7 @@ async function getTeachingContent(env, baseCourses = {}, now = Date.now()) {
   const dailyWords = expressions.filter(expression => expression.kind === '단어').sort((a, b) => String(b.studyDate || '').localeCompare(String(a.studyDate || '')));
   const speakingExpressions = expressions.filter(expression => expression.kind === '표현');
   const contentRevision = rows.length || expressionRows.length || readingRows.length || databaseRevision ? Number.parseInt((await hash(JSON.stringify({ databaseRevision, chapters, expressions, readings }))).slice(0, 12), 16) : 0;
-  return { content: { revision: contentRevision, activeChapter, chapters, expressions, days, weeks, decks, dailyWords, speakingExpressions, readings, latestStudyDate, usingFallback: !pool.some(expression => expression.kind === '표현') }, courses: Object.defineProperty({ ...baseCourses, business: days }, 'weeks', { value: Object.fromEntries(weeks.map(week => [week.key, week.days])), enumerable: false }) };
+  return { content: { revision: contentRevision, activeChapter, latestChapter, chapters, expressions, days, weeks, decks, dailyWords, speakingExpressions, readings, latestStudyDate, usingFallback: !pool.some(expression => expression.kind === '표현') }, courses: Object.defineProperty({ ...baseCourses, business: days }, 'weeks', { value: Object.fromEntries(weeks.map(week => [week.key, week.days])), enumerable: false }) };
 }
 
 async function handleTeaching(request, env, now = Date.now(), baseCourses = {}) {

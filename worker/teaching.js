@@ -196,7 +196,11 @@ export async function getTeachingContent(env, baseCourses = {}, now = Date.now()
   const expressions = expressionRows.filter(row => row.reading_id ? readingIds.has(row.reading_id) : row.status === 'published' && (row.publish_at === null || row.publish_at <= now) && (!row.chapter_id || visibleIds.has(row.chapter_id))).map(expressionView);
   const readings = readingRows.map(row => ({ id: row.id, date: row.study_date, title: row.title, hasBody: row.size > 0, words: expressions.filter(expression => expression.readingId === row.id).length }));
   const latestStudyDate = readings.find(reading => reading.words > 0)?.date || null;
-  const activeChapter = chapters.at(-1) || null;
+  // 가장 최근에 올린 수업(교재 탭이 먼저 여는 수업)과, 20분 복습의 기준이 되는 수업은 다를 수 있다.
+  // 복습 기준 = 문장이 올라와 있는 수업 가운데 가장 최근 것. 새 수업을 올렸는데 문장이 아직 없으면 바로 앞 수업으로 복습한다
+  // (예전에는 이럴 때 맨 처음의 기본 과정으로 돌아가 버렸다).
+  const latestChapter = chapters.at(-1) || null;
+  const activeChapter = [...chapters].reverse().find(chapter => expressions.some(expression => !expression.readingId && expression.chapterId === chapter.id && expression.kind === '표현')) || latestChapter;
   const pool = expressions.filter(expression => !expression.readingId && (!expression.chapterId || expression.chapterId === activeChapter?.id));
   // 이번 주 20분 공부에 그날 리딩 단어의 예문도 섞는다: 하루에 수업 문장 둘 + 리딩 예문 하나(월요일 리딩은 DAY 1, 화요일은 DAY 2 …).
   // 수업 문장이 하나도 없는 주에는 섞지 않는다(그때는 기본 과정이 그대로 나온다).
@@ -227,7 +231,7 @@ export async function getTeachingContent(env, baseCourses = {}, now = Date.now()
   const dailyWords = expressions.filter(expression => expression.kind === '단어').sort((a, b) => String(b.studyDate || '').localeCompare(String(a.studyDate || '')));
   const speakingExpressions = expressions.filter(expression => expression.kind === '표현');
   const contentRevision = rows.length || expressionRows.length || readingRows.length || databaseRevision ? Number.parseInt((await hash(JSON.stringify({ databaseRevision, chapters, expressions, readings }))).slice(0, 12), 16) : 0;
-  return { content: { revision: contentRevision, activeChapter, chapters, expressions, days, weeks, decks, dailyWords, speakingExpressions, readings, latestStudyDate, usingFallback: !pool.some(expression => expression.kind === '표현') }, courses: Object.defineProperty({ ...baseCourses, business: days }, 'weeks', { value: Object.fromEntries(weeks.map(week => [week.key, week.days])), enumerable: false }) };
+  return { content: { revision: contentRevision, activeChapter, latestChapter, chapters, expressions, days, weeks, decks, dailyWords, speakingExpressions, readings, latestStudyDate, usingFallback: !pool.some(expression => expression.kind === '표현') }, courses: Object.defineProperty({ ...baseCourses, business: days }, 'weeks', { value: Object.fromEntries(weeks.map(week => [week.key, week.days])), enumerable: false }) };
 }
 
 export async function handleTeaching(request, env, now = Date.now(), baseCourses = {}) {
