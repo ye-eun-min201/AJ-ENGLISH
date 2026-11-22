@@ -272,3 +272,10 @@ html[data-theme="dark"] body.dashboard-shell .dialog .orange-word.missing{backgr
 /* 학생 현황 · 말하기 넘어간 문장 */
 .al-skip{display:block;margin-top:2px;color:#b3261e;font-weight:700}
 html[data-theme="dark"] .al-skip{color:#ffb4b4}
+
+/* 학생 현황 · 말하기 문제 기록 */
+.al-issues{grid-column:1/-1}
+.al-issues ul{margin:4px 0 0;padding:0;list-style:none;display:grid;gap:4px}
+.al-issues li{font-size:13px;line-height:1.5}
+.al-issues time{color:var(--mist,#4e5968);margin-right:6px}
+.al-issues small{color:var(--mist,#4e5968);margin-left:6px}

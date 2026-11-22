@@ -534,10 +534,13 @@ async function handleApi(request, env, courses, now = Date.now()) {
       if (existing && now - existing.started_at > 3600000) {
         // 문제를 하나도 풀지 않은 채 잊은 수업은 지우고 지금 내용(이번 주 수업)으로 새로 시작한다. 풀던 것이 있으면 시간만 다시 잰다.
         const answered = await first(db, 'SELECT COUNT(*) AS n FROM quiz_answers WHERE session_id = ?', existing.id);
-        if (!answered?.n) { await db.prepare('DELETE FROM learning_sessions WHERE id = ? AND user_id = ? AND finished_at IS NULL AND NOT EXISTS (SELECT 1 FROM learning_rewards r WHERE r.id = learning_sessions.id)').bind(existing.id, userId).run(); existing = await first(db, 'SELECT * FROM learning_sessions WHERE user_id = ? AND local_date = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1', userId, today); }
+        // 말하기를 하나라도 통과했거나 토익 단어를 풀었으면 지우지 않는다(다시 들어왔을 때 처음부터 하게 되지 않도록).
+        if (!answered?.n && speechPasses(existing.speech_json).length === 0 && wordAnswers(existing.words_json).length === 0) { await db.prepare('DELETE FROM learning_sessions WHERE id = ? AND user_id = ? AND finished_at IS NULL AND NOT EXISTS (SELECT 1 FROM learning_rewards r WHERE r.id = learning_sessions.id)').bind(existing.id, userId).run(); existing = await first(db, 'SELECT * FROM learning_sessions WHERE user_id = ? AND local_date = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1', userId, today); }
         if (existing) { await db.prepare('UPDATE learning_sessions SET started_at = ? WHERE id = ? AND finished_at IS NULL').bind(now, existing.id).run(); existing = { ...existing, started_at: now }; }
       }
       if (existing) return json({ session: await sessionView(db, existing, courses, now), resumed: true });
+      // 화면이 다시 열려 '하던 수업만' 찾는 요청이면 새 수업을 만들지 않는다.
+      if (body.resumeOnly === true) return json({ session: null, resumed: false });
       const room = await activeRoom(db, userId, profile);
       const id = crypto.randomUUID();
       const startLesson = getLesson(courses,body.course,body.day,body.week), toeic = await toeicWordsFor(db, userId);
@@ -1158,9 +1161,12 @@ async function adminLearnerReport(env, url, now) {
   const skipCount = new Map();
   for (const row of await all(env.DB, "SELECT p.public_id AS id, SUM(json_array_length(s.speech_skip_json)) AS n FROM learning_sessions s JOIN profiles p ON p.user_id = s.user_id WHERE s.local_date LIKE ? AND s.speech_skip_json <> '[]' GROUP BY p.public_id", month + '-%')) skipCount.set(row.id, Number(row.n) || 0);
   for (const row of await all(env.DB, "SELECT p.public_id AS id, COUNT(*) AS n FROM activity_answers a JOIN activity_runs r ON r.id = a.run_id JOIN profiles p ON p.user_id = r.user_id WHERE a.answer = '__skip__' AND r.local_date LIKE ? GROUP BY p.public_id", month + '-%')) skipCount.set(row.id, (skipCount.get(row.id) || 0) + (Number(row.n) || 0));
+  // 말하기 문제 기록(선택한 달, 학생마다 최근 다섯 건)
+  const speechIssues = new Map();
+  for (const row of await all(env.DB, 'SELECT p.public_id AS id, l.created_at AS at, l.kind, l.detail, l.ua FROM speech_logs l JOIN profiles p ON p.user_id = l.user_id WHERE l.created_at >= ? AND l.created_at < ? ORDER BY l.id DESC LIMIT 600', start, end)) { const list = speechIssues.get(row.id) || []; if (list.length < 5) { list.push({ at: row.at, kind: row.kind, detail: row.detail, ua: row.ua }); speechIssues.set(row.id, list); } }
   const byLearner = new Map();
   for (const { learnerId, isCurrent, ...room } of memberships) { if (!byLearner.has(learnerId)) byLearner.set(learnerId, []); byLearner.get(learnerId).push({ ...room, isCurrent: !!isCurrent }); }
-  const learners = rows.map(row => { const avatar = { species: 0 }; try { const parsed = JSON.parse(row.avatar || '{}'); if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) for (const [key, limit] of Object.entries({ species: 12, skin: 5, hair: 5, eyes: 3, outfit: 5, accessory: 5, color: 7 })) if (Number.isInteger(parsed[key]) && parsed[key] >= 0 && parsed[key] <= limit) avatar[key] = parsed[key]; } catch { /* Old malformed avatars use the UI fallback. */ } return { ...row, avatar, rooms: byLearner.get(row.id) || [], readingDays: readDays.get(row.id) || 0, speechSkipped: skipCount.get(row.id) || 0 }; });
+  const learners = rows.map(row => { const avatar = { species: 0 }; try { const parsed = JSON.parse(row.avatar || '{}'); if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) for (const [key, limit] of Object.entries({ species: 12, skin: 5, hair: 5, eyes: 3, outfit: 5, accessory: 5, color: 7 })) if (Number.isInteger(parsed[key]) && parsed[key] >= 0 && parsed[key] <= limit) avatar[key] = parsed[key]; } catch { /* Old malformed avatars use the UI fallback. */ } return { ...row, avatar, rooms: byLearner.get(row.id) || [], readingDays: readDays.get(row.id) || 0, speechSkipped: skipCount.get(row.id) || 0, speechIssues: speechIssues.get(row.id) || [] }; });
   const metrics = ['studySeconds','completedLessons','completedUniqueLessons','gameCount','quizAnswered','quizCorrect','gameQuestions','gameCorrect','studyPoints','gamePoints','points','activeDays','flashcardKnown','reviewedCards','reviewedCardCount'];
   const summary = { learnerCount: learners.length, activeLearners: learners.filter(learner => learner.activeDays > 0).length };
   for (const key of metrics) summary[key] = learners.reduce((sum, learner) => sum + Number(learner[key] || 0), 0);
@@ -1590,6 +1596,14 @@ async function handleActivity(request,env,content,fallback=[],now=Date.now()){
   if(!request.headers.get('content-type')?.includes('application/json'))ae(415,'JSON 요청이 필요해요.');
   const raw=await request.text();if(raw.length>100000)ae(413,'입력 내용이 너무 길어요.');let body;try{body=JSON.parse(raw);}catch{ae(400,'입력 형식을 확인해 주세요.');}if(!body||typeof body!=='object'||Array.isArray(body))ae(400,'입력 형식을 확인해 주세요.');
   const cards=acards(content,fallback),byId=new Map(cards.map(c=>[c.id,c]));
+  // 폰에서 생긴 말하기 문제 기록(마이크 오류, 인식 미지원, 화면이 다시 열림 등). 학생마다 최근 마흔 건만 둔다.
+  if(p==='/api/activity/speech-log'){
+   const kinds=['error','empty','unsupported','reloaded','inapp'];if(!kinds.includes(body.kind))ae(400,'기록 종류 확인');
+   const detail=typeof body.detail==='string'?body.detail.slice(0,80):'',ua=String(request.headers.get('user-agent')||'').slice(0,300);
+   await db.prepare('INSERT INTO speech_logs (user_id,created_at,kind,detail,ua) VALUES (?,?,?,?,?)').bind(user,now,body.kind,detail,ua).run();
+   await db.prepare('DELETE FROM speech_logs WHERE user_id=? AND id NOT IN (SELECT id FROM speech_logs WHERE user_id=? ORDER BY id DESC LIMIT 40)').bind(user,user).run();
+   return aj({ok:true});
+  }
   // 20분 공부 안의 토익 단어: 뜻을 맞히면 그 단어를 외운 것으로 적고, 단어장과 같은 점수(단어 하나 2점, 하루 30점까지)를 준다. 처음 고른 답만 인정한다.
   if(p==='/api/activity/session-word'){
    if(typeof body.sessionId!=='string'||body.sessionId.length>100)ae(400,'학습 기록 확인');

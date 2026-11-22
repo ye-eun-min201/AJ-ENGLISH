@@ -222,10 +222,13 @@ export async function handleApi(request, env, courses, now = Date.now()) {
       if (existing && now - existing.started_at > 3600000) {
         // 문제를 하나도 풀지 않은 채 잊은 수업은 지우고 지금 내용(이번 주 수업)으로 새로 시작한다. 풀던 것이 있으면 시간만 다시 잰다.
         const answered = await first(db, 'SELECT COUNT(*) AS n FROM quiz_answers WHERE session_id = ?', existing.id);
-        if (!answered?.n) { await db.prepare('DELETE FROM learning_sessions WHERE id = ? AND user_id = ? AND finished_at IS NULL AND NOT EXISTS (SELECT 1 FROM learning_rewards r WHERE r.id = learning_sessions.id)').bind(existing.id, userId).run(); existing = await first(db, 'SELECT * FROM learning_sessions WHERE user_id = ? AND local_date = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1', userId, today); }
+        // 말하기를 하나라도 통과했거나 토익 단어를 풀었으면 지우지 않는다(다시 들어왔을 때 처음부터 하게 되지 않도록).
+        if (!answered?.n && speechPasses(existing.speech_json).length === 0 && wordAnswers(existing.words_json).length === 0) { await db.prepare('DELETE FROM learning_sessions WHERE id = ? AND user_id = ? AND finished_at IS NULL AND NOT EXISTS (SELECT 1 FROM learning_rewards r WHERE r.id = learning_sessions.id)').bind(existing.id, userId).run(); existing = await first(db, 'SELECT * FROM learning_sessions WHERE user_id = ? AND local_date = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1', userId, today); }
         if (existing) { await db.prepare('UPDATE learning_sessions SET started_at = ? WHERE id = ? AND finished_at IS NULL').bind(now, existing.id).run(); existing = { ...existing, started_at: now }; }
       }
       if (existing) return json({ session: await sessionView(db, existing, courses, now), resumed: true });
+      // 화면이 다시 열려 '하던 수업만' 찾는 요청이면 새 수업을 만들지 않는다.
+      if (body.resumeOnly === true) return json({ session: null, resumed: false });
       const room = await activeRoom(db, userId, profile);
       const id = crypto.randomUUID();
       const startLesson = getLesson(courses,body.course,body.day,body.week), toeic = await toeicWordsFor(db, userId);

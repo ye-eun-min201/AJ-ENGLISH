@@ -43,7 +43,27 @@
       return '<dl class="al-summary">' + stats.map(([label, value, unit, note]) => '<div><dt>' + label + '</dt><dd>' + value + (unit ? ' <span>' + unit + '</span>' : '') + '</dd><small>' + note + '</small></div>').join('') + '</dl>';
     }
     // 반 관리: 반을 만들고, 아래 표에서 학생마다 소속 반을 고른다.
-    function roomsHTML(rooms) {
+    // 폰에서 생긴 말하기 문제 기록을 쉬운 말로 바꿔 보여 준다.
+  function deviceName(ua) {
+    const text = String(ua || '');
+    const phone = /iPhone/.test(text) ? '아이폰' : /iPad/.test(text) ? '아이패드' : /Android/.test(text) ? '안드로이드 폰' : /Macintosh/.test(text) ? '맥' : /Windows/.test(text) ? '윈도우 컴퓨터' : '기기 모름';
+    const app = /KAKAOTALK/i.test(text) ? '카카오톡 안 브라우저' : /NAVER\(inapp/i.test(text) ? '네이버 앱 안 브라우저' : /Instagram|FBAN|FBAV|Line\/|; wv\)/i.test(text) ? '앱 안 브라우저' : /SamsungBrowser/i.test(text) ? '삼성 인터넷' : /Whale/i.test(text) ? '웨일' : /EdgA?\//.test(text) ? '엣지' : /CriOS|Chrome\//.test(text) ? '크롬' : /FxiOS|Firefox\//.test(text) ? '파이어폭스' : /Safari\//.test(text) ? '사파리' : '브라우저 모름';
+    return phone + ' · ' + app;
+  }
+  function issueName(item) {
+    const codes = { 'not-allowed': '마이크 권한이 꺼져 있음', 'service-not-allowed': '폰의 음성 인식(받아쓰기) 기능이 꺼져 있거나 막힘', 'audio-capture': '마이크를 쓸 수 없음', 'network': '음성 인식 인터넷 연결 실패', 'no-speech': '소리가 안 들어옴', 'language-not-supported': '영어 음성 인식 미지원', 'no-start': '마이크가 켜지지 않음', 'start-failed': '마이크 시작 실패' };
+    if (item.kind === 'error') return codes[item.detail] || ('음성 인식 오류(' + (item.detail || '알 수 없음') + ')');
+    if (item.kind === 'empty') return '말했는데 아무것도 받아 적지 못함';
+    if (item.kind === 'unsupported') return '이 브라우저는 말하기 인식이 안 됨';
+    if (item.kind === 'reloaded') return '공부 중에 화면이 통째로 다시 열림(' + (item.detail || '') + ')';
+    if (item.kind === 'inapp') return '앱 안 브라우저로 들어옴';
+    return item.kind;
+  }
+  function issuesHTML(list) {
+    if (!Array.isArray(list) || !list.length) return '<div><dt>말하기 문제 기록</dt><dd>없음</dd></div>';
+    return '<div class="al-issues"><dt>말하기 문제 기록 · 최근 ' + list.length + '건</dt><dd><ul>' + list.map(item => '<li><time>' + dateTime(item.at) + '</time> ' + esc(issueName(item)) + ' <small>' + esc(deviceName(item.ua)) + '</small></li>').join('') + '</ul></dd></div>';
+  }
+  function roomsHTML(rooms) {
       const list = Array.isArray(rooms) ? rooms : [];
       return '<section class="al-rooms" aria-label="반 관리"><h2>반</h2><p>반을 만든 뒤, 아래 표에서 학생 이름 밑의 칸으로 소속 반을 골라 주세요. 고르면 바로 저장돼요.</p><form class="al-room-form" data-al-room-form><input name="name" maxlength="40" placeholder="새 반 이름 (예: 주일 오후반)" aria-label="새 반 이름"><button type="submit" class="button primary">반 만들기</button></form><ul class="al-room-list">' + (list.length ? list.map(room => '<li><strong>' + esc(room.name || '이름 없는 반') + '</strong><span>' + number(room.memberCount) + '명 · 입장 코드 ' + esc(room.code || '') + '</span><button type="button" class="al-room-fill" data-al-room-fill="' + esc(room.id) + '" data-name="' + esc(room.name || '') + '">반 없는 학생 모두 넣기</button><button type="button" class="al-room-remove" data-al-room-remove="' + esc(room.id) + '">지우기</button></li>').join('') : '<li class="al-room-empty">아직 만든 반이 없어요.</li>') + '</ul><p class="al-room-status" data-al-room-status role="status" aria-live="polite"></p></section>';
     }
@@ -51,7 +71,7 @@
       const mine = Array.isArray(learner.rooms) ? learner.rooms : [], currentRoom = (mine.find(room => room.isCurrent) || mine[0] || {}).id || '';
       const rooms = '<select class="al-assign" data-al-assign="' + esc(learner.id) + '" aria-label="' + esc(learner.nickname || '학생') + ' 소속 반"><option value="">반 없음</option>' + (data?.rooms || []).map(room => '<option value="' + esc(room.id) + '"' + (room.id === currentRoom ? ' selected' : '') + '>' + esc(room.name || '이름 없는 반') + '</option>').join('') + '</select>';
       const name = learner.nickname || '닉네임 없음';
-      return '<tr class="al-student-row"><th scope="row"><div class="al-student"><span class="al-avatar" aria-hidden="true">' + avatarHTML(learner) + '</span><span><strong>' + esc(name) + '</strong><small>' + rooms + '</small>' + (learner.speechSkipped > 0 ? '<small class="al-skip">말하기 넘어감 ' + number(learner.speechSkipped) + '문장</small>' : '') + '</span></div></th><td data-label="수업 학습 시간"><strong>' + duration(learner.studySeconds) + '</strong></td><td data-label="수업 완료">' + number(learner.completedLessons) + '<span class="al-unit">회</span></td><td data-label="게임 완료">' + number(learner.gameCount) + '<span class="al-unit">회</span></td><td data-label="학습 XP">' + number(learner.studyPoints) + '</td><td data-label="게임 XP">' + number(learner.gamePoints) + '</td><td data-label="최근 학습"><time>' + dateTime(learner.lastStudiedInMonthAt) + '</time></td><td class="al-details-cell"><details class="al-student-details"><summary>' + esc(name) + ' 상세</summary><dl><div><dt>선택 월 학습일</dt><dd>' + number(learner.activeDays) + '일</dd></div><div><dt>리딩 읽은 날</dt><dd>' + number(learner.readingDays) + '일</dd></div><div><dt>말하기 넘어간 문장</dt><dd>' + number(learner.speechSkipped) + '문장</dd></div><div><dt>수업 완료 · 중복 제외</dt><dd>' + number(learner.completedUniqueLessons) + '개</dd></div><div><dt>수업 퀴즈 정답</dt><dd>' + accuracy(learner.quizCorrect, learner.quizAnswered) + '</dd></div><div><dt>게임 정답</dt><dd>' + accuracy(learner.gameCorrect, learner.gameQuestions) + '</dd></div><div><dt>누적 암기 카드</dt><dd>' + number(learner.flashcardKnown) + '개</dd></div><div><dt>누적 복습 카드</dt><dd>' + number(learner.reviewedCardCount) + '개 · ' + number(learner.reviewedCards) + '회</dd></div><div><dt>전체 기간 최근 학습</dt><dd>' + dateTime(learner.lastStudiedAt) + '</dd></div></dl><p>누적 암기·복습 카드와 전체 기간 최근 학습은 조회 월과 무관한 기록.</p></details></td></tr>';
+      return '<tr class="al-student-row"><th scope="row"><div class="al-student"><span class="al-avatar" aria-hidden="true">' + avatarHTML(learner) + '</span><span><strong>' + esc(name) + '</strong><small>' + rooms + '</small>' + (learner.speechSkipped > 0 ? '<small class="al-skip">말하기 넘어감 ' + number(learner.speechSkipped) + '문장</small>' : '') + '</span></div></th><td data-label="수업 학습 시간"><strong>' + duration(learner.studySeconds) + '</strong></td><td data-label="수업 완료">' + number(learner.completedLessons) + '<span class="al-unit">회</span></td><td data-label="게임 완료">' + number(learner.gameCount) + '<span class="al-unit">회</span></td><td data-label="학습 XP">' + number(learner.studyPoints) + '</td><td data-label="게임 XP">' + number(learner.gamePoints) + '</td><td data-label="최근 학습"><time>' + dateTime(learner.lastStudiedInMonthAt) + '</time></td><td class="al-details-cell"><details class="al-student-details"><summary>' + esc(name) + ' 상세</summary><dl><div><dt>선택 월 학습일</dt><dd>' + number(learner.activeDays) + '일</dd></div><div><dt>리딩 읽은 날</dt><dd>' + number(learner.readingDays) + '일</dd></div><div><dt>말하기 넘어간 문장</dt><dd>' + number(learner.speechSkipped) + '문장</dd></div>' + issuesHTML(learner.speechIssues) + '<div><dt>수업 완료 · 중복 제외</dt><dd>' + number(learner.completedUniqueLessons) + '개</dd></div><div><dt>수업 퀴즈 정답</dt><dd>' + accuracy(learner.quizCorrect, learner.quizAnswered) + '</dd></div><div><dt>게임 정답</dt><dd>' + accuracy(learner.gameCorrect, learner.gameQuestions) + '</dd></div><div><dt>누적 암기 카드</dt><dd>' + number(learner.flashcardKnown) + '개</dd></div><div><dt>누적 복습 카드</dt><dd>' + number(learner.reviewedCardCount) + '개 · ' + number(learner.reviewedCards) + '회</dd></div><div><dt>전체 기간 최근 학습</dt><dd>' + dateTime(learner.lastStudiedAt) + '</dd></div></dl><p>누적 암기·복습 카드와 전체 기간 최근 학습은 조회 월과 무관한 기록.</p></details></td></tr>';
     }
     function render() {
       if (destroyed || !data) return;

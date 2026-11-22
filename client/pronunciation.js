@@ -135,6 +135,11 @@
       skipButton.hidden = !open;
       skipButton.disabled = busy || listening || destroyed;
     }
+    // 폰에서 생긴 말하기 문제를 서버에 남긴다(선생님 화면의 학생 현황에서 원인을 볼 수 있게). 실패해도 공부에는 영향 없음.
+    function report(kind, detail) {
+      if (typeof options.onIssue !== 'function') return;
+      try { options.onIssue(kind, detail || ''); } catch (_) { /* 기록 실패는 무시 */ }
+    }
     // attempt: 마이크를 눌러 시작한 한 번의 시도. 통과·실패·오류·중지 가운데 무엇으로 끝나든 딱 한 번만 정리한다.
     let attempt = null;
     function closeAttempt(countIt) {
@@ -298,6 +303,7 @@
       const result = showTranscript(value);
       if (!result.exact) {
         closeAttempt(true);
+        stopRecognition();
         setMessage('강조된 단어 확인 후 문장 전체 재시도', 'retry');
         return;
       }
@@ -326,12 +332,13 @@
     };
 
     // 지금까지 받아 적힌 문장 가운데 가장 잘 맞는 것으로 채점한다. 아무것도 못 받아 적었으면 시도 한 번으로만 센다.
-    function resolveWithHeard(currentGeneration, emptyText, emptyState) {
+    function resolveWithHeard(currentGeneration, emptyText, emptyState, issueDetail) {
       if (destroyed || busy || currentGeneration !== generation || !attempt || attempt.done || index < 0) return;
       const best = [...attempt.heard].map((text, order) => ({ text, order, value: score(targets[index].en, text).percentage })).sort((a, b) => b.value - a.value || b.order - a.order)[0]?.text || '';
-      if (best) { finalReceived = true; acceptTranscript(best, currentGeneration); if (!busy) stopRecognition(); return; }
+      if (best) { finalReceived = true; acceptTranscript(best, currentGeneration); return; }
       closeAttempt(true);
       stopRecognition();
+      report(emptyState === 'error' ? 'error' : 'empty', issueDetail || '');
       setMessage(emptyText || '인식 문장 없음 · 마이크 선택 후 재시도', emptyState || 'retry');
     }
 
@@ -340,11 +347,13 @@
       // 말하는 중에 한 번 더 누르면 "다 말했어요": 버리지 않고, 받아 적힌 데까지로 채점한다.
       if (listening) {
         const instance = recognition, currentGeneration = generation;
-        try { if (instance) instance.stop(); } catch (_) { /* Already stopped. */ }
-        setMessage('받아 적는 중', 'listening');
-        if (attempt && !attempt.done) { clearTimeout(attempt.timer); attempt.timer = setTimeout(() => resolveWithHeard(currentGeneration), 1500); }
-        else stopRecognition();
-        return;
+        if (attempt && !attempt.done) {
+          try { if (instance) instance.stop(); } catch (_) { /* Already stopped. */ }
+          setMessage('받아 적는 중', 'listening');
+          clearTimeout(attempt.timer); attempt.timer = setTimeout(() => resolveWithHeard(currentGeneration), 1500);
+          return;
+        }
+        // 이미 채점이 끝난 시도인데 인식기만 켜져 있던 경우: 끄고 아래에서 새로 시작한다.
       }
       stopSpeech();
       stopRecognition();
@@ -358,8 +367,10 @@
       finalReceived = false;
       const heardSoFar = new Set();
       attempt = { done: false, heard: heardSoFar, timer: null };
+      let started = false;
       instance.onstart = () => {
         if (destroyed || currentGeneration !== generation) return;
+        started = true;
         listening = true; updateControls();
         setMessage('음성 인식 중 · 화면의 영어 문장 말하기', 'listening');
       };
@@ -389,7 +400,7 @@
         if (event.error === 'aborted') return;   // 곧 onend 가 와서 거기서 정리한다
         listening = false; updateControls();
         // 권한 거부·서비스 오류처럼 말해 볼 수조차 없던 경우도 시도 한 번으로 센다(그래야 열 번 뒤에 넘어갈 수 있다).
-        resolveWithHeard(currentGeneration, errorMessages[event.error] || '음성 인식 실패 · 마이크 선택 후 재시도', 'error');
+        resolveWithHeard(currentGeneration, errorMessages[event.error] || '음성 인식 실패 · 마이크 선택 후 재시도', 'error', String(event.error || 'unknown'));
       };
       instance.onend = () => {
         if (destroyed || currentGeneration !== generation) return;
@@ -400,6 +411,10 @@
         listening = true; updateControls();
         setMessage('마이크 연결 중', 'listening');
         instance.start();
+        attempt.timer = setTimeout(() => {
+          if (destroyed || started || currentGeneration !== generation || !attempt || attempt.done) return;
+          resolveWithHeard(currentGeneration, '마이크가 켜지지 않았어요 · 잠시 뒤 다시 눌러 주세요', 'error', 'no-start');
+        }, 6000);
         listenTimer = setTimeout(() => {
           if (destroyed || !listening || currentGeneration !== generation) return;
           try { instance.stop(); } catch (_) { /* Already stopped. */ }
@@ -409,6 +424,7 @@
         listening = false; recognition = null;
         closeAttempt(true);
         updateControls();
+        report('error', 'start-failed');
         setMessage('마이크 시작 실패 · Chrome 또는 Edge의 마이크 권한 확인', 'error');
       }
     }
@@ -422,6 +438,7 @@
     }
 
     listenButton.addEventListener('click', playTarget);
+    if (!Recognition) report('unsupported', '');
     micButton.addEventListener('click', startListening);
     skipButton.addEventListener('click', skipTarget);
     const destroy = () => {

@@ -113,6 +113,14 @@ export async function handleActivity(request,env,content,fallback=[],now=Date.no
   if(!request.headers.get('content-type')?.includes('application/json'))ae(415,'JSON 요청이 필요해요.');
   const raw=await request.text();if(raw.length>100000)ae(413,'입력 내용이 너무 길어요.');let body;try{body=JSON.parse(raw);}catch{ae(400,'입력 형식을 확인해 주세요.');}if(!body||typeof body!=='object'||Array.isArray(body))ae(400,'입력 형식을 확인해 주세요.');
   const cards=acards(content,fallback),byId=new Map(cards.map(c=>[c.id,c]));
+  // 폰에서 생긴 말하기 문제 기록(마이크 오류, 인식 미지원, 화면이 다시 열림 등). 학생마다 최근 마흔 건만 둔다.
+  if(p==='/api/activity/speech-log'){
+   const kinds=['error','empty','unsupported','reloaded','inapp'];if(!kinds.includes(body.kind))ae(400,'기록 종류 확인');
+   const detail=typeof body.detail==='string'?body.detail.slice(0,80):'',ua=String(request.headers.get('user-agent')||'').slice(0,300);
+   await db.prepare('INSERT INTO speech_logs (user_id,created_at,kind,detail,ua) VALUES (?,?,?,?,?)').bind(user,now,body.kind,detail,ua).run();
+   await db.prepare('DELETE FROM speech_logs WHERE user_id=? AND id NOT IN (SELECT id FROM speech_logs WHERE user_id=? ORDER BY id DESC LIMIT 40)').bind(user,user).run();
+   return aj({ok:true});
+  }
   // 20분 공부 안의 토익 단어: 뜻을 맞히면 그 단어를 외운 것으로 적고, 단어장과 같은 점수(단어 하나 2점, 하루 30점까지)를 준다. 처음 고른 답만 인정한다.
   if(p==='/api/activity/session-word'){
    if(typeof body.sessionId!=='string'||body.sessionId.length>100)ae(400,'학습 기록 확인');
