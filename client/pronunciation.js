@@ -48,19 +48,61 @@
           : Math.max(table[i - 1][j], table[i][j - 1]);
       }
     }
-    const matched = Array(wanted.length).fill(false), near = Array(wanted.length).fill(false);
+    const matched = Array(wanted.length).fill(false), near = Array(wanted.length).fill(false), pair = Array(wanted.length).fill(-1);
     let i = wanted.length, j = heard.length;
     while (i && j) {
-      if (sameWord(wanted[i - 1], heard[j - 1])) { matched[i - 1] = true; near[i - 1] = wanted[i - 1] !== heard[j - 1]; i--; j--; }
+      if (sameWord(wanted[i - 1], heard[j - 1])) { matched[i - 1] = true; near[i - 1] = wanted[i - 1] !== heard[j - 1]; pair[i - 1] = j - 1; i--; j--; }
       else if (table[i - 1][j] >= table[i][j - 1]) i--;
       else j--;
     }
     const exact = wanted.length > 0 && wanted.length === heard.length && wanted.every((word, k) => sameWord(word, heard[k]));
     const percentage = exact ? 100 : Math.min(99, Math.round(100 * table[wanted.length][heard.length] / Math.max(1, wanted.length, heard.length)));
-    return { exact, score: percentage, percentage, words: wanted, matched, near, nearWords: wanted.filter((_, k) => near[k]), heard, normalized: heard.join(' ') };
+    // 못 맞힌 단어가 무엇으로 들렸는지: 앞뒤로 맞은 단어 사이에 남아 있는 '들린 단어'와 짝짓는다.
+    const heardAs = Array(wanted.length).fill(''), used = new Set(pair.filter(n => n >= 0));
+    for (let a = 0; a < wanted.length; a++) {
+      if (matched[a]) continue;
+      let b = a; while (b + 1 < wanted.length && !matched[b + 1]) b++;
+      const lo = a > 0 ? pair[a - 1] : -1, hi = b + 1 < wanted.length ? pair[b + 1] : heard.length, spare = [];
+      for (let h = lo + 1; h < hi; h++) if (!used.has(h)) spare.push(h);
+      if (spare.length === b - a + 1) spare.forEach((h, n) => { heardAs[a + n] = heard[h]; });
+      else for (let k = a; k <= b; k++) {
+        let best = -1, top = 0.34;
+        for (const h of spare) { if (used.has(h)) continue; const value = closeness(wanted[k], heard[h]); if (value > top) { top = value; best = h; } }
+        if (best >= 0) { heardAs[k] = heard[best]; used.add(best); }
+      }
+      a = b;
+    }
+    return { exact, score: percentage, percentage, words: wanted, matched, near, nearWords: wanted.filter((_, k) => near[k]), heardAs, heard, normalized: heard.join(' ') };
+  }
+  // 두 낱말이 얼마나 비슷한지 (1 = 같음, 0 = 전혀 다름)
+  function closeness(a, b) {
+    const rows = Array.from({ length: a.length + 1 }, (_, n) => [n]);
+    for (let n = 1; n <= b.length; n++) rows[0][n] = n;
+    for (let x = 1; x <= a.length; x++) for (let y = 1; y <= b.length; y++) rows[x][y] = Math.min(rows[x - 1][y] + 1, rows[x][y - 1] + 1, rows[x - 1][y - 1] + (a[x - 1] === b[y - 1] ? 0 : 1));
+    return 1 - rows[a.length][b.length] / Math.max(1, a.length, b.length);
+  }
+  // 못 맞힌 단어에 붙이는 한 줄 안내 (무엇으로 들렸는지, 어디를 고치면 되는지)
+  const MIXUPS = [['r', 'l', 'r과 l: r은 혀가 입천장에 닿지 않게, l은 혀끝을 윗니 뒤에 붙여요'], ['f', 'p', 'f: 윗니를 아랫입술에 대고 바람만 (ㅍ 아님)'], ['v', 'b', 'v: 윗니를 아랫입술에 대고 목을 울려요 (ㅂ 아님)'], ['z', 'j', 'z: ‘스’에 목 울림을 넣어요 (ㅈ 아님)'], ['z', 's', 'z: ‘스’에 목 울림을 넣어요']];
+  function wordHint(target, heardWord) {
+    if (!heardWord) return '안 들렸어요 · 앞뒤 단어와 붙이지 말고 또박또박';
+    const said = '‘' + heardWord + '’(으)로 들렸어요';
+    if (target.startsWith(heardWord) && target.length > heardWord.length) return said + ' · 끝소리 ‘-' + target.slice(heardWord.length) + '’까지 내요';
+    if (heardWord.startsWith(target)) return said + ' · 끝에 소리가 더 붙었어요';
+    if (target.replace(/th/g, 's') === heardWord || target.replace(/th/g, 'd') === heardWord || target.replace(/th/g, 't') === heardWord) return said + ' · th: 혀끝을 이 사이로 살짝 내밀어요';
+    if (target.length === heardWord.length) {
+      const diff = []; for (let n = 0; n < target.length; n++) if (target[n] !== heardWord[n]) diff.push([target[n], heardWord[n]]);
+      for (const [x, y, tip] of MIXUPS) if (diff.length && diff.every(([t, h]) => (t === x && h === y) || (t === y && h === x))) return said + ' · ' + tip;
+    }
+    return said;
+  }
+  // 단어별로 몇 번 걸렸는지(이 화면을 열어 둔 동안)와 서버에서 받아 온 발음 도움말
+  const missCount = new Map(), helpCache = new Map();
+  function pronunciationHelp(word) {
+    if (!helpCache.has(word)) helpCache.set(word, fetch('/api/pronounce?w=' + encodeURIComponent(word), { credentials: 'same-origin' }).then(response => response.ok ? response.json() : null).catch(() => null).then(data => { if (!data) helpCache.delete(word); return data; }));
+    return helpCache.get(word);
   }
 
-  window.SpeechMatch = { normalize, score, sameWord };
+  window.SpeechMatch = { normalize, score, sameWord, wordHint };
 
   let activeDestroy = null;
   let artSequence = 0;
@@ -111,6 +153,7 @@
       '<div class="orange-target"><p class="orange-instruction">비즈니스 영어 문장 말하기</p><p class="orange-target-en"></p><p class="orange-target-ko"></p><div class="orange-word-list" aria-label="단어별 인식 결과"></div></div>' +
       '<div class="orange-actions"><button type="button" class="btn secondary orange-listen">◖ 먼저 듣기</button><button type="button" class="btn primary orange-mic">● 마이크로 말하기</button></div>' +
       '<div class="orange-recognition" role="status" aria-live="polite" aria-atomic="true"><div class="orange-match-head"><span>문장 인식 일치도</span><strong class="orange-percent">—</strong></div><div class="orange-match-track"><span></span></div><p class="orange-transcript">음성 인식 문장</p><p class="orange-message">문장 전체 인식 시 과일 1개 추가</p></div>' +
+      '<div class="orange-coach" hidden></div>' +
       '<div class="orange-skip-row"><p class="orange-tries" role="status" aria-live="polite" hidden></p><button type="button" class="btn secondary orange-skip" hidden>넘어가기 · 점수 절반</button></div>' +
       '<p class="orange-disclaimer">문장 인식 결과 비교 · 정밀 발음 평가 미지원<br>음성 인식 시 브라우저 제공업체의 음성 처리 가능</p>';
     container.replaceChildren(root);
@@ -121,6 +164,55 @@
     const percent = $('.orange-percent'), track = $('.orange-match-track > span');
     const transcriptText = $('.orange-transcript'), message = $('.orange-message');
     const crateSlots = $('.crate-slots'), crateCount = $('.crate-count');
+    // 틀린 단어를 짚어 주는 상자: 무엇으로 들렸는지 알려 주고, 세 번 넘게 걸린 단어는 발음(한글로 비슷하게·강세·입 모양)을 보여 준다.
+    const coach = $('.orange-coach'), helpAfter = 3;
+    const esc = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    function shown(word) {              // 채점용 소문자 낱말을 문장에 적힌 모양(CEO 등)으로
+      for (const raw of String(targets[index]?.en || '').split(/\s+/)) if (normalize(raw) === word) return raw.replace(/^[^A-Za-z0-9']+|[^A-Za-z0-9']+$/g, '');
+      return word;
+    }
+    function speakWord(word, rate) {
+      if (destroyed || busy) return;
+      closeAttempt(false); stopRecognition();
+      if (typeof options.say === 'function') options.say(word, rate);
+    }
+    async function openHelp(row, word, autoplay) {
+      const box = row.querySelector('.coach-help'), button = row.querySelector('[data-coach-help]');
+      if (!box || box.dataset.open === '1') return;
+      box.dataset.open = '1'; box.hidden = false; if (button) button.hidden = true;
+      box.innerHTML = '<p class="coach-note">발음 불러오는 중</p>';
+      const data = await pronunciationHelp(word);
+      if (destroyed || !box.isConnected) return;
+      if (!data || !data.found) box.innerHTML = '<p class="coach-note">이 단어는 발음 사전에 없어요. “천천히”를 눌러 듣고 따라 해 보세요.</p>';
+      else box.innerHTML = '<p class="coach-read"><span>비슷한 소리</span> ' + data.syllables.map((part, n) => n === data.stress ? '<b>' + esc(part) + '</b>' : esc(part)).join('') + (data.stress >= 0 && data.syllables.length > 1 ? ' <small>굵은 곳을 세게, 길게</small>' : '') + '</p>'
+        + (data.tips.length ? '<ul class="coach-tips">' + data.tips.map(tip => '<li>' + esc(tip) + '</li>').join('') + '</ul>' : '')
+        + '<p class="coach-note">한글은 비슷하게 적은 것이에요. “천천히”로 진짜 소리를 듣고 따라 하세요.</p>';
+      if (autoplay) speakWord(word, 0.55);
+    }
+    function renderCoach(result, fresh) {
+      coach.replaceChildren();
+      const missing = result ? result.words.map((word, n) => ({ word, heard: result.heardAs[n], hit: result.matched[n] })).filter(item => !item.hit) : [];
+      if (!missing.length || index < 0) { coach.hidden = true; return; }
+      coach.hidden = false;
+      const title = document.createElement('p'); title.className = 'coach-title'; title.textContent = '다시 볼 단어'; coach.appendChild(title);
+      const seen = new Set();
+      missing.filter(item => !seen.has(item.word) && seen.add(item.word)).slice(0, 4).forEach(item => {
+        const word = shown(item.word), count = missCount.get(item.word) || 0, row = document.createElement('div');
+        row.className = 'coach-row' + (count >= helpAfter ? ' is-hard' : '');
+        row.innerHTML = '<div class="coach-head"><strong lang="en">' + esc(word) + '</strong><span>' + esc(wordHint(item.word, item.heard)) + '</span></div>'
+          + (count >= helpAfter ? '<p class="coach-many">' + count + '번 걸렸어요 · 이렇게 소리 내 보세요</p>' : '')
+          + '<div class="coach-actions"><button type="button" class="btn secondary" data-coach-say="' + esc(word) + '">▶ 듣기</button><button type="button" class="btn secondary" data-coach-slow="' + esc(word) + '">천천히</button><button type="button" class="btn secondary" data-coach-help="' + esc(word) + '">발음 보기</button></div><div class="coach-help" hidden></div>';
+        coach.appendChild(row);
+        if (count >= helpAfter) openHelp(row, word, fresh && count === helpAfter);
+      });
+      if (seen.size > 4) { const more = document.createElement('p'); more.className = 'coach-note'; more.textContent = '외 ' + (seen.size - 4) + '개 · 위 단어부터 고쳐 보세요'; coach.appendChild(more); }
+    }
+    function onCoachClick(event) {
+      const button = event.target.closest('button'); if (!button || !coach.contains(button)) return;
+      if (button.dataset.coachSay) speakWord(button.dataset.coachSay);
+      else if (button.dataset.coachSlow) speakWord(button.dataset.coachSlow, 0.55);
+      else if (button.dataset.coachHelp) openHelp(button.closest('.coach-row'), button.dataset.coachHelp, false);
+    }
     // 여러 번 말해도 안 될 때: 정해진 횟수(기본 열 번)를 채우면 점수 절반으로 넘어갈 수 있다.
     const triesText = $('.orange-tries'), skipButton = $('.orange-skip');
     const canSkip = typeof options.onSkip === 'function';
@@ -242,6 +334,7 @@
       transcriptText.textContent = '음성 인식 문장';
       setMessage(Recognition ? '문장 전체 인식 시 과일 1개 추가' : '음성 인식 미지원 · HTTPS 주소를 Chrome 또는 Edge에서 열기', Recognition ? '' : 'unsupported');
       renderWords(null);
+      renderCoach(null);
       busy = false;
       updateControls();
     }
@@ -304,10 +397,13 @@
       if (!result.exact) {
         closeAttempt(true);
         stopRecognition();
-        setMessage('강조된 단어 확인 후 문장 전체 재시도', 'retry');
+        new Set(result.words.filter((_, n) => !result.matched[n])).forEach(word => missCount.set(word, (missCount.get(word) || 0) + 1));
+        renderCoach(result, true);
+        setMessage('아래 “다시 볼 단어” 확인 후 문장 전체 재시도', 'retry');
         return;
       }
       closeAttempt(false);
+      renderCoach(null);
       setMessage('문장 전체 인식 · 통과 여부 확인 중', 'checking');
       await settle(passingIndex => typeof options.onPass === 'function' ? options.onPass(passingIndex, value) : { passed: false },
         result.nearWords.length ? '통과 · 끝소리까지 또렷하게: ' + result.nearWords.join(', ') : '문장 인식 완료 · 과일 1개 추가', '말하기 퀘스트 성공');
@@ -441,6 +537,7 @@
     if (!Recognition) report('unsupported', '');
     micButton.addEventListener('click', startListening);
     skipButton.addEventListener('click', skipTarget);
+    coach.addEventListener('click', onCoachClick);
     const destroy = () => {
       if (destroyed) return;
       destroyed = true;
@@ -450,6 +547,7 @@
       listenButton.removeEventListener('click', playTarget);
       micButton.removeEventListener('click', startListening);
       skipButton.removeEventListener('click', skipTarget);
+      coach.removeEventListener('click', onCoachClick);
       if (activeDestroy === destroy) activeDestroy = null;
     };
     activeDestroy = destroy;

@@ -1224,11 +1224,18 @@ async function getTeachingContent(env, baseCourses = {}, now = Date.now()) {
 
 async function handleTeaching(request, env, now = Date.now(), baseCourses = {}) {
   const url = new URL(request.url), path = url.pathname;
-  if (!(path.startsWith('/api/admin/') || path === '/api/content' || path === '/api/notes' || path.startsWith('/api/pdf/') || path.startsWith('/api/transcript/') || path === '/api/reading' || path.startsWith('/api/reading/') || path === '/api/wordbook')) return null;
+  if (!(path.startsWith('/api/admin/') || path === '/api/content' || path === '/api/notes' || path.startsWith('/api/pdf/') || path.startsWith('/api/transcript/') || path === '/api/reading' || path.startsWith('/api/reading/') || path === '/api/wordbook' || path === '/api/pronounce')) return null;
   try {
     if (!env.DB) fail(503, 'database_unavailable', '수업 저장소를 준비하고 있어요. 잠시 후 다시 시도해 주세요.');
     if (!['GET', 'POST', 'HEAD'].includes(request.method)) fail(405, 'method_not_allowed', '지원하지 않는 요청입니다.');
     if (request.method === 'POST') originCheck(request);
+    // 단어 발음 도움말(한글로 비슷하게·강세·입 모양). 수업 내용이 아니라 영어 사전 정보라서 로그인 없이도 준다.
+    if (path === '/api/pronounce' && request.method === 'GET') {
+      const word = (url.searchParams.get('w') || '').trim();
+      if (!/^[A-Za-z][A-Za-z']{0,39}$/.test(word)) fail(400, 'invalid_word', '영어 단어 하나를 보내 주세요.');
+      const { pronounce } = await import('./pronounce.mjs');
+      return new Response(JSON.stringify(await pronounce(word)), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=86400' } });
+    }
     // 우리 반 사이트: 수업 내용은 카카오로 로그인한 사람(또는 관리자)에게만 준다.
     if (path === '/api/content' && request.method === 'GET') { if (!request.headers.get('x-aj-user-id') && !await adminSession(request, env, now)) return json({ error: 'sign_in_required', message: '카카오로 로그인한 뒤에 볼 수 있어요.' }, 401); return json((await getTeachingContent(env, baseCourses, now)).content); }
     if (path === '/api/admin/login' && request.method === 'POST') {
