@@ -100,6 +100,7 @@
   // 그 버그 보고서에서 통했다고 한 방법 두 가지를 그대로 따른다:
   //   ① 인식을 시작하기 직전에 짧은 말소리(읽어 주기)를 한 번 내고, 그 소리가 끝난 바로 뒤에 인식을 시작한다.
   //   ② 인식을 중간에 끊지 않는다(stop·abort 를 부르지 않고 저절로 끝나게 둔다).
+  const BUILD = ((document.currentScript && document.currentScript.src || '').match(/[?&]v=aj(\d+)/) || [])[1] || '?';
   const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent || '') || (/Macintosh/.test(navigator.userAgent || '') && (navigator.maxTouchPoints || 0) > 1);
   let lingering = null, emptyStreak = 0;     // lingering: 손은 뗐지만 아직 저절로 끝나지 않은 이전 인식기
   let cueBroken = false;                     // 신호 소리 뒤에 시작하는 방식이 이 기기에서 막히면, 누르는 즉시 시작하는 예전 방식으로 돌아간다
@@ -177,6 +178,14 @@
     let index = targets.findIndex((_, n) => !alreadyPassed.has(n));
     let recognition = null, generation = 0, destroyed = false, busy = false, listening = false;
     let preparing = false;     // 아이폰: 신호 소리를 내는 동안(아직 인식 시작 전)
+    // 진단 줄: 몇 번 눌렀고 어떻게 끝났는지를 화면 맨 아래에 작게 적는다(문제가 생겼을 때 화면 사진만으로 원인을 알 수 있게).
+    const stats = { press: 0, heard: 0, empty: 0, error: 0, server: 0, last: '' };
+    function renderDiag() {
+      const box = $('.orange-diag'); if (!box) return;
+      const failed = stats.heard + stats.empty + stats.error + stats.server;
+      box.hidden = failed < 3;
+      box.textContent = '진단 · 버전 ' + BUILD + (IOS ? ' · 아이폰 방식' : '') + (Recognition ? '' : ' · 인식 기능 없음') + ' · 누름 ' + stats.press + ' · 다르게 들림 ' + stats.heard + ' · 못 들음 ' + stats.empty + ' · 마이크 오류 ' + stats.error + ' · 저장 실패 ' + stats.server + (stats.last ? ' · 마지막: ' + stats.last : '');
+    }
     let advanceTimer = null, listenTimer = null, successTimer = null, completed = false, finalReceived = false;
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const sceneId = 'harvest-crate-' + (++artSequence);
@@ -188,10 +197,11 @@
       '<p class="crate-count" role="status" aria-live="polite" aria-atomic="true"></p><div class="harvest-progress"><div class="harvest-stars" aria-label="완료한 퀘스트 별"></div><ol class="harvest-checkpoints" aria-label="말하기 세 단계"></ol></div><div class="harvest-success" role="status" aria-live="polite" hidden></div>' +
       '<div class="orange-target"><p class="orange-instruction">비즈니스 영어 문장 말하기</p><p class="orange-target-en"></p><p class="orange-target-ko"></p><div class="orange-word-list" aria-label="단어별 인식 결과"></div></div>' +
       '<div class="orange-actions"><button type="button" class="btn secondary orange-listen">◖ 먼저 듣기</button><button type="button" class="btn primary orange-mic">● 마이크로 말하기</button></div>' +
+      '<div class="orange-skip-row"><p class="orange-tries" role="status" aria-live="polite" hidden></p><button type="button" class="btn primary orange-skip" hidden>넘어가기 · 점수 절반 →</button></div>' +
       '<div class="orange-recognition" role="status" aria-live="polite" aria-atomic="true"><div class="orange-match-head"><span>문장 인식 일치도</span><strong class="orange-percent">—</strong></div><div class="orange-match-track"><span></span></div><p class="orange-transcript">음성 인식 문장</p><p class="orange-message">문장 전체 인식 시 과일 1개 추가</p></div>' +
       '<div class="orange-coach" hidden></div>' +
-      '<div class="orange-skip-row"><p class="orange-tries" role="status" aria-live="polite" hidden></p><button type="button" class="btn secondary orange-skip" hidden>넘어가기 · 점수 절반</button></div>' +
-      '<p class="orange-disclaimer">문장 인식 결과 비교 · 정밀 발음 평가 미지원<br>음성 인식 시 브라우저 제공업체의 음성 처리 가능</p>';
+      '<p class="orange-disclaimer">문장 인식 결과 비교 · 정밀 발음 평가 미지원<br>음성 인식 시 브라우저 제공업체의 음성 처리 가능</p>' +
+      '<p class="orange-diag" hidden></p>';
     container.replaceChildren(root);
     const $ = sel => root.querySelector(sel);
     const scene = $('.orange-scene'), fruit = $('.cargo-orange'), round = $('.orange-round');
@@ -261,8 +271,10 @@
       triesText.textContent = !Recognition ? '이 브라우저는 말하기 인식이 안 돼요 · Chrome이나 Safari로 열면 점수를 다 받을 수 있어요'
         : deaf && count < skipAfter ? '아이폰이 목소리를 받지 못하고 있어요 · 넘어가면 이 문장 점수는 절반'
         : open ? skipAfter + '번 시도했어요 · 넘어가면 이 문장 점수는 절반' : count + '번 시도 · ' + skipAfter + '번이 되면 넘어갈 수 있어요';
+      const wasHidden = skipButton.hidden;
       skipButton.hidden = !open;
       skipButton.disabled = busy || listening || preparing || destroyed;
+      if (open && wasHidden && !destroyed) { try { skipButton.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) { /* 무시 */ } }
     }
     // 폰에서 생긴 말하기 문제를 서버에 남긴다(선생님 화면의 학생 현황에서 원인을 볼 수 있게). 실패해도 공부에는 영향 없음.
     function report(kind, detail) {
@@ -373,12 +385,13 @@
       setMessage(Recognition ? '문장 전체 인식 시 과일 1개 추가' : '음성 인식 미지원 · HTTPS 주소를 Chrome 또는 Edge에서 열기', Recognition ? '' : 'unsupported');
       renderWords(null);
       renderCoach(null);
+      emptyStreak = 0;
       busy = false;
       updateControls();
     }
 
     // 통과(또는 넘어가기)를 서버에 확인받고, 과일을 상자에 넣은 뒤 다음 문장으로 간다.
-    async function settle(validate, successText, rewardLabel) {
+    async function settle(validate, successText, rewardLabel, countOnFail) {
       stopRecognition();
       busy = true; updateControls();
       const passingIndex = index;
@@ -387,6 +400,8 @@
         if (destroyed || passingIndex !== index) return;
         if (!validation || validation.passed !== true) {
           busy = false;
+          stats.server++; stats.last = '서버가 통과로 인정하지 않음'; renderDiag();
+          if (countOnFail) { addTry(); report('error', 'server-refused'); }
           setMessage(validation && validation.message ? validation.message : '통과 기준 미충족 · 문장 전체 재시도', 'retry');
           updateControls();
           return;
@@ -424,6 +439,8 @@
       } catch (error) {
         if (destroyed || passingIndex !== index) return;
         busy = false;
+        stats.server++; stats.last = '저장 실패 ' + (error && error.status ? error.status : ''); renderDiag();
+        if (countOnFail) { addTry(); report('error', 'server-' + (error && error.status ? error.status : 'fail')); }
         setMessage(error && error.message ? error.message : '결과 저장 실패 · 연결 확인 후 재시도', 'error');
         updateControls();
       }
@@ -435,6 +452,7 @@
       if (!result.exact) {
         closeAttempt(true);
         stopRecognition();
+        stats.heard++; stats.last = '“' + String(value).slice(0, 40) + '” ' + result.percentage + '%'; renderDiag();
         new Set(result.words.filter((_, n) => !result.matched[n])).forEach(word => missCount.set(word, (missCount.get(word) || 0) + 1));
         renderCoach(result, true);
         setMessage('아래 “다시 볼 단어” 확인 후 문장 전체 재시도', 'retry');
@@ -444,7 +462,7 @@
       renderCoach(null);
       setMessage('문장 전체 인식 · 통과 여부 확인 중', 'checking');
       await settle(passingIndex => typeof options.onPass === 'function' ? options.onPass(passingIndex, value) : { passed: false },
-        result.nearWords.length ? '통과 · 끝소리까지 또렷하게: ' + result.nearWords.join(', ') : '문장 인식 완료 · 과일 1개 추가', '말하기 퀘스트 성공');
+        result.nearWords.length ? '통과 · 끝소리까지 또렷하게: ' + result.nearWords.join(', ') : '문장 인식 완료 · 과일 1개 추가', '말하기 퀘스트 성공', true);
     }
 
     async function skipTarget() {
@@ -474,6 +492,8 @@
       closeAttempt(true);
       stopRecognition();
       emptyStreak++;
+      if (emptyState === 'error') { stats.error++; stats.last = issueDetail || '오류'; } else { stats.empty++; stats.last = '아무것도 못 받아 적음'; }
+      renderDiag();
       report(emptyState === 'error' ? 'error' : 'empty', issueDetail || (IOS ? (sawSpeech ? 'ios-unclear' : 'ios-deaf') : ''));
       // 아이폰이 연달아 아무 소리도 못 받으면 iOS 쪽 문제일 가능성이 크다: 쉬었다 하거나 사파리를 껐다 켜면 풀린다.
       if (IOS && emptyState !== 'error' && emptyStreak >= 2) setMessage('아이폰이 목소리를 받지 못했어요 · 1분쯤 쉬었다가 다시 누르거나, 사파리를 완전히 껐다 켜 주세요', 'error');
@@ -483,6 +503,7 @@
 
     function startListening() {
       if (destroyed || busy || completed || !Recognition || index < 0 || preparing) return;
+      stats.press++;
       // 말하는 중에 한 번 더 누르면 "다 말했어요": 버리지 않고, 받아 적힌 데까지로 채점한다.
       if (listening) {
         const instance = recognition, currentGeneration = generation;
@@ -581,6 +602,7 @@
         listening = false; recognition = null;
         closeAttempt(true);
         updateControls();
+        stats.error++; stats.last = 'start-failed'; renderDiag();
         report('error', 'start-failed');
         setMessage('마이크 시작 실패 · Chrome 또는 Edge의 마이크 권한 확인', 'error');
       }

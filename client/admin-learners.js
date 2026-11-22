@@ -51,7 +51,8 @@
     return phone + ' · ' + app;
   }
   function issueName(item) {
-    const codes = { 'not-allowed': '마이크 권한이 꺼져 있음', 'service-not-allowed': '폰의 음성 인식(받아쓰기) 기능이 꺼져 있거나 막힘', 'audio-capture': '마이크를 쓸 수 없음', 'network': '음성 인식 인터넷 연결 실패', 'no-speech': '소리가 안 들어옴', 'language-not-supported': '영어 음성 인식 미지원', 'no-start': '마이크가 켜지지 않음', 'start-failed': '마이크 시작 실패', 'cue-start-blocked': '신호 소리 뒤 자동 시작이 막힘(다음부터는 누르는 즉시 시작)' };
+    const codes = { 'not-allowed': '마이크 권한이 꺼져 있음', 'service-not-allowed': '폰의 음성 인식(받아쓰기) 기능이 꺼져 있거나 막힘', 'audio-capture': '마이크를 쓸 수 없음', 'network': '음성 인식 인터넷 연결 실패', 'no-speech': '소리가 안 들어옴', 'language-not-supported': '영어 음성 인식 미지원', 'no-start': '마이크가 켜지지 않음', 'start-failed': '마이크 시작 실패', 'cue-start-blocked': '신호 소리 뒤 자동 시작이 막힘(다음부터는 누르는 즉시 시작)', 'server-refused': '맞게 들렸는데 서버가 통과로 인정하지 않음', 'session-404': '수업 기록이 서버에서 사라져 다시 불러옴', 'session-409': '이미 끝난 수업 기록이라 다시 불러옴' };
+    if (item.kind === 'error' && /^server-/.test(item.detail || '') && !codes[item.detail]) return '통과 결과 저장 실패(' + item.detail.slice(7) + ')';
     if (item.kind === 'error') return codes[item.detail] || ('음성 인식 오류(' + (item.detail || '알 수 없음') + ')');
     if (item.kind === 'empty' && item.detail === 'ios-deaf') return '아이폰이 목소리를 전혀 받지 못함(iOS 음성 인식 문제 의심)';
     if (item.kind === 'empty' && item.detail === 'ios-unclear') return '아이폰이 소리는 들었지만 글자로 받아 적지 못함';

@@ -311,3 +311,9 @@ body.dashboard-shell .dialog .orange-coach .coach-read{font-size:24px !important
 body.dashboard-shell .dialog .orange-coach .coach-read span,body.dashboard-shell .dialog .orange-coach .coach-read small{font-size:12px !important}
 body.dashboard-shell .dialog .orange-coach .coach-title{color:#b3261e !important}
 html[data-theme="dark"] body.dashboard-shell .dialog .orange-coach .coach-title{color:#ffb4b4 !important}
+
+/* 말하기: 넘어가기 줄을 마이크 단추 바로 아래에(눈에 잘 띄게), 맨 아래 진단 줄 */
+.orange-skip-row{margin:12px 0 6px}
+.orange-skip-row .orange-skip{box-shadow:0 0 0 3px rgba(79,70,229,.18)}
+.orange-diag{margin:10px 0 0;font-size:11px;line-height:1.5;color:#8b95a1;text-align:center;overflow-wrap:anywhere}
+.orange-diag[hidden]{display:none}

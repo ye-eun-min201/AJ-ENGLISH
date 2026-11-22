@@ -95,7 +95,9 @@
       const tokens = option.split(/\s+/).filter(Boolean);
       return tokens.map((token, index) => /^(?:one's|someone's|sb's)$/.test(token) ? "(?:my|your|his|her|its|our|their|one's)" : /^(?:sb|sth|someone|something)$/.test(token) ? '\\S+' : index === 0 || tokens.length === 1 ? inflect(token) : rx(token) + (index === tokens.length - 1 ? '(?:s|es)?' : '')).join('[\\s-]+');
     });
-    return patterns.length ? new RegExp("(?<![A-Za-z'])(?:" + patterns.join('|') + ")(?![A-Za-z])", 'gi') : null;
+    if (!patterns.length) return null;
+    try { return new RegExp("(?<![A-Za-z'])(?:" + patterns.join('|') + ")(?![A-Za-z])", 'gi'); }
+    catch (_) { return new RegExp("\\b(?:" + patterns.join('|') + ")(?![A-Za-z])", 'gi'); }   // 2023년 3월 이전 사파리는 뒤돌아보기를 모른다
   }
   /** 글에서 단어들을 찾아 [{text} | {text, word: 번호}] 조각으로 돌려준다. */
   function pieces(text, words) {
