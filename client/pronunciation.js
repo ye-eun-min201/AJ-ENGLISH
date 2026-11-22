@@ -95,6 +95,41 @@
     }
     return said;
   }
+  // ── 아이폰·아이패드 전용 처리 ─────────────────────────────────────────────
+  // iOS 27 사파리에는 "첫 번째 음성 인식만 되고 그다음부터는 마이크가 켜져도 아무 소리도 받지 못하는" 문제가 있다 (WebKit 버그 321436, 아직 안 고쳐짐).
+  // 그 버그 보고서에서 통했다고 한 방법 두 가지를 그대로 따른다:
+  //   ① 인식을 시작하기 직전에 짧은 말소리(읽어 주기)를 한 번 내고, 그 소리가 끝난 바로 뒤에 인식을 시작한다.
+  //   ② 인식을 중간에 끊지 않는다(stop·abort 를 부르지 않고 저절로 끝나게 둔다).
+  const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent || '') || (/Macintosh/.test(navigator.userAgent || '') && (navigator.maxTouchPoints || 0) > 1);
+  let lingering = null, emptyStreak = 0;     // lingering: 손은 뗐지만 아직 저절로 끝나지 않은 이전 인식기
+  let cueBroken = false;                     // 신호 소리 뒤에 시작하는 방식이 이 기기에서 막히면, 누르는 즉시 시작하는 예전 방식으로 돌아간다
+  const quietWaiters = [];
+  function letGo(instance) {                 // 끊지 않고 손만 뗀다. 끝내 안 끝나면(20초) 어쩔 수 없이 끊는다.
+    instance.onstart = instance.onresult = instance.onerror = null;
+    lingering = instance;
+    const done = () => { if (lingering === instance) lingering = null; quietWaiters.splice(0).forEach(run => run()); };
+    instance.onend = done;
+    setTimeout(() => { if (lingering === instance) { try { instance.abort(); } catch (_) { /* 이미 끝남 */ } done(); } }, 20000);
+  }
+  function whenQuiet(run, maxWait) {         // 이전 인식기가 저절로 끝난 뒤에 실행 (너무 오래 걸리면 그냥 실행)
+    if (!lingering) { run(); return; }
+    let called = false;
+    const once = () => { if (called) return; called = true; clearTimeout(timer); const at = quietWaiters.indexOf(once); if (at >= 0) quietWaiters.splice(at, 1); run(); };
+    const timer = setTimeout(once, maxWait || 7000);
+    quietWaiters.push(once);
+  }
+  function startCue(done) {                  // 인식 직전에 내는 짧은 말소리
+    let called = false;
+    const finish = () => { if (called) return; called = true; clearTimeout(timer); done(); };
+    const timer = setTimeout(() => { try { window.speechSynthesis.cancel(); } catch (_) { /* 무시 */ } finish(); }, 4000);
+    try {
+      const synth = window.speechSynthesis, cue = new SpeechSynthesisUtterance('Your turn.');
+      cue.lang = 'en-US'; cue.rate = 1; cue.onend = finish; cue.onerror = finish;
+      if (synth.speaking || synth.pending) synth.cancel();
+      synth.speak(cue);
+    } catch (_) { finish(); }
+  }
+
   // 단어별로 몇 번 걸렸는지(이 화면을 열어 둔 동안)와 서버에서 받아 온 발음 도움말
   const missCount = new Map(), helpCache = new Map();
   function pronunciationHelp(word) {
@@ -141,6 +176,7 @@
     const alreadyPassed = new Set((options.initialPassed || []).map(Number).filter(n => Number.isInteger(n) && n >= 0 && n < targets.length));
     let index = targets.findIndex((_, n) => !alreadyPassed.has(n));
     let recognition = null, generation = 0, destroyed = false, busy = false, listening = false;
+    let preparing = false;     // 아이폰: 신호 소리를 내는 동안(아직 인식 시작 전)
     let advanceTimer = null, listenTimer = null, successTimer = null, completed = false, finalReceived = false;
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const sceneId = 'harvest-crate-' + (++artSequence);
@@ -172,9 +208,9 @@
       return word;
     }
     function speakWord(word, rate) {
-      if (destroyed || busy) return;
+      if (destroyed || busy || preparing || (IOS && listening)) return;      // 아이폰: 인식 중에 소리를 내면 인식이 죽는다
       closeAttempt(false); stopRecognition();
-      if (typeof options.say === 'function') options.say(word, rate);
+      whenQuiet(() => { if (!destroyed && !listening && !preparing && typeof options.say === 'function') options.say(word, rate); }, 4000);
     }
     async function openHelp(row, word, autoplay) {
       const box = row.querySelector('.coach-help'), button = row.querySelector('[data-coach-help]');
@@ -187,7 +223,7 @@
       else box.innerHTML = '<p class="coach-read"><span>비슷한 소리</span> ' + data.syllables.map((part, n) => n === data.stress ? '<b>' + esc(part) + '</b>' : esc(part)).join('') + (data.stress >= 0 && data.syllables.length > 1 ? ' <small>굵은 곳을 세게, 길게</small>' : '') + '</p>'
         + (data.tips.length ? '<ul class="coach-tips">' + data.tips.map(tip => '<li>' + esc(tip) + '</li>').join('') + '</ul>' : '')
         + '<p class="coach-note">한글은 비슷하게 적은 것이에요. “천천히”로 진짜 소리를 듣고 따라 하세요.</p>';
-      if (autoplay) speakWord(word, 0.55);
+      if (autoplay) speakWord(word, 0.55);      // 아이폰에서는 speakWord 안에서 이전 인식기가 끝나기를 기다린다
     }
     function renderCoach(result, fresh) {
       coach.replaceChildren();
@@ -220,12 +256,13 @@
     const tries = {};
     Object.entries(options.initialTries || {}).forEach(([key, count]) => { const n = Number(key), c = Math.floor(Number(count)); if (Number.isInteger(n) && n >= 0 && n < targets.length && c > 0) tries[n] = Math.min(c, 999); });
     function renderTries() {
-      const count = index >= 0 ? (tries[index] || 0) : 0, open = canSkip && !completed && index >= 0 && (count >= skipAfter || !Recognition);
+      const count = index >= 0 ? (tries[index] || 0) : 0, deaf = IOS && emptyStreak >= 3, open = canSkip && !completed && index >= 0 && (count >= skipAfter || !Recognition || deaf);
       triesText.hidden = !canSkip || completed || index < 0 || (count === 0 && Recognition);
       triesText.textContent = !Recognition ? '이 브라우저는 말하기 인식이 안 돼요 · Chrome이나 Safari로 열면 점수를 다 받을 수 있어요'
+        : deaf && count < skipAfter ? '아이폰이 목소리를 받지 못하고 있어요 · 넘어가면 이 문장 점수는 절반'
         : open ? skipAfter + '번 시도했어요 · 넘어가면 이 문장 점수는 절반' : count + '번 시도 · ' + skipAfter + '번이 되면 넘어갈 수 있어요';
       skipButton.hidden = !open;
-      skipButton.disabled = busy || listening || destroyed;
+      skipButton.disabled = busy || listening || preparing || destroyed;
     }
     // 폰에서 생긴 말하기 문제를 서버에 남긴다(선생님 화면의 학생 현황에서 원인을 볼 수 있게). 실패해도 공부에는 영향 없음.
     function report(kind, detail) {
@@ -272,19 +309,20 @@
     }
     function updateControls() {
       const blocked = busy || completed || destroyed || index < 0;
-      listenButton.disabled = blocked;
-      micButton.disabled = blocked || !Recognition;
-      micButton.textContent = listening ? '■ 다 말했어요' : '● 문장 말하기';
-      micButton.classList.toggle('recording', listening);
+      listenButton.disabled = blocked || preparing || (IOS && listening);
+      micButton.disabled = blocked || !Recognition || preparing;
+      micButton.textContent = preparing ? '신호 소리 뒤에 말하세요' : listening ? '■ 다 말했어요' : '● 문장 말하기';
+      micButton.classList.toggle('recording', listening || preparing);
       renderTries();
     }
     function stopRecognition() {
       generation++;
       clearTimeout(listenTimer);
+      preparing = false;
       if (recognition) {
-        recognition.onresult = recognition.onerror = recognition.onend = null;
-        try { recognition.abort(); } catch (_) { /* Already stopped. */ }
-        recognition = null;
+        const old = recognition; recognition = null;
+        if (IOS) letGo(old);          // 아이폰: 중간에 끊으면 그다음 인식이 전부 먹통이 된다 → 저절로 끝나게 둔다
+        else { old.onresult = old.onerror = old.onend = null; try { old.abort(); } catch (_) { /* Already stopped. */ } }
       }
       listening = false;
       updateControls();
@@ -410,7 +448,7 @@
     }
 
     async function skipTarget() {
-      if (destroyed || busy || completed || index < 0 || !canSkip || (Recognition && (tries[index] || 0) < skipAfter)) return;
+      if (destroyed || busy || completed || index < 0 || !canSkip || (Recognition && (tries[index] || 0) < skipAfter && !(IOS && emptyStreak >= 3))) return;
       const count = Math.max(skipAfter, tries[index] || 0);
       closeAttempt(false);
       setMessage('넘어가는 중', 'checking');
@@ -432,27 +470,42 @@
       if (destroyed || busy || currentGeneration !== generation || !attempt || attempt.done || index < 0) return;
       const best = [...attempt.heard].map((text, order) => ({ text, order, value: score(targets[index].en, text).percentage })).sort((a, b) => b.value - a.value || b.order - a.order)[0]?.text || '';
       if (best) { finalReceived = true; acceptTranscript(best, currentGeneration); return; }
+      const sawSpeech = !!attempt.sawSpeech;
       closeAttempt(true);
       stopRecognition();
-      report(emptyState === 'error' ? 'error' : 'empty', issueDetail || '');
-      setMessage(emptyText || '인식 문장 없음 · 마이크 선택 후 재시도', emptyState || 'retry');
+      emptyStreak++;
+      report(emptyState === 'error' ? 'error' : 'empty', issueDetail || (IOS ? (sawSpeech ? 'ios-unclear' : 'ios-deaf') : ''));
+      // 아이폰이 연달아 아무 소리도 못 받으면 iOS 쪽 문제일 가능성이 크다: 쉬었다 하거나 사파리를 껐다 켜면 풀린다.
+      if (IOS && emptyState !== 'error' && emptyStreak >= 2) setMessage('아이폰이 목소리를 받지 못했어요 · 1분쯤 쉬었다가 다시 누르거나, 사파리를 완전히 껐다 켜 주세요', 'error');
+      else setMessage(emptyText || '인식 문장 없음 · 마이크 선택 후 재시도', emptyState || 'retry');
+      renderTries();
     }
 
     function startListening() {
-      if (destroyed || busy || completed || !Recognition || index < 0) return;
+      if (destroyed || busy || completed || !Recognition || index < 0 || preparing) return;
       // 말하는 중에 한 번 더 누르면 "다 말했어요": 버리지 않고, 받아 적힌 데까지로 채점한다.
       if (listening) {
         const instance = recognition, currentGeneration = generation;
         if (attempt && !attempt.done) {
-          try { if (instance) instance.stop(); } catch (_) { /* Already stopped. */ }
+          // 아이폰에서는 stop() 을 부르지 않는다(끊으면 그다음 인식이 먹통). 받아 적힌 데까지로 채점만 하고 인식기는 저절로 끝나게 둔다.
+          if (!IOS) { try { if (instance) instance.stop(); } catch (_) { /* Already stopped. */ } }
           setMessage('받아 적는 중', 'listening');
-          clearTimeout(attempt.timer); attempt.timer = setTimeout(() => resolveWithHeard(currentGeneration), 1500);
+          clearTimeout(attempt.timer); attempt.timer = setTimeout(() => resolveWithHeard(currentGeneration), IOS ? 900 : 1500);
           return;
         }
         // 이미 채점이 끝난 시도인데 인식기만 켜져 있던 경우: 끄고 아래에서 새로 시작한다.
       }
-      stopSpeech();
+      if (!IOS || cueBroken) { stopSpeech(); stopRecognition(); beginRecognition(false); return; }
+      // 아이폰: 이전 인식기가 저절로 끝나기를 기다렸다가 → 짧은 신호 소리 → 소리가 끝난 바로 뒤에 인식 시작
       stopRecognition();
+      const token = generation;
+      preparing = true; updateControls();
+      setMessage('“Your turn” 소리가 난 뒤에 말하세요', 'listening');
+      const still = () => !destroyed && !busy && !completed && index >= 0 && token === generation && preparing;
+      whenQuiet(() => { if (!still()) return; startCue(() => { if (!still()) return; setTimeout(() => { if (!still()) return; preparing = false; beginRecognition(true); }, 350); }); });
+    }
+
+    function beginRecognition(afterCue) {
       const currentGeneration = generation;
       const instance = new Recognition();
       recognition = instance;
@@ -462,7 +515,7 @@
       instance.maxAlternatives = 3;
       finalReceived = false;
       const heardSoFar = new Set();
-      attempt = { done: false, heard: heardSoFar, timer: null };
+      const mine = attempt = { done: false, heard: heardSoFar, timer: null, sawSpeech: false };
       let started = false;
       instance.onstart = () => {
         if (destroyed || currentGeneration !== generation) return;
@@ -470,6 +523,7 @@
         listening = true; updateControls();
         setMessage('음성 인식 중 · 화면의 영어 문장 말하기', 'listening');
       };
+      instance.onspeechstart = () => { mine.sawSpeech = true; };
       instance.onresult = event => {
         if (destroyed || currentGeneration !== generation || busy) return;
         const candidates = [], finalCandidates = [];
@@ -478,7 +532,7 @@
           for (let a = 0; a < entry.length; a++) {
             const text = String(entry[a].transcript || '').trim();
             candidates.push(text);
-            if (text) heardSoFar.add(text);
+            if (text) { heardSoFar.add(text); mine.sawSpeech = true; emptyStreak = 0; }
             if (entry.isFinal) finalCandidates.push(text);
           }
         }
@@ -494,6 +548,13 @@
       instance.onerror = event => {
         if (destroyed || currentGeneration !== generation || busy) return;
         if (event.error === 'aborted') return;   // 곧 onend 가 와서 거기서 정리한다
+        // 아이폰은 조용할 때 오류(no-speech)를 낸 뒤 스스로 끝난다: 끝나는 것을 기다렸다가 거기서 정리한다(여기서 손대면 끊는 것이 된다).
+        if (IOS && event.error === 'no-speech') return;
+        // 신호 소리 뒤에(= 누른 직후가 아닐 때) 시작하는 것을 이 기기가 막는 경우: 세지 않고, 다음부터는 누르는 즉시 시작한다.
+        if (afterCue && !cueBroken && (event.error === 'not-allowed' || event.error === 'service-not-allowed')) {
+          cueBroken = true; closeAttempt(false); stopRecognition(); report('error', 'cue-start-blocked');
+          setMessage('한 번 더 눌러 주세요', 'retry'); return;
+        }
         listening = false; updateControls();
         // 권한 거부·서비스 오류처럼 말해 볼 수조차 없던 경우도 시도 한 번으로 센다(그래야 열 번 뒤에 넘어갈 수 있다).
         resolveWithHeard(currentGeneration, errorMessages[event.error] || '음성 인식 실패 · 마이크 선택 후 재시도', 'error', String(event.error || 'unknown'));
@@ -513,9 +574,9 @@
         }, 6000);
         listenTimer = setTimeout(() => {
           if (destroyed || !listening || currentGeneration !== generation) return;
-          try { instance.stop(); } catch (_) { /* Already stopped. */ }
-          if (attempt && !attempt.done) { clearTimeout(attempt.timer); attempt.timer = setTimeout(() => resolveWithHeard(currentGeneration), 1500); }
-        }, 25000);
+          if (!IOS) { try { instance.stop(); } catch (_) { /* Already stopped. */ } }
+          if (attempt && !attempt.done) { clearTimeout(attempt.timer); attempt.timer = setTimeout(() => resolveWithHeard(currentGeneration), IOS ? 0 : 1500); }
+        }, IOS ? 20000 : 25000);
       } catch (_) {
         listening = false; recognition = null;
         closeAttempt(true);
@@ -526,11 +587,12 @@
     }
 
     function playTarget() {
-      if (destroyed || busy || index < 0) return;
+      if (destroyed || busy || index < 0 || preparing || (IOS && listening)) return;
       closeAttempt(false);
       stopRecognition();
-      if (typeof options.say === 'function') options.say(targets[index].en);
-      else setMessage('듣기 미지원 · 화면의 영어 문장으로 연습');
+      if (typeof options.say !== 'function') { setMessage('듣기 미지원 · 화면의 영어 문장으로 연습'); return; }
+      const at = index;
+      whenQuiet(() => { if (!destroyed && !listening && !preparing && index === at) options.say(targets[at].en); }, 4000);
     }
 
     listenButton.addEventListener('click', playTarget);

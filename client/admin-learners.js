@@ -47,12 +47,14 @@
   function deviceName(ua) {
     const text = String(ua || '');
     const phone = /iPhone/.test(text) ? '아이폰' : /iPad/.test(text) ? '아이패드' : /Android/.test(text) ? '안드로이드 폰' : /Macintosh/.test(text) ? '맥' : /Windows/.test(text) ? '윈도우 컴퓨터' : '기기 모름';
-    const app = /KAKAOTALK/i.test(text) ? '카카오톡 안 브라우저' : /NAVER\(inapp/i.test(text) ? '네이버 앱 안 브라우저' : /Instagram|FBAN|FBAV|Line\/|; wv\)/i.test(text) ? '앱 안 브라우저' : /SamsungBrowser/i.test(text) ? '삼성 인터넷' : /Whale/i.test(text) ? '웨일' : /EdgA?\//.test(text) ? '엣지' : /CriOS|Chrome\//.test(text) ? '크롬' : /FxiOS|Firefox\//.test(text) ? '파이어폭스' : /Safari\//.test(text) ? '사파리' : '브라우저 모름';
+    const app = /KAKAOTALK/i.test(text) ? '카카오톡 안 브라우저' : /NAVER\(inapp/i.test(text) ? '네이버 앱 안 브라우저' : /Instagram|FBAN|FBAV|Line\/|; wv\)/i.test(text) ? '앱 안 브라우저' : /SamsungBrowser/i.test(text) ? '삼성 인터넷' : /Whale/i.test(text) ? '웨일' : /EdgA?\//.test(text) ? '엣지' : /CriOS|Chrome\//.test(text) ? '크롬' : /FxiOS|Firefox\//.test(text) ? '파이어폭스' : /Safari\//.test(text) ? '사파리' + ((text.match(/Version\/(\d+(?:\.\d+)?)/) || [])[1] ? ' ' + text.match(/Version\/(\d+(?:\.\d+)?)/)[1] : '') : '브라우저 모름';
     return phone + ' · ' + app;
   }
   function issueName(item) {
-    const codes = { 'not-allowed': '마이크 권한이 꺼져 있음', 'service-not-allowed': '폰의 음성 인식(받아쓰기) 기능이 꺼져 있거나 막힘', 'audio-capture': '마이크를 쓸 수 없음', 'network': '음성 인식 인터넷 연결 실패', 'no-speech': '소리가 안 들어옴', 'language-not-supported': '영어 음성 인식 미지원', 'no-start': '마이크가 켜지지 않음', 'start-failed': '마이크 시작 실패' };
+    const codes = { 'not-allowed': '마이크 권한이 꺼져 있음', 'service-not-allowed': '폰의 음성 인식(받아쓰기) 기능이 꺼져 있거나 막힘', 'audio-capture': '마이크를 쓸 수 없음', 'network': '음성 인식 인터넷 연결 실패', 'no-speech': '소리가 안 들어옴', 'language-not-supported': '영어 음성 인식 미지원', 'no-start': '마이크가 켜지지 않음', 'start-failed': '마이크 시작 실패', 'cue-start-blocked': '신호 소리 뒤 자동 시작이 막힘(다음부터는 누르는 즉시 시작)' };
     if (item.kind === 'error') return codes[item.detail] || ('음성 인식 오류(' + (item.detail || '알 수 없음') + ')');
+    if (item.kind === 'empty' && item.detail === 'ios-deaf') return '아이폰이 목소리를 전혀 받지 못함(iOS 음성 인식 문제 의심)';
+    if (item.kind === 'empty' && item.detail === 'ios-unclear') return '아이폰이 소리는 들었지만 글자로 받아 적지 못함';
     if (item.kind === 'empty') return '말했는데 아무것도 받아 적지 못함';
     if (item.kind === 'unsupported') return '이 브라우저는 말하기 인식이 안 됨';
     if (item.kind === 'reloaded') return '공부 중에 화면이 통째로 다시 열림(' + (item.detail || '') + ')';
