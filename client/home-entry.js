@@ -62,14 +62,16 @@
       const current = lesson(), progress = todayProgress(), room = state.room;
       const timeText = progress.unknown ? '수업 시간 집계 확인' : progress.minutes + '분 / 20분';
       const name = state.user?.nickname ? String(state.user.nickname) : '';
+      const dayDeck = (content.decks || []).find(deck => String(deck.id).startsWith('day-'));
       const quests = [
         { key: 'rail', title: '레일 퀘스트', note: '게임 칸에서 몇 번이든 풀 수 있어요', done: today ? !!today.rail : railDone(), go: '출발' },
-        { key: 'words', title: '단어 카드', note: (content.decks || []).find(deck => String(deck.id).startsWith('day-')) ? '오늘의 단어 ' + (content.decks.find(deck => String(deck.id).startsWith('day-')).cards || []).length + '개만 외우기' : '오늘의 단어·문장 뒤집어 보기', done: !!today?.words, go: '뒤집기', disabled: typeof initial.onWords !== 'function' },
+        { key: 'words', title: '단어 카드', note: dayDeck ? (dayDeck.studyDate === kstDate(Date.now()) ? '오늘의 단어 ' : '오늘 단어는 아직 안 올라왔어요 · 최근 단어 ') + (dayDeck.cards || []).length + '개만 외우기' : '오늘의 단어·문장 뒤집어 보기', done: !!today?.words, go: '뒤집기', disabled: typeof initial.onWords !== 'function' },
         { key: 'start', title: '20분 복습', note: (content.activeChapter?.number && !content.usingFallback ? content.activeChapter.number + '주차 · ' : '') + 'DAY ' + current.id + ' · ' + current.title, done: progress.completed || !!today?.study, go: current.active ? '이어하기' : progress.completed ? '한 번 더' : '시작', disabled: typeof initial.onStart !== 'function', meter: progress.percent, meterText: timeText }
       ];
-      // 선생님이 올린 리딩이 있으면 맨 앞 퀘스트로 — 가장 최근 날짜의 글
-      const latest = Array.isArray(content.readings) ? content.readings[0] : null;
-      if (latest) quests.unshift({ key: 'reading', title: '오늘의 리딩', note: (window.AJDaily ? window.AJDaily.dateLabel(latest.date, false) + ' · ' : '') + (latest.title || '읽을 글') + (latest.words ? ' · 단어 ' + latest.words + '개' : ''), done: !!window.DailyReading?.isDone(latest.date) || !!today?.reading, go: '읽기', disabled: typeof initial.onReading !== 'function' });
+      // 선생님이 올린 리딩이 있으면 맨 앞 퀘스트로 — 오늘 날짜의 글이 먼저. 오늘 글이 아직 없으면 그렇다고 알리고, 가장 최근 글을 보여 준다.
+      const readings = Array.isArray(content.readings) ? content.readings : [], todayKey = kstDate(Date.now());
+      const todays = readings.find(item => item.date === todayKey), latest = todays || readings[0] || null;
+      if (latest) quests.unshift({ key: 'reading', title: '오늘의 리딩', note: todays ? (window.AJDaily ? window.AJDaily.dateLabel(latest.date, false) + ' · ' : '') + (latest.title || '읽을 글') + (latest.words ? ' · 단어 ' + latest.words + '개' : '') : '오늘 글은 아직 안 올라왔어요 · 가장 최근 글 ' + (window.AJDaily ? window.AJDaily.dateLabel(latest.date, false) : latest.date), done: !!window.DailyReading?.isDone(latest.date) || (!!todays && !!today?.reading), go: '읽기', disabled: typeof initial.onReading !== 'function' });
       const next = quests.find(q => !q.done && !q.disabled) || quests[0], doneCount = quests.filter(q => q.done).length;
       const avatar = window.CuteCharacters ? window.CuteCharacters.render(state.user?.avatar || { species: 0, outfit: 3, color: 3 }, 'qb-avatar') : '';
       const points = finite(state.progress?.points) ? state.progress.points : 0, streak = finite(state.progress?.streak) ? state.progress.streak : 0;
