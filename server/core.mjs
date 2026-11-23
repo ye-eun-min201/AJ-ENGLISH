@@ -332,7 +332,52 @@ async function activeRoom(db, userId, profile) { if (!profile?.current_room_id) 
 async function readSession(db, userId, id) { if (typeof id !== 'string' || id.length > 100) fail(400, 'invalid_session', '학습 세션을 확인해 주세요.'); const session = await first(db, 'SELECT * FROM learning_sessions WHERE id = ? AND user_id = ?', id, userId); if (!session) fail(404, 'session_not_found', '이 계정의 학습 세션을 찾을 수 없습니다.'); return session; }
 function speechPasses(value) { try { const passed = JSON.parse(value || '[]'); return Array.isArray(passed) ? passed.filter(Number.isInteger).sort((a,b) => a-b) : []; } catch { return []; } }
 const CONTRACTIONS = { "i'm":'i am', "you're":'you are', "we're":'we are', "they're":'they are', "he's":'he is', "she's":'she is', "it's":'it is', "that's":'that is', "what's":'what is', "there's":'there is', "don't":'do not', "doesn't":'does not', "didn't":'did not', "can't":'cannot', "couldn't":'could not', "won't":'will not', "wouldn't":'would not', "shouldn't":'should not', "isn't":'is not', "aren't":'are not', "wasn't":'was not', "weren't":'were not', "i've":'i have', "you've":'you have', "we've":'we have', "they've":'they have', "i'll":'i will', "you'll":'you will', "we'll":'we will', "they'll":'they will', "i'd":'i would', "you'd":'you would', "we'd":'we would', "they'd":'they would', "let's":'let us' };
-function normalizeSpeech(value) { return value.normalize('NFKC').toLowerCase().replace(/[’‘]/g, "'").replace(/\b[a-z]+'[a-z]+\b/g, word => CONTRACTIONS[word] || word).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim(); }
+// 음성 인식기는 "ten"을 "10"처럼 숫자로 적어 준다. 숫자는 영어 낱말로 바꿔서 비교한다.
+// (worker/api.js 의 speechNumberWords 와 같은 규칙)
+const speechONES = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+const speechTENS = ['', '', 'twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+function speechBelow1000(n) {
+  const out = [];
+  if (n >= 100) { out.push(speechONES[Math.floor(n / 100)], 'hundred'); n %= 100; }
+  if (n >= 20) { out.push(speechTENS[Math.floor(n / 10)]); n %= 10; if (n) out.push(speechONES[n]); }
+  else if (n || !out.length) out.push(speechONES[n]);
+  return out;
+}
+function speechNumberWords(n, plain) {
+  if (!Number.isSafeInteger(n) || n < 0 || n >= 1e12) return null;
+  if (n < 1000) return speechBelow1000(n).join(' ');
+  // 1100~1999, 2010~2099 는 연도처럼 읽는다 (1999 → nineteen ninety nine)
+  if (!plain && ((n >= 1100 && n <= 1999) || (n >= 2010 && n <= 2099))) {
+    const head = Math.floor(n / 100), tail = n % 100;
+    return speechBelow1000(head).join(' ') + (tail ? ' ' + (tail < 10 ? 'oh ' : '') + speechBelow1000(tail).join(' ') : ' hundred');
+  }
+  const out = [];
+  for (const [size, name] of [[1e9, 'billion'], [1e6, 'million'], [1e3, 'thousand']]) {
+    if (n >= size) { out.push(...speechBelow1000(Math.floor(n / size)), name); n %= size; }
+  }
+  if (n) out.push(...speechBelow1000(n));
+  return out.join(' ');
+}
+const speechORDINAL_IRREGULAR = { one: 'first', two: 'second', three: 'third', five: 'fifth', eight: 'eighth', nine: 'ninth', twelve: 'twelfth' };
+function speechOrdinalWords(n) {
+  const words = speechNumberWords(n);
+  if (!words) return null;
+  const parts = words.split(' '), last = parts.pop();
+  const done = speechORDINAL_IRREGULAR[last] || (last.endsWith('y') ? last.slice(0, -1) + 'ieth' : last + 'th');
+  return [...parts, done].join(' ');
+}
+function speechSpellNumbers(text) {
+  return text
+    .replace(/\b\d{1,3}(?:,\d{3})+\b/g, m => speechNumberWords(Number(m.replace(/,/g, '')), true) || m)
+    .replace(/\$\s?(\d+(?:\.\d+)?)/g, '$1 dollars')
+    .replace(/(\d)\s?%/g, '$1 percent')
+    .replace(/\b(\d+)(?:st|nd|rd|th)\b/g, (m, d) => speechOrdinalWords(Number(d)) || m)
+    .replace(/\b(\d+)\.(\d+)\b/g, (m, a, b) => (speechNumberWords(Number(a)) || a) + ' point ' + b.split('').map(c => speechONES[Number(c)]).join(' '))
+    .replace(/\b\d+\b/g, m => speechNumberWords(Number(m)) || m)
+    .replace(/\b(hundred|thousand|million|billion) and\b/g, '$1');
+}
+
+function normalizeSpeech(value) { return speechSpellNumbers(value.normalize('NFKC').toLowerCase().replace(/[’‘]/g, "'").replace(/\b[a-z]+'[a-z]+\b/g, word => CONTRACTIONS[word] || word)).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim(); }
 // 음성 인식기가 끝소리(-s, -ed, -ing)를 빼먹고 받아 적는 일이 잦아, 같은 낱말의 꼴만 다른 경우는 같은 단어로 본다. (client/pronunciation.js 의 sameWord 와 같은 규칙)
 function speechSame(a, b) { if (a === b) return true; const short = a.length <= b.length ? a : b, long = short === a ? b : a; if (short.length < 3 || long.length - short.length > 4) return false; const tails = (base, list) => long.startsWith(base) && list.includes(long.slice(base.length)); if (tails(short, ['s','es','ed','ing'])) return true; if (short.endsWith('e') && (tails(short, ['d']) || tails(short.slice(0,-1), ['ing']))) return true; if (short.endsWith('y') && tails(short.slice(0,-1) + 'i', ['es','ed'])) return true; if (/[^aeiou][aeiou][^aeiouwxy]$/.test(short) && tails(short + short.slice(-1), ['ed','ing'])) return true; return false; }
 function compareSpeech(expected, actual) { const a = normalizeSpeech(expected).split(' ').filter(Boolean), b = normalizeSpeech(actual).split(' ').filter(Boolean); const passed = a.length > 0 && a.length === b.length && a.every((word,i) => speechSame(word, b[i])); const dp = Array(b.length + 1).fill(0); for (const word of a) { let previous = 0; for (let j = 1; j <= b.length; j++) { const old = dp[j]; dp[j] = speechSame(word, b[j-1]) ? previous + 1 : Math.max(dp[j], dp[j-1]); previous = old; } } return { passed, match: passed ? 100 : Math.min(99, Math.round(100 * dp[b.length] / Math.max(a.length, b.length, 1))) }; }

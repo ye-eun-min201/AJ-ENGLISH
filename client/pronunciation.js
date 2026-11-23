@@ -15,10 +15,56 @@
     "let's": 'let us'
   };
 
+  // 음성 인식기는 "ten"을 "10"처럼 숫자로 적어 준다. 숫자는 영어 낱말로 바꿔서 비교한다.
+  // (worker/api.js 의 numberWords 와 같은 규칙)
+  const ONES = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+  const TENS = ['', '', 'twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+  function below1000(n) {
+    const out = [];
+    if (n >= 100) { out.push(ONES[Math.floor(n / 100)], 'hundred'); n %= 100; }
+    if (n >= 20) { out.push(TENS[Math.floor(n / 10)]); n %= 10; if (n) out.push(ONES[n]); }
+    else if (n || !out.length) out.push(ONES[n]);
+    return out;
+  }
+  function numberWords(n, plain) {
+    if (!Number.isSafeInteger(n) || n < 0 || n >= 1e12) return null;
+    if (n < 1000) return below1000(n).join(' ');
+    // 1100~1999, 2010~2099 는 연도처럼 읽는다 (1999 → nineteen ninety nine)
+    if (!plain && ((n >= 1100 && n <= 1999) || (n >= 2010 && n <= 2099))) {
+      const head = Math.floor(n / 100), tail = n % 100;
+      return below1000(head).join(' ') + (tail ? ' ' + (tail < 10 ? 'oh ' : '') + below1000(tail).join(' ') : ' hundred');
+    }
+    const out = [];
+    for (const [size, name] of [[1e9, 'billion'], [1e6, 'million'], [1e3, 'thousand']]) {
+      if (n >= size) { out.push(...below1000(Math.floor(n / size)), name); n %= size; }
+    }
+    if (n) out.push(...below1000(n));
+    return out.join(' ');
+  }
+  const ORDINAL_IRREGULAR = { one: 'first', two: 'second', three: 'third', five: 'fifth', eight: 'eighth', nine: 'ninth', twelve: 'twelfth' };
+  function ordinalWords(n) {
+    const words = numberWords(n);
+    if (!words) return null;
+    const parts = words.split(' '), last = parts.pop();
+    const done = ORDINAL_IRREGULAR[last] || (last.endsWith('y') ? last.slice(0, -1) + 'ieth' : last + 'th');
+    return [...parts, done].join(' ');
+  }
+  function spellNumbers(text) {
+    return text
+      .replace(/\b\d{1,3}(?:,\d{3})+\b/g, m => numberWords(Number(m.replace(/,/g, '')), true) || m)
+      .replace(/\$\s?(\d+(?:\.\d+)?)/g, '$1 dollars')
+      .replace(/(\d)\s?%/g, '$1 percent')
+      .replace(/\b(\d+)(?:st|nd|rd|th)\b/g, (m, d) => ordinalWords(Number(d)) || m)
+      .replace(/\b(\d+)\.(\d+)\b/g, (m, a, b) => (numberWords(Number(a)) || a) + ' point ' + b.split('').map(c => ONES[Number(c)]).join(' '))
+      .replace(/\b\d+\b/g, m => numberWords(Number(m)) || m)
+    .replace(/\b(hundred|thousand|million|billion) and\b/g, '$1');
+  }
+
   function normalize(value) {
     return String(value || '').normalize('NFKC').toLowerCase()
       .replace(/[’‘]/g, "'")
       .replace(/\b[a-z]+(?:'[a-z]+)\b/g, token => contractions[token] || token)
+      .replace(/^[\s\S]*$/, spellNumbers)
       .replace(/[^a-z0-9\s]/g, ' ')
       .replace(/\s+/g, ' ').trim();
   }
