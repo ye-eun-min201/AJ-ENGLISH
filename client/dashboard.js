@@ -38,7 +38,7 @@
       const current = all.filter(e => expressionDate(e) === today);
       if (current.length) return {items:current.sort((a,b)=>expressionTime(b)-expressionTime(a)).slice(0,3), fresh:true};
       const available = all.filter(e => !expressionDate(e) || expressionDate(e) <= today);
-      const weekStart = dateKey(content.activeChapter?.weekStart);
+      const rawStart = dateKey(content.activeChapter?.weekStart), weekStart = rawStart && new Date(rawStart + 'T00:00:00Z').getUTCDay() === 0 ? new Date(Date.parse(rawStart + 'T00:00:00Z') + 86400000).toISOString().slice(0, 10) : rawStart;
       const dayOffset = weekStart ? Math.max(0, Math.floor((Date.parse(today + 'T00:00:00Z') - Date.parse(weekStart + 'T00:00:00Z')) / 86400000)) % 7 + 1 : (new Date(today + 'T00:00:00Z').getUTCDay() + 6) % 7 + 1;
       const recommended = available.filter(e => Number(e.studyDay) === dayOffset && (!content.activeChapter?.id || !e.chapterId || e.chapterId === content.activeChapter.id));
       return {items:(recommended.length ? recommended : available.sort((a,b)=>expressionTime(b)-expressionTime(a))).slice(0,3), fresh:false};

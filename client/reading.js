@@ -16,6 +16,8 @@
     const list = () => Array.isArray(content.readings) ? content.readings : [];
     const reading = () => list().find(item => item.date === date) || null;
     const words = () => { const item = reading(); return item ? (content.expressions || []).filter(word => word.readingId === item.id) : []; };
+    // 일요일 수업은 그다음 날(월요일)부터 한 주 복습을 시작한다.
+    const studyStart = date => new Date(date + 'T00:00:00Z').getUTCDay() === 0 ? D.addDays(date, 1) : date;
     const weeks = () => [...new Set(list().map(item => D.mondayOf(item.date)))].sort();
 
     async function load() {
@@ -51,7 +53,7 @@
       const items = list();
       if (!items.length) { root.innerHTML = '<div class="rd-empty"><h2>아직 올라온 리딩이 없어요</h2><p>선생님이 글을 올리면 여기에 날짜별로 쌓여요.</p></div>'; return; }
       const item = reading(), monday = D.mondayOf(date), all = weeks(), at = all.indexOf(monday), today = kstToday(), dayWords = words();
-      const lesson = (content.chapters || []).filter(chapter => chapter.weekStart && D.mondayOf(chapter.weekStart) === monday).at(-1);
+      const lesson = (content.chapters || []).filter(chapter => chapter.weekStart && D.mondayOf(studyStart(chapter.weekStart)) === monday).at(-1);
       const days = Array.from({ length: 7 }, (_, index) => { const day = D.addDays(monday, index), has = items.some(entry => entry.date === day); return '<button type="button" class="rd-day' + (has ? ' has' : '') + (day === date ? ' is-on' : '') + (day === today ? ' is-today' : '') + '" ' + (has ? 'data-rd-date="' + day + '"' : 'disabled') + ' aria-label="' + esc(D.dateLabel(day)) + (has ? '' : ' · 리딩 없음') + '"' + (day === date ? ' aria-current="date"' : '') + '><span>' + D.DAYS[index] + '</span><b>' + Number(day.slice(8)) + '</b><i></i></button>'; }).join('');
       let body = '';
       if (bodyState.status === 'loading') body = '<p class="rd-tip">글을 불러오는 중이에요…</p>';

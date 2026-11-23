@@ -15,6 +15,8 @@
   function value(form, name) { return field(form, name).value; }
   function setValue(form, name, next) { const input = field(form, name); if (input) { input.value = String(next ?? ''); window.AJFormGuidance?.refresh(input); } }
   function kstDate() { return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
+  // 수업은 일요일에 하므로, 새 수업의 날짜는 가장 최근 일요일(오늘이 일요일이면 오늘)로 둔다.
+  function classDay() { const date = new Date(kstDate() + 'T00:00:00Z'); date.setUTCDate(date.getUTCDate() - date.getUTCDay()); return date.toISOString().slice(0, 10); }
   function monday() { const date = new Date(kstDate() + 'T00:00:00Z'); date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 6) % 7); return date.toISOString().slice(0, 10); }
   function isoToKSTInput(iso) { const ms = Date.parse(iso); return Number.isFinite(ms) ? new Date(ms + 9 * 3600000).toISOString().slice(0, 16) : ''; }
   function kstInputToISO(local) { if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(local || '')) return null; const date = new Date(local + ':00+09:00'); return Number.isFinite(date.getTime()) ? date.toISOString() : null; }
@@ -190,7 +192,7 @@
     const buttons = all('[data-quick-publish],[data-delivery-choice]'); buttons.forEach(b => b.disabled = true);
     status('#chapter-list-status', mode === 'now' ? '공개로 바꾸는 중' : '비공개로 바꾸는 중');
     try {
-      const weekStart = mode === 'now' && (!chapter.weekStart || chapter.weekStart > kstDate()) ? monday() : chapter.weekStart;
+      const weekStart = mode === 'now' && (!chapter.weekStart || chapter.weekStart > kstDate()) ? classDay() : chapter.weekStart;
       const result = await request('admin/chapter', { id: chapter.id, number: Number(chapter.number), title: chapter.title, weekStart, body: chapter.body || '', status: mode === 'now' ? 'published' : 'draft', publishAt: null });
       replaceRecord('chapters', result.chapter); state.revision = result.revision;
       const form = $('#chapter-form');
@@ -317,7 +319,7 @@
     const form = $('#chapter-form');
     ['id', 'title', 'body'].forEach(name => setValue(form, name, ''));
     setValue(form, 'number', Math.min(999, Math.max(0, ...state.chapters.map(c => Number(c.number) || 0)) + 1));
-    setValue(form, 'weekStart', kstDate()); populateDelivery(form, null, 'chapter');
+    setValue(form, 'weekStart', classDay()); populateDelivery(form, null, 'chapter');
     $('#chapter-editor-title').textContent = '수업 등록'; $('#chapter-advanced').open = false; $('#wizard-success').hidden = true; status('#chapter-status', ''); resetPDFSelection(); renderPDF(null); renderChapters(); syncWeekChoice(); showWizardStep(1);
   }
   function editChapter(id) {
