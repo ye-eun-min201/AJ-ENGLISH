@@ -647,12 +647,12 @@ async function handleApi(request, env, courses, now = Date.now()) {
       if (answerStats.total !== lesson.quiz.length) fail(409, 'quiz_incomplete', '퀴즈를 모두 풀면 미션을 마칠 수 있어요.');
       const reflection = typeof body.reflection === 'string' ? body.reflection.trim().slice(0, 500) : '';
       const seconds = session.finished_at ? session.elapsed_seconds : Math.min(1800, Math.max(0, Math.floor((now - session.started_at) / 1000)));
-      const ratio = Math.min(1, seconds / 1200);
       const rewardRoom = await activeRoom(db, userId, profile);
       // 말하기 문장 하나는 전체 점수의 (1 / 문장 수) 몫. 넘어간 문장은 그 몫의 절반만 받는다.
       const skippedSpeech = speechPasses(session.speech_skip_json).filter(index => passedSpeech.includes(index)).length;
       const speechShare = 1 - 0.5 * Math.min(1, skippedSpeech / lesson.phrases.length);
-      const points = Math.floor((80 + 20 * answerStats.correct / lesson.quiz.length) * ratio * speechShare);
+      // 학습 시간과 상관없이, 말하기·퀴즈를 다 마치면 같은 점수를 받는다(퀴즈 정답 수와 넘어간 문장만 점수에 영향).
+      const points = Math.floor((80 + 20 * answerStats.correct / lesson.quiz.length) * speechShare);
       // Reward date is the completion date; one reward per account per Korean calendar day.
       // These statements run atomically. The applied flag also makes replay/concurrent calls idempotent.
       await db.batch([
